@@ -11,6 +11,7 @@ import { ConversationHistory } from '../components/sidebar/ConversationHistory';
 import { ErrorBubble } from '../components/chat/ErrorBubble';
 import { Button } from '../components/ui/button';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useSmoothScroll } from '../hooks/useSmoothScroll';
 
 interface Message {
   id: string;
@@ -29,7 +30,6 @@ export function Chat({ onOpenSettings }: ChatProps) {
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<ChatInputHandle>(null);
 
@@ -45,10 +45,12 @@ export function Chat({ onOpenSettings }: ChatProps) {
     },
   });
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  // Auto-scroll to bottom when new messages arrive using smooth scroll hook
+  const messagesEndRef = useSmoothScroll<HTMLDivElement>({
+    dependencies: [messages, isTyping],
+    behavior: 'smooth',
+    delay: 100,
+  });
 
   // Load conversation messages when switching conversations
   useEffect(() => {
@@ -265,8 +267,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
         {/* Messages area */}
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto px-6 py-4"
-          style={{ scrollBehavior: 'smooth' }}
+          className="flex-1 overflow-y-auto px-6 py-4 smooth-scroll"
         >
           {messages.length === 0 ? (
             // Empty state

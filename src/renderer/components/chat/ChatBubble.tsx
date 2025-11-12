@@ -36,7 +36,12 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
   };
 
   return (
-    <div className={cn('flex w-full gap-2 mb-3', isUser ? 'justify-end' : 'justify-start')}>
+    <div
+      className={cn(
+        'flex w-full gap-2 mb-3',
+        isUser ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'
+      )}
+    >
       {/* Avatar for AI */}
       {!isUser && (
         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
