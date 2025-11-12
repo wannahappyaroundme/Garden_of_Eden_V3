@@ -8,13 +8,15 @@ import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
 import { ChatInput } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
 import { ConversationHistory } from '../components/sidebar/ConversationHistory';
+import { ErrorBubble } from '../components/chat/ErrorBubble';
 import { Button } from '../components/ui/button';
 
 interface Message {
   id: string;
   content: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'error';
   timestamp: Date;
+  errorRetryContent?: string; // For error messages, stores the original user message
 }
 
 interface ChatProps {
@@ -135,13 +137,23 @@ export function Chat({ onOpenSettings }: ChatProps) {
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === aiMessageId
-            ? { ...msg, content: errorContent + '\n\n다시 시도하시겠습니까?' }
+            ? {
+                ...msg,
+                role: 'error',
+                content: errorContent,
+                errorRetryContent: content // Store original message for retry
+              }
             : msg
         )
       );
     } finally {
       setIsTyping(false);
     }
+  };
+
+  // Handle retry for failed messages
+  const handleRetry = (originalMessage: string) => {
+    handleSendMessage(originalMessage);
   };
 
   const handleVoiceStart = async () => {
@@ -261,14 +273,27 @@ export function Chat({ onOpenSettings }: ChatProps) {
               {Object.entries(groupedMessages).map(([dateKey, dateMessages]) => (
                 <div key={dateKey}>
                   <ChatDateDivider date={new Date(dateKey)} />
-                  {dateMessages.map((message) => (
-                    <ChatBubble
-                      key={message.id}
-                      message={message.content}
-                      role={message.role}
-                      timestamp={message.timestamp}
-                    />
-                  ))}
+                  {dateMessages.map((message) =>
+                    message.role === 'error' ? (
+                      <ErrorBubble
+                        key={message.id}
+                        message={message.content}
+                        timestamp={message.timestamp}
+                        onRetry={
+                          message.errorRetryContent
+                            ? () => handleRetry(message.errorRetryContent!)
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <ChatBubble
+                        key={message.id}
+                        message={message.content}
+                        role={message.role}
+                        timestamp={message.timestamp}
+                      />
+                    )
+                  )}
                 </div>
               ))}
 
