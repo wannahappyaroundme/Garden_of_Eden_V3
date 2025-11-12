@@ -7,9 +7,11 @@ import { ipcMain } from 'electron';
 import log from 'electron-log';
 import { getDatabase } from '../database';
 import { MessageRepository } from '../database/repositories/message.repository';
+import { ConversationRepository } from '../database/repositories/conversation.repository';
 import type { Message, MessageRole } from '../../shared/types/chat.types';
 
 let messageRepository: MessageRepository | null = null;
+let conversationRepository: ConversationRepository | null = null;
 
 function getMessageRepository(): MessageRepository {
   if (!messageRepository) {
@@ -17,6 +19,14 @@ function getMessageRepository(): MessageRepository {
     messageRepository = new MessageRepository(db);
   }
   return messageRepository;
+}
+
+function getConversationRepository(): ConversationRepository {
+  if (!conversationRepository) {
+    const db = getDatabase();
+    conversationRepository = new ConversationRepository(db);
+  }
+  return conversationRepository;
 }
 
 export function registerMessageHandlers(): void {
@@ -36,14 +46,23 @@ export function registerMessageHandlers(): void {
     };
   }): Promise<Message> => {
     try {
-      const repo = getMessageRepository();
-      const message = repo.create(
+      const msgRepo = getMessageRepository();
+      const convRepo = getConversationRepository();
+
+      const message = msgRepo.create(
         args.conversationId,
         args.role,
         args.content,
         args.metadata
       );
-      
+
+      // Increment conversation message count and update timestamp
+      try {
+        convRepo.incrementMessageCount(args.conversationId);
+      } catch (convError) {
+        log.warn('Failed to update conversation count', { conversationId: args.conversationId, error: convError });
+      }
+
       log.info('Message saved', { messageId: message.id, conversationId: args.conversationId });
       return message;
     } catch (error) {

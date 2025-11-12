@@ -251,6 +251,54 @@ const api = {
     return await ipcRenderer.invoke('message:delete', args) as Promise<boolean>;
   },
 
+  // Conversation operations
+  conversationCreate: async (args?: {
+    title?: string;
+    mode?: 'user-led' | 'ai-led';
+  }) => {
+    return await ipcRenderer.invoke('conversation:create', args || {});
+  },
+
+  conversationGetAll: async (args?: {
+    limit?: number;
+    offset?: number;
+  }) => {
+    return await ipcRenderer.invoke('conversation:get-all', args);
+  },
+
+  conversationGetById: async (args: {
+    id: string;
+  }) => {
+    return await ipcRenderer.invoke('conversation:get-by-id', args);
+  },
+
+  conversationUpdate: async (args: {
+    id: string;
+    updates: {
+      title?: string;
+      mode?: 'user-led' | 'ai-led';
+    };
+  }) => {
+    return await ipcRenderer.invoke('conversation:update', args) as Promise<boolean>;
+  },
+
+  conversationDelete: async (args: {
+    id: string;
+  }) => {
+    return await ipcRenderer.invoke('conversation:delete', args) as Promise<boolean>;
+  },
+
+  conversationSearch: async (args: {
+    query: string;
+    limit?: number;
+  }) => {
+    return await ipcRenderer.invoke('conversation:search', args);
+  },
+
+  conversationGetCount: async () => {
+    return await ipcRenderer.invoke('conversation:get-count') as Promise<number>;
+  },
+
   // Platform info
   platform: process.platform,
   versions: {

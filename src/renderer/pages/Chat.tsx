@@ -92,6 +92,23 @@ export function Chat({ onOpenSettings }: ChatProps) {
   const handleSendMessage = async (content: string) => {
     const startTime = Date.now();
 
+    // Create new conversation if this is the first message
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      try {
+        // Generate title from first message (first 30 chars)
+        const title = content.length > 30 ? content.substring(0, 30) + '...' : content;
+        const newConversation: any = await window.api.conversationCreate({ title, mode: 'user-led' });
+        conversationId = newConversation.id;
+        setCurrentConversationId(conversationId);
+      } catch (error) {
+        console.error('Failed to create conversation:', error);
+        // Use fallback conversation ID
+        conversationId = `conv-${Date.now()}`;
+        setCurrentConversationId(conversationId);
+      }
+    }
+
     // Add user message
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -119,7 +136,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
       const response = await window.api.chatStream(
         {
           message: content,
-          conversationId: currentConversationId,
+          conversationId: conversationId,
           contextLevel: 1, // Default context level
         },
         (chunk: string) => {
@@ -134,10 +151,12 @@ export function Chat({ onOpenSettings }: ChatProps) {
         }
       );
 
-      // Update conversation ID if this was a new conversation
-      const conversationId = response.conversationId;
-      if (!currentConversationId) {
-        setCurrentConversationId(conversationId);
+      // Use the conversation ID from response if available
+      if (response.conversationId) {
+        conversationId = response.conversationId;
+        if (!currentConversationId) {
+          setCurrentConversationId(conversationId);
+        }
       }
 
       // Calculate response time

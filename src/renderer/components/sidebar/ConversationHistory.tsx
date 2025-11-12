@@ -29,8 +29,17 @@ export function ConversationHistory({
   const loadConversations = async () => {
     try {
       setIsLoading(true);
-      const data = await window.api.getConversations();
-      setConversations(data);
+      const data: any = await window.api.conversationGetAll({ limit: 50 });
+      // Convert timestamps to match ConversationSummary interface
+      const formattedData = data.map((conv: any) => ({
+        id: conv.id,
+        title: conv.title,
+        mode: conv.mode,
+        createdAt: typeof conv.createdAt === 'object' ? conv.createdAt.getTime() : conv.createdAt,
+        updatedAt: typeof conv.updatedAt === 'object' ? conv.updatedAt.getTime() : conv.updatedAt,
+        messageCount: conv.messageCount,
+      }));
+      setConversations(formattedData);
     } catch (error) {
       console.error('Failed to load conversations:', error);
     } finally {
@@ -48,7 +57,7 @@ export function ConversationHistory({
 
   const handleDeleteConversation = async (id: string) => {
     try {
-      await window.api.deleteConversation(id);
+      await window.api.conversationDelete({ id });
       // Remove from local state
       setConversations((prev) => prev.filter((c) => c.id !== id));
       // If deleted conversation was selected, create new conversation
@@ -63,7 +72,7 @@ export function ConversationHistory({
 
   const handleRenameConversation = async (id: string, newTitle: string) => {
     try {
-      await window.api.updateConversationTitle(id, newTitle);
+      await window.api.conversationUpdate({ id, updates: { title: newTitle } });
       // Update local state
       setConversations((prev) =>
         prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c))
