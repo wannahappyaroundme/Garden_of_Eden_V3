@@ -89,7 +89,7 @@ export function useAsyncPerformance() {
 /**
  * Utility to mark performance points
  */
-export const performance Monitor = {
+export const performanceMonitor = {
   mark: (name: string) => {
     if (typeof performance !== 'undefined' && performance.mark) {
       performance.mark(name);

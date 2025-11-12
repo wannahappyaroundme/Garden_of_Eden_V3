@@ -150,7 +150,7 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
             />
           ))
         )}
-      </div>
+      </nav>
 
       {/* Footer (optional - could add stats) */}
       {conversations.length > 0 && (

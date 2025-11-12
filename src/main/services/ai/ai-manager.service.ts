@@ -85,7 +85,7 @@ export class AIManagerService {
    * Generate placeholder response based on persona
    */
   private generatePlaceholderResponse(message: string, persona: PersonaParameters): string {
-    const isKorean = persona.languagePreference === 'ko';
+    const isKorean = true; // Default to Korean for now
     const isFormal = persona.formality > 60;
     const isHumorous = persona.humor > 50;
     const isVerbose = persona.verbosity > 60;
@@ -96,7 +96,7 @@ export class AIManagerService {
     const isCode = /코드|code|프로그래밍|programming/i.test(message);
 
     if (isKorean) {
-      const honorific = isFormal || persona.formality_honorifics ? '요' : '';
+      const honorific = isFormal ? '요' : '';
 
       if (isGreeting) {
         return isHumorous

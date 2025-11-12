@@ -101,8 +101,8 @@ export class GitService {
       const status: StatusResult = await this.git!.status();
 
       return {
-        current: status.current,
-        tracking: status.tracking,
+        current: status.current || 'main',
+        tracking: status.tracking || null,
         files: status.files.map((file) => ({
           path: file.path,
           status: file.index + file.working_dir,

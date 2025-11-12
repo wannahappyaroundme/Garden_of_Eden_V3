@@ -15,20 +15,8 @@ import { registerMessageHandlers } from './ipc/message.handler';
 import { registerConversationHandlers } from './ipc/conversation.handler';
 import log from 'electron-log';
 
-// Lazy-load electron to avoid module loading issues
-let app: any;
-let BrowserWindow: any;
-
-function getElectron() {
-  if (!app) {
-    const electron = require('electron');
-    app = electron.app;
-    BrowserWindow = electron.BrowserWindow;
-    console.log('Electron loaded - app type:', typeof app);
-    console.log('Electron loaded - BrowserWindow type:', typeof BrowserWindow);
-  }
-  return { app, BrowserWindow };
-}
+// Import electron directly
+import { app as electronApp, BrowserWindow } from 'electron';
 
 // Initialize logger
 log.transports.file.level = 'info';
@@ -41,7 +29,7 @@ let windowManager: WindowManager | null = null;
 try {
   const squirrelStartup = require('electron-squirrel-startup');
   if (squirrelStartup) {
-    const { app: electronApp } = getElectron();
+    
     if (electronApp) {
       electronApp.quit();
     }
@@ -54,7 +42,7 @@ try {
  * Initialize the application
  */
 const initialize = async () => {
-  const { app: electronApp } = getElectron();
+  
 
   try {
     log.info('Initializing application...');
@@ -86,7 +74,7 @@ const initialize = async () => {
  * App lifecycle: Ready
  */
 // Load electron and set up event handlers
-const { app: electronApp } = getElectron();
+
 
 electronApp.on('ready', async () => {
   log.info('App ready event');
@@ -129,11 +117,11 @@ electronApp.on('window-all-closed', () => {
  * App lifecycle: Activate (macOS)
  */
 electronApp.on('activate', async () => {
-  const { BrowserWindow: ElectronBrowserWindow } = getElectron();
+  
   log.info('App activate event');
 
   // On macOS, re-create window when dock icon is clicked and no windows exist
-  if (ElectronBrowserWindow.getAllWindows().length === 0) {
+  if (BrowserWindow.getAllWindows().length === 0) {
     await initialize();
   }
 });
@@ -190,7 +178,7 @@ electronApp.on('web-contents-created', (_event: any, contents: WebContents) => {
 
 // Enable DevTools in development
 if (process.env.NODE_ENV === 'development') {
-  app.whenReady().then(() => {
+  electronApp.whenReady().then(() => {
     // Install React DevTools
     // Note: electron-devtools-installer is optional
   });

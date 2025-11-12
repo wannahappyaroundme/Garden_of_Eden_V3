@@ -1,28 +1,28 @@
 /**
  * Whisper Service
- * Handles Whisper Large V3 for speech-to-text
- * TODO: Integrate actual Whisper model (requires whisper.cpp Node bindings or subprocess)
+ * Handles Whisper Large V3 for speech-to-text using @huggingface/transformers
  */
 
 import path from 'path';
-import fs from 'fs';
+import fs from 'fs/promises';
 import log from 'electron-log';
 import type { WhisperConfig } from '@shared/types/ai.types';
+
+// Types for @huggingface/transformers (will be imported dynamically)
+type WhisperPipeline = any;
 
 export class WhisperService {
   private modelPath: string;
   private _config: WhisperConfig;
   private isInitialized = false;
   private isRecording = false;
+  private pipeline: WhisperPipeline | null = null;
+  private isLoading = false;
 
   constructor(config?: Partial<WhisperConfig>) {
-    // Determine model path
-    const isDev = process.env.NODE_ENV === 'development';
-    const resourcesPath = isDev
-      ? path.join(process.cwd(), 'resources')
-      : path.join(process.resourcesPath, 'resources');
-
-    this.modelPath = path.join(resourcesPath, 'models', 'whisper-large-v3.bin');
+    // Determine model path - use user home directory for models
+    const homeDir = process.env.HOME || process.env.USERPROFILE || '.';
+    this.modelPath = path.join(homeDir, '.garden-of-eden-v3', 'models', 'whisper-large-v3');
 
     // Default configuration
     this._config = {
@@ -43,33 +43,50 @@ export class WhisperService {
    * Initialize Whisper model
    */
   async initialize(): Promise<void> {
+    if (this.isLoading) {
+      throw new Error('Whisper model is already loading');
+    }
+
     if (this.isInitialized) {
       log.info('Whisper model already initialized');
       return;
     }
 
+    this.isLoading = true;
+
     try {
       log.info(`Initializing Whisper model from: ${this.modelPath}`);
 
-      // Check if model file exists
-      if (!fs.existsSync(this.modelPath)) {
+      // Check if model directory exists
+      try {
+        await fs.access(this.modelPath);
+      } catch {
         log.warn(
-          `Model file not found: ${this.modelPath}. Please run 'npm run download:whisper' first.`
+          `Model directory not found: ${this.modelPath}. Please run 'npm run download:whisper' first.`
         );
         // Don't throw error, allow app to run without Whisper
+        this.isLoading = false;
         return;
       }
 
-      // TODO: Load Whisper model
-      // This requires whisper.cpp bindings or calling whisper executable as subprocess
-      // For now, we'll mark as initialized with placeholder
-      log.info('Whisper service initialized (placeholder)');
+      // Dynamically import @huggingface/transformers (ES Module)
+      const { pipeline } = await import('@huggingface/transformers');
 
+      // Create Whisper pipeline for automatic speech recognition
+      log.info('Creating Whisper pipeline...');
+      this.pipeline = await pipeline('automatic-speech-recognition', this.modelPath, {
+        device: 'cpu', // Use CPU for stability
+      });
+
+      log.info('Whisper model loaded successfully');
       this.isInitialized = true;
     } catch (error) {
       log.error('Failed to initialize Whisper model:', error);
+      this.isLoading = false;
       throw error;
     }
+
+    this.isLoading = false;
   }
 
   /**
@@ -133,25 +150,50 @@ export class WhisperService {
       await this.initialize();
     }
 
+    if (!this.pipeline) {
+      throw new Error('Whisper pipeline not initialized');
+    }
+
     log.info(`Transcribing audio file: ${audioFilePath}`);
 
     // Check if file exists
-    if (!fs.existsSync(audioFilePath)) {
+    try {
+      await fs.access(audioFilePath);
+    } catch {
       throw new Error(`Audio file not found: ${audioFilePath}`);
     }
 
-    // TODO: Call Whisper model to transcribe audio
-    // This requires whisper.cpp bindings
+    try {
+      const startTime = Date.now();
 
-    const placeholderTranscript = '음성 파일 인식 기능은 구현 중입니다.';
-    const language: 'ko' | 'en' = 'ko';
+      // Run transcription
+      const result = await this.pipeline(audioFilePath, {
+        language: this._config.language === 'auto' ? undefined : this._config.language,
+        task: this._config.task,
+        return_timestamps: false,
+      });
 
-    log.info('Audio file transcription completed (placeholder)');
+      const duration = Date.now() - startTime;
 
-    return {
-      transcript: placeholderTranscript,
-      language,
-    };
+      log.info('Audio file transcription completed', {
+        duration,
+        textLength: result.text?.length || 0
+      });
+
+      // Detect language if auto
+      let detectedLanguage: 'ko' | 'en' = 'ko';
+      if (result.language) {
+        detectedLanguage = result.language === 'korean' ? 'ko' : 'en';
+      }
+
+      return {
+        transcript: result.text || '',
+        language: detectedLanguage,
+      };
+    } catch (error) {
+      log.error('Failed to transcribe audio file:', error);
+      throw error;
+    }
   }
 
   /**
@@ -172,10 +214,29 @@ export class WhisperService {
       this.isRecording = false;
     }
 
-    // TODO: Cleanup Whisper model resources
+    // Cleanup pipeline
+    if (this.pipeline) {
+      this.pipeline = null;
+    }
 
     this.isInitialized = false;
     log.info('Whisper service cleaned up');
+  }
+
+  /**
+   * Set language configuration
+   */
+  setLanguage(language: 'auto' | 'ko' | 'en'): void {
+    this._config.language = language;
+    log.info('Whisper language updated', { language });
+  }
+
+  /**
+   * Set task configuration
+   */
+  setTask(task: 'transcribe' | 'translate'): void {
+    this._config.task = task;
+    log.info('Whisper task updated', { task });
   }
 }
 

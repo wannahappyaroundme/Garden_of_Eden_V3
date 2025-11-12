@@ -3,11 +3,16 @@
  * Manages Llama 3.1 8B model for AI conversations
  */
 
-import { LlamaModel, LlamaContext, LlamaChatSession } from 'node-llama-cpp';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { log } from '../../utils/logger';
 import { personaService } from '../learning/persona.service';
+
+// Types for node-llama-cpp (will be imported dynamically)
+type LlamaModel = any;
+type LlamaContext = any;
+type LlamaChatSession = any;
+type GetLlamaFunction = () => Promise<any>;
 
 export interface LlamaConfig {
   modelPath: string;
@@ -76,11 +81,17 @@ export class LlamaService {
       try {
         await fs.access(this.config.modelPath);
       } catch {
-        throw new Error(\`Model file not found: \${this.config.modelPath}\`);
+        throw new Error(`Model file not found: ${this.config.modelPath}`);
       }
 
+      // Dynamically import node-llama-cpp (ES Module)
+      const { getLlama, LlamaChatSession } = await import('node-llama-cpp');
+
+      // Get Llama instance
+      const llama = await getLlama();
+
       // Load model
-      this.model = new LlamaModel({
+      this.model = await llama.loadModel({
         modelPath: this.config.modelPath,
         gpuLayers: this.config.gpuLayers,
       });
@@ -88,8 +99,7 @@ export class LlamaService {
       log.ai.info('Llama model loaded successfully');
 
       // Create context
-      this.context = new LlamaContext({
-        model: this.model,
+      this.context = await this.model.createContext({
         contextSize: this.config.contextSize,
       });
 
@@ -97,7 +107,7 @@ export class LlamaService {
 
       // Create chat session
       this.session = new LlamaChatSession({
-        context: this.context,
+        contextSequence: this.context.getSequence(),
       });
 
       // Set system prompt from persona
@@ -109,111 +119,34 @@ export class LlamaService {
 
       log.ai.info('Llama chat session ready');
     } catch (error) {
-      log.ai.error('Failed to load Llama model', error);
-      this.cleanup();
-      throw error;
-    } finally {
+      log.ai.error('Failed to initialize Llama model', error);
       this.isLoading = false;
-    }
-  }
-
-  /**
-   * Check if model is loaded and ready
-   */
-  isReady(): boolean {
-    return this.model !== null && this.context !== null && this.session !== null;
-  }
-
-  /**
-   * Generate a chat response (streaming)
-   */
-  async chat(
-    message: string,
-    options?: {
-      conversationId?: string;
-      temperature?: number;
-      maxTokens?: number;
-      stream?: StreamCallback;
-    }
-  ): Promise<string> {
-    if (!this.isReady()) {
-      throw new Error('Llama model not initialized. Call initialize() first.');
-    }
-
-    try {
-      log.ai.info('Generating chat response', {
-        messageLength: message.length,
-        conversationId: options?.conversationId,
-      });
-
-      // Add user message to history
-      this.conversationHistory.push({
-        role: 'user',
-        content: message,
-      });
-
-      const temperature = options?.temperature ?? this.config.temperature!;
-      const maxTokens = options?.maxTokens ?? this.config.maxTokens!;
-
-      let fullResponse = '';
-
-      // Generate response with streaming
-      const response = await this.session!.prompt(message, {
-        temperature,
-        maxTokens,
-        topP: this.config.topP,
-        topK: this.config.topK,
-        onToken: (token: number[]) => {
-          const decodedToken = this.model!.detokenize(token);
-          fullResponse += decodedToken;
-          options?.stream?.onToken(decodedToken);
-        },
-      });
-
-      // Add assistant response to history
-      this.conversationHistory.push({
-        role: 'assistant',
-        content: fullResponse,
-      });
-
-      // Manage context window (keep last N messages)
-      this.trimConversationHistory();
-
-      log.ai.info('Chat response generated', {
-        responseLength: fullResponse.length,
-        conversationHistorySize: this.conversationHistory.length,
-      });
-
-      options?.stream?.onComplete(fullResponse);
-
-      return fullResponse;
-    } catch (error) {
-      log.ai.error('Failed to generate chat response', error);
-      options?.stream?.onError(error as Error);
       throw error;
     }
+
+    this.isLoading = false;
   }
 
   /**
-   * Generate a response without streaming
+   * Generate a response (non-streaming)
    */
-  async generate(prompt: string, systemPrompt?: string): Promise<string> {
-    if (!this.isReady()) {
-      throw new Error('Llama model not initialized. Call initialize() first.');
+  async generateResponse(
+    prompt: string,
+    systemPrompt?: string
+  ): Promise<string> {
+    await this.ensureInitialized();
+
+    if (!this.session) {
+      throw new Error('Chat session not initialized');
     }
 
     try {
       log.ai.info('Generating response', { promptLength: prompt.length });
 
-      const fullPrompt = systemPrompt
-        ? \`\${systemPrompt}\n\nUser: \${prompt}\n\nAssistant:\`
-        : prompt;
-
-      const response = await this.session!.prompt(fullPrompt, {
+      // Simple prompt-based generation for now
+      const response = await this.session.prompt(prompt, {
         temperature: this.config.temperature,
         maxTokens: this.config.maxTokens,
-        topP: this.config.topP,
-        topK: this.config.topK,
       });
 
       log.ai.info('Response generated', { responseLength: response.length });
@@ -226,28 +159,55 @@ export class LlamaService {
   }
 
   /**
-   * Clear conversation history and start fresh
+   * Generate streaming response
    */
-  clearHistory(): void {
-    const systemPrompt = this.conversationHistory.find((msg) => msg.role === 'system');
-    this.conversationHistory = systemPrompt ? [systemPrompt] : [];
-    log.ai.info('Conversation history cleared');
+  async generateStreamingResponse(
+    prompt: string,
+    onToken: (token: string) => void,
+    systemPrompt?: string
+  ): Promise<string> {
+    await this.ensureInitialized();
+
+    if (!this.session) {
+      throw new Error('Chat session not initialized');
+    }
+
+    try {
+      log.ai.info('Generating streaming response', { promptLength: prompt.length });
+
+      let fullResponse = '';
+
+      const response = await this.session.prompt(prompt, {
+        temperature: this.config.temperature,
+        maxTokens: this.config.maxTokens,
+        onTextChunk: (chunk: string) => {
+          fullResponse += chunk;
+          onToken(chunk);
+        },
+      });
+
+      log.ai.info('Streaming response complete', { responseLength: fullResponse.length });
+
+      return fullResponse;
+    } catch (error) {
+      log.ai.error('Failed to generate streaming response', error);
+      throw error;
+    }
   }
 
   /**
-   * Update system prompt (for persona changes)
+   * Add message to conversation history
    */
-  updateSystemPrompt(systemPrompt: string): void {
-    const systemMessage = this.conversationHistory.find((msg) => msg.role === 'system');
-    if (systemMessage) {
-      systemMessage.content = systemPrompt;
-    } else {
-      this.conversationHistory.unshift({
-        role: 'system',
-        content: systemPrompt,
-      });
+  addToHistory(role: 'user' | 'assistant', content: string): void {
+    this.conversationHistory.push({ role, content });
+
+    // Trim history if it gets too long (keep last 10 messages + system)
+    const maxHistory = 11; // system + 10 messages
+    if (this.conversationHistory.length > maxHistory) {
+      const systemMessage = this.conversationHistory[0];
+      const recentMessages = this.conversationHistory.slice(-10);
+      this.conversationHistory = [systemMessage, ...recentMessages];
     }
-    log.ai.info('System prompt updated');
   }
 
   /**
@@ -258,67 +218,51 @@ export class LlamaService {
   }
 
   /**
-   * Trim conversation history to fit context window
+   * Clear conversation history (keep system prompt)
    */
-  private trimConversationHistory(): void {
-    // Keep system prompt + last N messages that fit in context
-    const maxMessages = 20; // Adjust based on context size
-    const systemMessage = this.conversationHistory.find((msg) => msg.role === 'system');
+  clearHistory(): void {
+    const systemMessage = this.conversationHistory[0];
+    this.conversationHistory = systemMessage ? [systemMessage] : [];
+  }
 
-    if (this.conversationHistory.length > maxMessages) {
-      const recentMessages = this.conversationHistory.slice(-maxMessages);
-      this.conversationHistory = systemMessage
-        ? [systemMessage, ...recentMessages.filter((msg) => msg.role !== 'system')]
-        : recentMessages;
+  /**
+   * Check if model is initialized
+   */
+  isInitialized(): boolean {
+    return this.model !== null && this.context !== null && this.session !== null;
+  }
 
-      log.ai.info('Conversation history trimmed', {
-        newSize: this.conversationHistory.length,
-      });
+  /**
+   * Ensure model is initialized (lazy initialization)
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (!this.isInitialized()) {
+      await this.initialize();
     }
   }
 
   /**
-   * Get model info
+   * Shutdown and cleanup resources
    */
-  getModelInfo(): { loaded: boolean; modelPath: string; config: LlamaConfig } {
-    return {
-      loaded: this.isReady(),
-      modelPath: this.config.modelPath,
-      config: this.config,
-    };
-  }
+  async shutdown(): Promise<void> {
+    log.ai.info('Shutting down Llama service');
 
-  /**
-   * Cleanup resources
-   */
-  async cleanup(): Promise<void> {
-    try {
-      if (this.session) {
-        // Session cleanup is automatic
-        this.session = null;
-      }
-
-      if (this.context) {
-        await this.context.dispose();
-        this.context = null;
-      }
-
-      if (this.model) {
-        await this.model.dispose();
-        this.model = null;
-      }
-
-      this.conversationHistory = [];
-      log.ai.info('Llama service cleaned up');
-    } catch (error) {
-      log.ai.error('Error during cleanup', error);
-      throw error;
+    if (this.context) {
+      this.context.dispose();
+      this.context = null;
     }
+
+    if (this.model) {
+      this.model.dispose();
+      this.model = null;
+    }
+
+    this.session = null;
+    this.conversationHistory = [];
   }
 }
 
-// Singleton instance
-// Model path will be set during first-run setup
+// Create default instance with model path
 const defaultModelPath = path.join(
   process.env.HOME || process.env.USERPROFILE || '.',
   '.garden-of-eden-v3',

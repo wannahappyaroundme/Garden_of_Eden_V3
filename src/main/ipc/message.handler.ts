@@ -5,7 +5,6 @@
 
 import { ipcMain } from 'electron';
 import log from 'electron-log';
-import { getDatabase } from '../database';
 import { MessageRepository } from '../database/repositories/message.repository';
 import { ConversationRepository } from '../database/repositories/conversation.repository';
 import type { Message, MessageRole } from '../../shared/types/chat.types';
@@ -15,16 +14,14 @@ let conversationRepository: ConversationRepository | null = null;
 
 function getMessageRepository(): MessageRepository {
   if (!messageRepository) {
-    const db = getDatabase();
-    messageRepository = new MessageRepository(db);
+    messageRepository = new MessageRepository();
   }
   return messageRepository;
 }
 
 function getConversationRepository(): ConversationRepository {
   if (!conversationRepository) {
-    const db = getDatabase();
-    conversationRepository = new ConversationRepository(db);
+    conversationRepository = new ConversationRepository();
   }
   return conversationRepository;
 }
