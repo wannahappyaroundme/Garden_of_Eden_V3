@@ -4,6 +4,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 
 export interface ChatRequest {
   message: string;
@@ -85,6 +86,31 @@ export const api = {
    */
   chat: async (args: ChatRequest): Promise<ChatResponse> => {
     return await invoke<ChatResponse>('chat', { request: args });
+  },
+
+  /**
+   * Chat with AI using streaming
+   * @param args ChatRequest
+   * @param onChunk Callback for each chunk of text
+   * @returns Promise<ChatResponse>
+   */
+  chatStream: async (
+    args: ChatRequest,
+    onChunk: (chunk: string) => void
+  ): Promise<ChatResponse> => {
+    // Listen for stream chunks
+    const unlistenChunk = await listen<{ chunk: string }>('chat-stream-chunk', (event) => {
+      onChunk(event.payload.chunk);
+    });
+
+    // Listen for stream completion
+    const unlistenComplete = await listen('chat-stream-complete', () => {
+      unlistenChunk();
+      unlistenComplete();
+    });
+
+    // Invoke the streaming command
+    return await invoke<ChatResponse>('chat_stream', { request: args });
   },
 
   /**

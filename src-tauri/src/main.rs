@@ -27,6 +27,7 @@ fn main() {
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
+            commands::ai::chat_stream,
             commands::ai::voice_input_start,
             commands::ai::voice_input_stop,
             commands::conversation::get_conversations,

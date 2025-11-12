@@ -78,30 +78,43 @@ export function Chat({ onOpenSettings }: ChatProps) {
     };
     setMessages((prev) => [...prev, userMessage]);
 
+    // Create AI message placeholder with empty content
+    const aiMessageId = `ai-${Date.now()}`;
+    const aiMessage: Message = {
+      id: aiMessageId,
+      content: '',
+      role: 'assistant',
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, aiMessage]);
+
     // Show typing indicator
     setIsTyping(true);
 
     try {
-      // Call IPC to send message to AI
-      const response = await window.api.chat({
-        message: content,
-        conversationId: currentConversationId,
-        contextLevel: 1, // Default context level
-      });
+      // Call streaming API
+      const response = await window.api.chatStream(
+        {
+          message: content,
+          conversationId: currentConversationId,
+          contextLevel: 1, // Default context level
+        },
+        (chunk: string) => {
+          // Update AI message with streaming chunks
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === aiMessageId
+                ? { ...msg, content: msg.content + chunk }
+                : msg
+            )
+          );
+        }
+      );
 
       // Update conversation ID if this was a new conversation
       if (!currentConversationId) {
         setCurrentConversationId(response.conversationId);
       }
-
-      // Add AI response
-      const aiMessage: Message = {
-        id: response.messageId,
-        content: response.response,
-        role: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error('Failed to send message:', error);
 
@@ -118,14 +131,14 @@ export function Chat({ onOpenSettings }: ChatProps) {
         }
       }
 
-      // Add error message
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        content: errorContent + '\n\n다시 시도하시겠습니까?',
-        role: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      // Replace AI message with error message
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === aiMessageId
+            ? { ...msg, content: errorContent + '\n\n다시 시도하시겠습니까?' }
+            : msg
+        )
+      );
     } finally {
       setIsTyping(false);
     }
