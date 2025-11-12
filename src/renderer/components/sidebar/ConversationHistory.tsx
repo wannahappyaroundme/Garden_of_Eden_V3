@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { HistoryItem } from './HistoryItem';
+import { HistoryListSkeleton } from './HistoryItemSkeleton';
 import type { ConversationSummary } from '../../lib/tauri-api';
 
 interface ConversationHistoryProps {
@@ -107,9 +108,7 @@ export function ConversationHistory({
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto p-3">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-sm text-muted-foreground">로딩 중...</div>
-          </div>
+          <HistoryListSkeleton count={5} />
         ) : conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold mb-3">
