@@ -220,12 +220,12 @@ export function Chat({ onOpenSettings }: ChatProps) {
       />
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1">
+      <main className="flex flex-col flex-1">
         {/* Header */}
         <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between titlebar-drag">
           <div>
             <h1 className="text-lg font-semibold">Garden of Eden</h1>
-            <p className="text-xs text-muted-foreground">AI Assistant</p>
+            <p className="text-xs text-muted-foreground" aria-label="애플리케이션 설명">AI Assistant</p>
           </div>
           <div className="flex items-center gap-4 titlebar-no-drag">
             <div className="text-xs text-muted-foreground">
@@ -335,7 +335,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
           isLoading={isTyping}
           placeholder="메시지를 입력하세요..."
         />
-      </div>
+      </main>
     </div>
   );
 }

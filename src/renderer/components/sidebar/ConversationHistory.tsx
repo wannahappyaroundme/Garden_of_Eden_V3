@@ -75,12 +75,10 @@ export function ConversationHistory({
   };
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r border-border bg-card flex flex-col h-full">
+    <aside className="w-64 flex-shrink-0 border-r border-border bg-card flex flex-col h-full" aria-label="대화 목록 사이드바">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">대화 목록</h2>
-        </div>
+        <h2 className="text-lg font-semibold mb-3">대화 목록</h2>
         <Button
           onClick={handleNewConversation}
           className="w-full"
@@ -106,15 +104,15 @@ export function ConversationHistory({
       </div>
 
       {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <nav className="flex-1 overflow-y-auto p-3" aria-label="대화 목록" role="navigation">
         {isLoading ? (
           <HistoryListSkeleton count={5} />
         ) : conversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold mb-3">
+          <div className="flex flex-col items-center justify-center h-full text-center px-4" role="status">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold mb-3" aria-hidden="true">
               E
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground" aria-live="polite">
               아직 대화가 없습니다
               <br />
               새 대화를 시작해보세요!
@@ -136,11 +134,11 @@ export function ConversationHistory({
 
       {/* Footer (optional - could add stats) */}
       {conversations.length > 0 && (
-        <div className="p-3 border-t border-border">
-          <p className="text-xs text-muted-foreground text-center">
+        <footer className="p-3 border-t border-border" role="contentinfo">
+          <p className="text-xs text-muted-foreground text-center" aria-live="polite">
             총 {conversations.length}개의 대화
           </p>
-        </div>
+        </footer>
       )}
     </aside>
   );
