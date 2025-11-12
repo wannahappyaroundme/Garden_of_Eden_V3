@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 type Page = 'chat' | 'settings';
 
@@ -39,12 +40,12 @@ function App() {
   };
 
   return (
-    <>
+    <ErrorBoundary>
       {currentPage === 'chat' && <Chat onOpenSettings={() => setCurrentPage('settings')} />}
       {currentPage === 'settings' && (
         <Settings onClose={() => setCurrentPage('chat')} onThemeChange={handleThemeChange} />
       )}
-    </>
+    </ErrorBoundary>
   );
 }
 

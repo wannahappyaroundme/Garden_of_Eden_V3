@@ -62,7 +62,7 @@
     "remark-gfm": "^4.0.1",
     "screenshot-desktop": "^1.15.0",
     "simple-git": "^3.30.0",
-    "winston": "^3.11.0",
+    "winston": "^3.18.3",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
