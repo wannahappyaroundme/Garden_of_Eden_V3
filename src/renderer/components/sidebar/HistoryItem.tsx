@@ -77,10 +77,20 @@ export function HistoryItem({
     <div
       className={cn(
         'group relative px-3 py-2.5 rounded-lg cursor-pointer transition-colors mb-1',
-        'hover:bg-accent',
+        'hover:bg-accent focus-within:bg-accent',
         isSelected && 'bg-primary/10'
       )}
       onClick={() => !isEditing && onSelect(conversation.id)}
+      onKeyDown={(e) => {
+        if (!isEditing && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onSelect(conversation.id);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`${conversation.title} 대화, ${conversation.messageCount}개 메시지, ${formatTime(conversation.updatedAt)}`}
+      aria-current={isSelected ? 'true' : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -117,8 +127,9 @@ export function HistoryItem({
         {!isEditing && (
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+              className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
               onClick={(e) => e.stopPropagation()}
+              aria-label="대화 옵션"
             >
               <svg
                 width="16"
