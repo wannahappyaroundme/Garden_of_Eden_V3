@@ -10,9 +10,19 @@ import { MessageRepository } from '../database/repositories/message.repository';
 import { getAIManager } from '../services/ai/ai-manager.service';
 import { DEFAULT_PERSONA } from '@shared/types/persona.types';
 
-const conversationRepo = new ConversationRepository();
-const messageRepo = new MessageRepository();
-const aiManager = getAIManager();
+// Lazy-initialize repositories after Electron app is ready
+let conversationRepo: ConversationRepository;
+let messageRepo: MessageRepository;
+let aiManager: ReturnType<typeof getAIManager>;
+
+function getRepositories() {
+  if (!conversationRepo) {
+    conversationRepo = new ConversationRepository();
+    messageRepo = new MessageRepository();
+    aiManager = getAIManager();
+  }
+  return { conversationRepo, messageRepo, aiManager };
+}
 
 export function registerAIHandlers(): void {
   log.info('Registering AI IPC handlers');
@@ -28,6 +38,7 @@ export function registerAIHandlers(): void {
       args: { message: string; conversationId?: string; contextLevel?: 1 | 2 | 3 }
     ) => {
       const { message, conversationId, contextLevel } = args;
+      const { conversationRepo, messageRepo, aiManager } = getRepositories();
 
       try {
         // Get or create conversation
@@ -91,6 +102,7 @@ export function registerAIHandlers(): void {
    * Start voice input
    */
   ipcMain.handle('ai:voice-input-start', async () => {
+    const { aiManager } = getRepositories();
     log.info('Starting voice input...');
     const recording = await aiManager.startVoiceInput();
     return { recording };
@@ -100,6 +112,7 @@ export function registerAIHandlers(): void {
    * Stop voice input and get transcript
    */
   ipcMain.handle('ai:voice-input-stop', async () => {
+    const { aiManager } = getRepositories();
     log.info('Stopping voice input...');
     const result = await aiManager.stopVoiceInput();
     return result;

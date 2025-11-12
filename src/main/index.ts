@@ -20,8 +20,13 @@ log.info('Starting Garden of Eden V3...');
 let windowManager: WindowManager | null = null;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
-if (require('electron-squirrel-startup')) {
-  app.quit();
+try {
+  const squirrelStartup = require('electron-squirrel-startup');
+  if (squirrelStartup) {
+    app.quit();
+  }
+} catch (error) {
+  log.warn('electron-squirrel-startup not available:', error);
 }
 
 /**
