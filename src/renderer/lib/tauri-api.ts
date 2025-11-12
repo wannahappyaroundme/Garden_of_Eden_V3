@@ -53,6 +53,28 @@ export interface Settings {
   language: string;
 }
 
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  mode: string;
+  createdAt: number;
+  updatedAt: number;
+  messageCount: number;
+  lastMessagePreview?: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+  tokens?: number;
+  responseTime?: number;
+  contextLevel?: 1 | 2 | 3;
+  satisfaction?: 'positive' | 'negative';
+}
+
 /**
  * Tauri API
  * Drop-in replacement for Electron IPC
@@ -98,6 +120,34 @@ export const api = {
    */
   updateSettings: async (settings: Settings): Promise<void> => {
     return await invoke<void>('update_settings', { settings });
+  },
+
+  /**
+   * Get all conversations
+   */
+  getConversations: async (): Promise<ConversationSummary[]> => {
+    return await invoke<ConversationSummary[]>('get_conversations');
+  },
+
+  /**
+   * Get messages for a conversation
+   */
+  getConversationMessages: async (conversationId: string): Promise<Message[]> => {
+    return await invoke<Message[]>('get_conversation_messages', { conversationId });
+  },
+
+  /**
+   * Delete a conversation
+   */
+  deleteConversation: async (conversationId: string): Promise<void> => {
+    return await invoke<void>('delete_conversation', { conversationId });
+  },
+
+  /**
+   * Update conversation title
+   */
+  updateConversationTitle: async (conversationId: string, newTitle: string): Promise<void> => {
+    return await invoke<void>('update_conversation_title', { conversationId, newTitle });
   },
 
   // Platform info (from Tauri)
