@@ -4,7 +4,7 @@
  */
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import type { IPCChannelName } from '../shared/types/ipc.types';
+import type { IPCChannelName, FileInfo, GitStatus, GitCommit, GitBranch } from '../shared/types/ipc.types';
 
 /**
  * Exposed API for renderer process
@@ -60,6 +60,120 @@ const api = {
 
   voiceInputStop: async () => {
     return await ipcRenderer.invoke('ai:voice-input-stop') as { transcript: string; language: 'ko' | 'en' };
+  },
+
+  // File operations
+  fileRead: async (path: string, options?: { encoding?: string; maxSize?: number }) => {
+    return await ipcRenderer.invoke('file:read', { path, ...options }) as { content: string };
+  },
+
+  fileWrite: async (path: string, content: string, options?: { encoding?: string; createDir?: boolean }) => {
+    return await ipcRenderer.invoke('file:write', { path, content, ...options }) as { success: boolean };
+  },
+
+  fileDelete: async (path: string) => {
+    return await ipcRenderer.invoke('file:delete', { path }) as { success: boolean };
+  },
+
+  fileExists: async (path: string) => {
+    return await ipcRenderer.invoke('file:exists', { path }) as { exists: boolean };
+  },
+
+  fileInfo: async (path: string) => {
+    return await ipcRenderer.invoke('file:info', { path }) as { info: FileInfo };
+  },
+
+  fileListDirectory: async (path: string) => {
+    return await ipcRenderer.invoke('file:list-directory', { path }) as { files: FileInfo[] };
+  },
+
+  fileSearch: async (pattern: string, options?: { cwd?: string; maxResults?: number; ignore?: string[] }) => {
+    return await ipcRenderer.invoke('file:search', { pattern, ...options }) as { files: string[] };
+  },
+
+  fileWorkspaceRoot: async (startPath: string) => {
+    return await ipcRenderer.invoke('file:workspace-root', { startPath }) as { root: string | null };
+  },
+
+  fileCreateDirectory: async (path: string) => {
+    return await ipcRenderer.invoke('file:create-directory', { path }) as { success: boolean };
+  },
+
+  fileCopy: async (source: string, destination: string) => {
+    return await ipcRenderer.invoke('file:copy', { source, destination }) as { success: boolean };
+  },
+
+  fileMove: async (source: string, destination: string) => {
+    return await ipcRenderer.invoke('file:move', { source, destination }) as { success: boolean };
+  },
+
+  // Git operations
+  gitInit: async (repoPath: string) => {
+    return await ipcRenderer.invoke('git:init', { repoPath }) as { success: boolean };
+  },
+
+  gitStatus: async () => {
+    return await ipcRenderer.invoke('git:status') as { status: GitStatus };
+  },
+
+  gitDiff: async (filePath?: string) => {
+    return await ipcRenderer.invoke('git:diff', { filePath }) as { diff: string };
+  },
+
+  gitDiffStaged: async (filePath?: string) => {
+    return await ipcRenderer.invoke('git:diff-staged', { filePath }) as { diff: string };
+  },
+
+  gitAdd: async (files: string | string[]) => {
+    return await ipcRenderer.invoke('git:add', { files }) as { success: boolean };
+  },
+
+  gitReset: async (files?: string | string[]) => {
+    return await ipcRenderer.invoke('git:reset', { files }) as { success: boolean };
+  },
+
+  gitCommit: async (message: string) => {
+    return await ipcRenderer.invoke('git:commit', { message }) as { commitHash: string };
+  },
+
+  gitPush: async (remote?: string, branch?: string) => {
+    return await ipcRenderer.invoke('git:push', { remote, branch }) as { success: boolean };
+  },
+
+  gitPull: async (remote?: string, branch?: string) => {
+    return await ipcRenderer.invoke('git:pull', { remote, branch }) as { success: boolean };
+  },
+
+  gitLog: async (maxCount?: number) => {
+    return await ipcRenderer.invoke('git:log', { maxCount }) as { commits: GitCommit[] };
+  },
+
+  gitBranches: async () => {
+    return await ipcRenderer.invoke('git:branches') as { branches: GitBranch[] };
+  },
+
+  gitCreateBranch: async (branchName: string) => {
+    return await ipcRenderer.invoke('git:create-branch', { branchName }) as { success: boolean };
+  },
+
+  gitCheckout: async (branchName: string) => {
+    return await ipcRenderer.invoke('git:checkout', { branchName }) as { success: boolean };
+  },
+
+  gitCurrentBranch: async () => {
+    return await ipcRenderer.invoke('git:current-branch') as { branch: string };
+  },
+
+  gitRemoteUrl: async (remote?: string) => {
+    return await ipcRenderer.invoke('git:remote-url', { remote }) as { url: string };
+  },
+
+  gitStash: async (message?: string) => {
+    return await ipcRenderer.invoke('git:stash', { message }) as { success: boolean };
+  },
+
+  gitStashPop: async () => {
+    return await ipcRenderer.invoke('git:stash-pop') as { success: boolean };
   },
 
   // Platform info

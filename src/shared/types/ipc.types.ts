@@ -56,50 +56,165 @@ export interface AIChannels {
 }
 
 // File system IPC channels
+export interface FileInfo {
+  path: string;
+  name: string;
+  type: 'file' | 'directory';
+  size: number;
+  modified: number; // timestamp
+  extension?: string;
+}
+
 export interface FileChannels {
   'file:read': {
-    request: { path: string };
+    request: { path: string; encoding?: string; maxSize?: number };
     response: { content: string };
   };
   'file:write': {
-    request: { path: string; content: string };
+    request: { path: string; content: string; encoding?: string; createDir?: boolean };
     response: { success: boolean };
   };
+  'file:delete': {
+    request: { path: string };
+    response: { success: boolean };
+  };
+  'file:exists': {
+    request: { path: string };
+    response: { exists: boolean };
+  };
+  'file:info': {
+    request: { path: string };
+    response: { info: FileInfo };
+  };
+  'file:list-directory': {
+    request: { path: string };
+    response: { files: FileInfo[] };
+  };
   'file:search': {
-    request: { pattern: string; directory?: string };
+    request: {
+      pattern: string;
+      cwd?: string;
+      maxResults?: number;
+      ignore?: string[];
+    };
     response: { files: string[] };
   };
-  'file:workspace-detect': {
-    request: void;
-    response: {
-      root: string | null;
-      type: 'vscode' | 'intellij' | 'unknown' | null;
-    };
+  'file:workspace-root': {
+    request: { startPath: string };
+    response: { root: string | null };
+  };
+  'file:create-directory': {
+    request: { path: string };
+    response: { success: boolean };
+  };
+  'file:copy': {
+    request: { source: string; destination: string };
+    response: { success: boolean };
+  };
+  'file:move': {
+    request: { source: string; destination: string };
+    response: { success: boolean };
   };
 }
 
 // Git IPC channels
+export interface GitFileStatus {
+  path: string;
+  status: string;
+  workingDir: string;
+  index: string;
+}
+
+export interface GitStatus {
+  current: string;
+  tracking: string | null;
+  files: GitFileStatus[];
+  ahead: number;
+  behind: number;
+  isClean: boolean;
+}
+
+export interface GitCommit {
+  hash: string;
+  date: string;
+  message: string;
+  author: string;
+  body?: string;
+}
+
+export interface GitBranch {
+  name: string;
+  current: boolean;
+  commit: string;
+}
+
 export interface GitChannels {
-  'git:status': {
+  'git:init': {
     request: { repoPath: string };
-    response: {
-      modified: string[];
-      added: string[];
-      deleted: string[];
-      untracked: string[];
-      branch: string;
-    };
+    response: { success: boolean };
+  };
+  'git:status': {
+    request: void;
+    response: { status: GitStatus };
   };
   'git:diff': {
-    request: { repoPath: string; file?: string };
+    request: { filePath?: string };
     response: { diff: string };
   };
+  'git:diff-staged': {
+    request: { filePath?: string };
+    response: { diff: string };
+  };
+  'git:add': {
+    request: { files: string | string[] };
+    response: { success: boolean };
+  };
+  'git:reset': {
+    request: { files?: string | string[] };
+    response: { success: boolean };
+  };
   'git:commit': {
-    request: { repoPath: string; message: string; files?: string[] };
-    response: { success: boolean; commitHash: string };
+    request: { message: string };
+    response: { commitHash: string };
   };
   'git:push': {
-    request: { repoPath: string };
+    request: { remote?: string; branch?: string };
+    response: { success: boolean };
+  };
+  'git:pull': {
+    request: { remote?: string; branch?: string };
+    response: { success: boolean };
+  };
+  'git:log': {
+    request: { maxCount?: number };
+    response: { commits: GitCommit[] };
+  };
+  'git:branches': {
+    request: void;
+    response: { branches: GitBranch[] };
+  };
+  'git:create-branch': {
+    request: { branchName: string };
+    response: { success: boolean };
+  };
+  'git:checkout': {
+    request: { branchName: string };
+    response: { success: boolean };
+  };
+  'git:current-branch': {
+    request: void;
+    response: { branch: string };
+  };
+  'git:remote-url': {
+    request: { remote?: string };
+    response: { url: string };
+  };
+  'git:stash': {
+    request: { message?: string };
+    response: { success: boolean };
+  };
+  'git:stash-pop': {
+    request: void;
     response: { success: boolean };
   };
 }

@@ -9,6 +9,8 @@ import { initializeDatabase, closeDatabase } from './database';
 import { registerSystemHandlers } from './ipc/system.handler';
 import { registerSettingsHandlers } from './ipc/settings.handler';
 import { registerAIHandlers } from './ipc/ai.handler';
+import { registerFileHandlers } from './ipc/file.handler';
+import { registerGitHandlers } from './ipc/git.handler';
 import { getAIManager, cleanupAIManager } from './services/ai/ai-manager.service';
 import log from 'electron-log';
 
@@ -72,6 +74,8 @@ const initialize = async () => {
     registerSystemHandlers();
     registerSettingsHandlers();
     registerAIHandlers();
+    registerFileHandlers();
+    registerGitHandlers();
 
     // Create window manager
     windowManager = new WindowManager();
