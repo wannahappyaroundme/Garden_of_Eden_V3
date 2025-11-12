@@ -11,6 +11,7 @@ import { registerSettingsHandlers } from './ipc/settings.handler';
 import { registerAIHandlers, cleanupAIResources } from './ipc/ai.handler';
 import { registerFileHandlers } from './ipc/file.handler';
 import { registerGitHandlers } from './ipc/git.handler';
+import { registerMessageHandlers } from './ipc/message.handler';
 import log from 'electron-log';
 
 // Lazy-load electron to avoid module loading issues
@@ -70,6 +71,7 @@ const initialize = async () => {
     registerAIHandlers(windowManager.mainWindow!);
     registerFileHandlers();
     registerGitHandlers();
+    registerMessageHandlers();
 
     log.info('Application initialized successfully');
   } catch (error) {

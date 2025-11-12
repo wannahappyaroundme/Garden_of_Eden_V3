@@ -54,9 +54,12 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   const loadConversationMessages = useCallback(async (conversationId: string) => {
     try {
-      const loadedMessages = await window.api.getConversationMessages(conversationId);
+      const loadedMessages = await window.api.messageGetByConversation({
+        conversationId,
+        limit: 100,
+      });
       // Convert timestamps to Date objects
-      const formattedMessages: Message[] = loadedMessages.map((msg) => ({
+      const formattedMessages: Message[] = loadedMessages.map((msg: any) => ({
         id: msg.id,
         content: msg.content,
         role: msg.role,
@@ -87,6 +90,8 @@ export function Chat({ onOpenSettings }: ChatProps) {
   }, []);
 
   const handleSendMessage = async (content: string) => {
+    const startTime = Date.now();
+
     // Add user message
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -130,8 +135,52 @@ export function Chat({ onOpenSettings }: ChatProps) {
       );
 
       // Update conversation ID if this was a new conversation
+      const conversationId = response.conversationId;
       if (!currentConversationId) {
-        setCurrentConversationId(response.conversationId);
+        setCurrentConversationId(conversationId);
+      }
+
+      // Calculate response time
+      const responseTime = Date.now() - startTime;
+
+      // Save user message to database
+      try {
+        await window.api.messageSave({
+          conversationId,
+          role: 'user',
+          content,
+          metadata: {
+            contextLevel: 1,
+          },
+        });
+      } catch (saveError) {
+        console.error('Failed to save user message:', saveError);
+      }
+
+      // Save AI response to database
+      try {
+        // Get the final AI response content
+        const finalAiMessage = await new Promise<string>((resolve) => {
+          setMessages((prev) => {
+            const aiMsg = prev.find((msg) => msg.id === aiMessageId);
+            if (aiMsg) {
+              resolve(aiMsg.content);
+            }
+            return prev;
+          });
+        });
+
+        await window.api.messageSave({
+          conversationId,
+          role: 'assistant',
+          content: response.response,
+          metadata: {
+            responseTime,
+            contextLevel: 1,
+          },
+        });
+      } catch (saveError) {
+        console.error('Failed to save AI message:', saveError);
       }
     } catch (error) {
       console.error('Failed to send message:', error);

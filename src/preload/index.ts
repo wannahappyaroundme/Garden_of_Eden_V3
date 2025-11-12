@@ -202,6 +202,55 @@ const api = {
     return await ipcRenderer.invoke('git:stash-pop') as { success: boolean };
   },
 
+  // Message operations
+  messageSave: async (args: {
+    conversationId: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    metadata?: {
+      tokens?: number;
+      responseTime?: number;
+      contextLevel?: 1 | 2 | 3;
+    };
+  }) => {
+    return await ipcRenderer.invoke('message:save', args);
+  },
+
+  messageGetByConversation: async (args: {
+    conversationId: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    return await ipcRenderer.invoke('message:get-by-conversation', args);
+  },
+
+  messageGetRecent: async (args: {
+    conversationId: string;
+    count?: number;
+  }) => {
+    return await ipcRenderer.invoke('message:get-recent', args);
+  },
+
+  messageUpdateSatisfaction: async (args: {
+    messageId: string;
+    satisfaction: 'positive' | 'negative';
+  }) => {
+    return await ipcRenderer.invoke('message:update-satisfaction', args) as Promise<boolean>;
+  },
+
+  messageSearch: async (args: {
+    query: string;
+    limit?: number;
+  }) => {
+    return await ipcRenderer.invoke('message:search', args);
+  },
+
+  messageDelete: async (args: {
+    messageId: string;
+  }) => {
+    return await ipcRenderer.invoke('message:delete', args) as Promise<boolean>;
+  },
+
   // Platform info
   platform: process.platform,
   versions: {
