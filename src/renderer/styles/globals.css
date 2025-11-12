@@ -175,3 +175,21 @@
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease-out forwards;
 }
+
+/* Focus visible states for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Skip outline for mouse users */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
