@@ -5,11 +5,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
-import { ChatInput } from '../components/chat/ChatInput';
+import { ChatInput, ChatInputHandle } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
 import { ConversationHistory } from '../components/sidebar/ConversationHistory';
 import { ErrorBubble } from '../components/chat/ErrorBubble';
 import { Button } from '../components/ui/button';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 interface Message {
   id: string;
@@ -30,6 +31,19 @@ export function Chat({ onOpenSettings }: ChatProps) {
   const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<ChatInputHandle>(null);
+
+  // Setup keyboard shortcuts
+  useKeyboardShortcuts({
+    onFocusInput: () => inputRef.current?.focus(),
+    onOpenSettings: onOpenSettings,
+    onEscape: () => {
+      // Blur the input if it's focused
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    },
+  });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -308,6 +322,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
         {/* Input area */}
         <ChatInput
+          ref={inputRef}
           onSendMessage={handleSendMessage}
           onVoiceStart={handleVoiceStart}
           onVoiceStop={handleVoiceStop}

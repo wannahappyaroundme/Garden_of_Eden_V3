@@ -3,7 +3,7 @@
  * Input field with voice button and send functionality
  */
 
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent, forwardRef, useImperativeHandle } from 'react';
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
@@ -19,17 +19,32 @@ export interface ChatInputProps {
   placeholder?: string;
 }
 
-export function ChatInput({
-  onSendMessage,
-  onVoiceStart,
-  onVoiceStop,
-  isRecording = false,
-  isLoading = false,
-  disabled = false,
-  placeholder = '메시지를 입력하세요...',
-}: ChatInputProps) {
-  const [message, setMessage] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+export interface ChatInputHandle {
+  focus: () => void;
+}
+
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
+  (
+    {
+      onSendMessage,
+      onVoiceStart,
+      onVoiceStop,
+      isRecording = false,
+      isLoading = false,
+      disabled = false,
+      placeholder = '메시지를 입력하세요...',
+    },
+    ref
+  ) => {
+    const [message, setMessage] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Expose focus method to parent
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        textareaRef.current?.focus();
+      },
+    }));
 
   // Auto-resize textarea
   useEffect(() => {
@@ -110,8 +125,8 @@ export function ChatInput({
 
       {/* Helper text */}
       <div className="text-xs text-muted-foreground text-center mt-2">
-        Enter로 전송, Shift + Enter로 줄바꿈
+        Enter로 전송, Shift + Enter로 줄바꿈 • Cmd/Ctrl+K로 포커스
       </div>
     </div>
   );
-}
+});
