@@ -11,9 +11,10 @@ import type { PersonaSettings } from '../lib/tauri-api';
 
 interface SettingsProps {
   onClose: () => void;
+  onThemeChange?: (theme: 'light' | 'dark') => void;
 }
 
-export function Settings({ onClose }: SettingsProps) {
+export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -377,7 +378,11 @@ export function Settings({ onClose }: SettingsProps) {
                 </div>
                 <Switch
                   checked={theme === 'dark'}
-                  onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                  onCheckedChange={(checked) => {
+                    const newTheme = checked ? 'dark' : 'light';
+                    setTheme(newTheme);
+                    onThemeChange?.(newTheme);
+                  }}
                 />
               </div>
 
