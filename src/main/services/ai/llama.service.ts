@@ -1,274 +1,331 @@
 /**
  * Llama Service
- * Handles Llama 3.1 8B model for conversation generation
+ * Manages Llama 3.1 8B model for AI conversations
  */
 
-// Type-only imports for node-llama-cpp (package not installed yet)
-type LlamaModel = any;
-type LlamaContext = any;
-type LlamaChatSession = any;
+import { LlamaModel, LlamaContext, LlamaChatSession } from 'node-llama-cpp';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import { log } from '../../utils/logger';
+import { personaService } from '../learning/persona.service';
 
-import path from 'path';
-import fs from 'fs';
-import log from 'electron-log';
-import type { LLMConfig, StreamToken, GenerationMetrics } from '@shared/types/ai.types';
-import type { PersonaParameters } from '@shared/types/persona.types';
+export interface LlamaConfig {
+  modelPath: string;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  maxTokens?: number;
+  contextSize?: number;
+  gpuLayers?: number; // Number of layers to offload to GPU
+}
 
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface StreamCallback {
+  onToken: (token: string) => void;
+  onComplete: (fullResponse: string) => void;
+  onError: (error: Error) => void;
+}
+
+/**
+ * Llama Service
+ * Handles local AI model loading and inference
+ */
 export class LlamaService {
   private model: LlamaModel | null = null;
   private context: LlamaContext | null = null;
   private session: LlamaChatSession | null = null;
-  private modelPath: string;
-  private _config: LLMConfig;
-  private isInitialized = false;
+  private config: LlamaConfig;
+  private isLoading: boolean = false;
+  private conversationHistory: ChatMessage[] = [];
 
-  constructor(config?: Partial<LLMConfig>) {
-    // Determine model path
-    const isDev = process.env.NODE_ENV === 'development';
-    const resourcesPath = isDev
-      ? path.join(process.cwd(), 'resources')
-      : path.join(process.resourcesPath, 'resources');
-
-    this.modelPath = path.join(resourcesPath, 'models', 'llama-3.1-8b-instruct-q4.gguf');
-
-    // Default configuration
-    this._config = {
-      modelPath: this.modelPath,
-      contextSize: config?.contextSize ?? 8192,
-      temperature: config?.temperature ?? 0.7,
-      topP: config?.topP ?? 0.9,
-      topK: config?.topK ?? 40,
-      maxTokens: config?.maxTokens ?? 2048,
-      repeatPenalty: config?.repeatPenalty ?? 1.1,
-      seed: config?.seed,
+  constructor(config: LlamaConfig) {
+    this.config = {
+      temperature: 0.7,
+      topP: 0.9,
+      topK: 40,
+      maxTokens: 2048,
+      contextSize: 4096,
+      gpuLayers: 33, // Default for M3 chips (offload most layers to GPU)
+      ...config,
     };
   }
 
   /**
-   * Get current config
-   */
-  getConfig(): LLMConfig {
-    return this._config;
-  }
-
-  /**
-   * Initialize Llama model
+   * Initialize and load the Llama model
    */
   async initialize(): Promise<void> {
-    if (this.isInitialized) {
-      log.info('Llama model already initialized');
+    if (this.isLoading) {
+      throw new Error('Model is already loading');
+    }
+
+    if (this.model) {
+      log.ai.info('Llama model already loaded');
       return;
     }
 
+    this.isLoading = true;
+
     try {
-      log.info(`Loading Llama model from: ${this.modelPath}`);
+      log.ai.info('Loading Llama model...', { path: this.config.modelPath });
 
       // Check if model file exists
-      if (!fs.existsSync(this.modelPath)) {
-        throw new Error(
-          `Model file not found: ${this.modelPath}. Please run 'npm run download:llama' first.`
-        );
+      try {
+        await fs.access(this.config.modelPath);
+      } catch {
+        throw new Error(\`Model file not found: \${this.config.modelPath}\`);
       }
 
-      const startTime = Date.now();
+      // Load model
+      this.model = new LlamaModel({
+        modelPath: this.config.modelPath,
+        gpuLayers: this.config.gpuLayers,
+      });
 
-      // TODO: Load model with node-llama-cpp once arm64 compatible
-      // For now, keep as placeholder structure
-      throw new Error('Llama model integration pending - awaiting arm64 Node.js or alternative');
+      log.ai.info('Llama model loaded successfully');
 
-      // This will be enabled in Phase 3:
-      // this.model = await LlamaModel.load({ modelPath: this.modelPath });
-      // this.context = await this.model.createContext({ contextSize: this.config.contextSize });
-      // this.session = new LlamaChatSession({ contextSequence: this.context.getSequence() });
+      // Create context
+      this.context = new LlamaContext({
+        model: this.model,
+        contextSize: this.config.contextSize,
+      });
 
-      const loadTime = Date.now() - startTime;
-      log.info(`Llama model loaded successfully in ${loadTime}ms`);
+      log.ai.info('Llama context created', { contextSize: this.config.contextSize });
 
-      this.isInitialized = true;
+      // Create chat session
+      this.session = new LlamaChatSession({
+        context: this.context,
+      });
+
+      // Set system prompt from persona
+      const systemPrompt = personaService.generateSystemPrompt();
+      this.conversationHistory.push({
+        role: 'system',
+        content: systemPrompt,
+      });
+
+      log.ai.info('Llama chat session ready');
     } catch (error) {
-      log.error('Failed to initialize Llama model:', error);
+      log.ai.error('Failed to load Llama model', error);
+      this.cleanup();
       throw error;
+    } finally {
+      this.isLoading = false;
     }
   }
 
   /**
-   * Check if model is initialized
+   * Check if model is loaded and ready
    */
   isReady(): boolean {
-    return this.isInitialized && this.session !== null;
+    return this.model !== null && this.context !== null && this.session !== null;
   }
 
   /**
-   * Generate system prompt from persona parameters
+   * Generate a chat response (streaming)
    */
-  private generateSystemPrompt(persona: PersonaParameters): string {
-    const formality = persona.formality > 60 ? 'formal' : persona.formality < 40 ? 'casual' : 'balanced';
-    const verbosity = persona.verbosity > 60 ? 'detailed' : persona.verbosity < 40 ? 'concise' : 'balanced';
-    const humor = persona.humor > 50 ? 'with humor and wit' : 'professionally';
-    const lang = persona.languagePreference === 'ko' ? 'Korean' : persona.languagePreference === 'en' ? 'English' : 'the user\'s language';
-
-    return `You are Eden, a friendly and helpful AI assistant. Your personality:
-- Communication style: ${formality}, ${verbosity}
-- You respond ${humor}
-- Primary language: ${lang}
-- Empathy level: ${persona.empathy > 70 ? 'very empathetic' : 'professional'}
-- Technical depth: ${persona.technicality > 60 ? 'technical and detailed' : 'simple and clear'}
-
-Your role is to assist users with their tasks, provide emotional support, and help boost their productivity. Be encouraging and patient.`;
-  }
-
-  /**
-   * Generate response (non-streaming)
-   */
-  async generate(
-    prompt: string,
-    persona: PersonaParameters,
-    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
-  ): Promise<{ response: string; metrics: GenerationMetrics }> {
+  async chat(
+    message: string,
+    options?: {
+      conversationId?: string;
+      temperature?: number;
+      maxTokens?: number;
+      stream?: StreamCallback;
+    }
+  ): Promise<string> {
     if (!this.isReady()) {
-      await this.initialize();
+      throw new Error('Llama model not initialized. Call initialize() first.');
     }
 
     try {
-      const startTime = Date.now();
-      const systemPrompt = this.generateSystemPrompt(persona);
+      log.ai.info('Generating chat response', {
+        messageLength: message.length,
+        conversationId: options?.conversationId,
+      });
 
-      log.info(`Generating response for prompt: ${prompt.substring(0, 50)}...`);
+      // Add user message to history
+      this.conversationHistory.push({
+        role: 'user',
+        content: message,
+      });
 
-      // Build conversation context
-      let fullPrompt = `${systemPrompt}\n\n`;
+      const temperature = options?.temperature ?? this.config.temperature!;
+      const maxTokens = options?.maxTokens ?? this.config.maxTokens!;
 
-      if (conversationHistory && conversationHistory.length > 0) {
-        for (const msg of conversationHistory.slice(-10)) {
-          // Last 10 messages
-          const role = msg.role === 'user' ? 'User' : 'Eden';
-          fullPrompt += `${role}: ${msg.content}\n`;
-        }
-      }
+      let fullResponse = '';
 
-      fullPrompt += `User: ${prompt}\nEden:`;
+      // Generate response with streaming
+      const response = await this.session!.prompt(message, {
+        temperature,
+        maxTokens,
+        topP: this.config.topP,
+        topK: this.config.topK,
+        onToken: (token: number[]) => {
+          const decodedToken = this.model!.detokenize(token);
+          fullResponse += decodedToken;
+          options?.stream?.onToken(decodedToken);
+        },
+      });
 
-      // Generate response
-      // TODO: Uncomment when node-llama-cpp is compatible
-      // const response = await this.session!.prompt(fullPrompt, {
-      //   temperature: this.config.temperature,
-      //   topP: this.config.topP,
-      //   topK: this.config.topK,
-      //   maxTokens: this.config.maxTokens,
-      //   repeatPenalty: { ... },
-      // });
-      const response = 'Placeholder response';
+      // Add assistant response to history
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: fullResponse,
+      });
 
-      const totalTime = Date.now() - startTime;
-      const tokenCount = response.split(' ').length; // Rough estimate
+      // Manage context window (keep last N messages)
+      this.trimConversationHistory();
 
-      const metrics: GenerationMetrics = {
-        tokensGenerated: tokenCount,
-        tokensPerSecond: tokenCount / (totalTime / 1000),
-        totalTimeMs: totalTime,
-        promptTokens: fullPrompt.split(' ').length,
-      };
+      log.ai.info('Chat response generated', {
+        responseLength: fullResponse.length,
+        conversationHistorySize: this.conversationHistory.length,
+      });
 
-      log.info(
-        `Response generated in ${totalTime}ms (${metrics.tokensPerSecond.toFixed(1)} tokens/s)`
-      );
+      options?.stream?.onComplete(fullResponse);
 
-      return {
-        response: response.trim(),
-        metrics,
-      };
+      return fullResponse;
     } catch (error) {
-      log.error('Failed to generate response:', error);
+      log.ai.error('Failed to generate chat response', error);
+      options?.stream?.onError(error as Error);
       throw error;
     }
   }
 
   /**
-   * Generate response with streaming
+   * Generate a response without streaming
    */
-  async *generateStream(
-    prompt: string,
-    persona: PersonaParameters,
-    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
-  ): AsyncGenerator<StreamToken> {
+  async generate(prompt: string, systemPrompt?: string): Promise<string> {
     if (!this.isReady()) {
-      await this.initialize();
+      throw new Error('Llama model not initialized. Call initialize() first.');
     }
 
     try {
-      const systemPrompt = this.generateSystemPrompt(persona);
-      log.info(`Streaming response for prompt: ${prompt.substring(0, 50)}...`);
+      log.ai.info('Generating response', { promptLength: prompt.length });
 
-      // Build conversation context
-      let fullPrompt = `${systemPrompt}\n\n`;
+      const fullPrompt = systemPrompt
+        ? \`\${systemPrompt}\n\nUser: \${prompt}\n\nAssistant:\`
+        : prompt;
 
-      if (conversationHistory && conversationHistory.length > 0) {
-        for (const msg of conversationHistory.slice(-10)) {
-          const role = msg.role === 'user' ? 'User' : 'Eden';
-          fullPrompt += `${role}: ${msg.content}\n`;
-        }
-      }
+      const response = await this.session!.prompt(fullPrompt, {
+        temperature: this.config.temperature,
+        maxTokens: this.config.maxTokens,
+        topP: this.config.topP,
+        topK: this.config.topK,
+      });
 
-      fullPrompt += `User: ${prompt}\nEden:`;
+      log.ai.info('Response generated', { responseLength: response.length });
 
-      let index = 0;
-
-      // Stream tokens
-      // TODO: Uncomment when node-llama-cpp is compatible
-      // for await (const token of this.session!.promptTokens(fullPrompt, { ... })) {
-      //   yield { token, index: index++ };
-      // }
-
-      // Placeholder: yield the full prompt in chunks
-      const words = fullPrompt.split(' ');
-      for (const word of words) {
-        yield { token: word + ' ', index: index++ };
-      }
+      return response;
     } catch (error) {
-      log.error('Failed to stream response:', error);
+      log.ai.error('Failed to generate response', error);
       throw error;
     }
+  }
+
+  /**
+   * Clear conversation history and start fresh
+   */
+  clearHistory(): void {
+    const systemPrompt = this.conversationHistory.find((msg) => msg.role === 'system');
+    this.conversationHistory = systemPrompt ? [systemPrompt] : [];
+    log.ai.info('Conversation history cleared');
+  }
+
+  /**
+   * Update system prompt (for persona changes)
+   */
+  updateSystemPrompt(systemPrompt: string): void {
+    const systemMessage = this.conversationHistory.find((msg) => msg.role === 'system');
+    if (systemMessage) {
+      systemMessage.content = systemPrompt;
+    } else {
+      this.conversationHistory.unshift({
+        role: 'system',
+        content: systemPrompt,
+      });
+    }
+    log.ai.info('System prompt updated');
+  }
+
+  /**
+   * Get conversation history
+   */
+  getHistory(): ChatMessage[] {
+    return [...this.conversationHistory];
+  }
+
+  /**
+   * Trim conversation history to fit context window
+   */
+  private trimConversationHistory(): void {
+    // Keep system prompt + last N messages that fit in context
+    const maxMessages = 20; // Adjust based on context size
+    const systemMessage = this.conversationHistory.find((msg) => msg.role === 'system');
+
+    if (this.conversationHistory.length > maxMessages) {
+      const recentMessages = this.conversationHistory.slice(-maxMessages);
+      this.conversationHistory = systemMessage
+        ? [systemMessage, ...recentMessages.filter((msg) => msg.role !== 'system')]
+        : recentMessages;
+
+      log.ai.info('Conversation history trimmed', {
+        newSize: this.conversationHistory.length,
+      });
+    }
+  }
+
+  /**
+   * Get model info
+   */
+  getModelInfo(): { loaded: boolean; modelPath: string; config: LlamaConfig } {
+    return {
+      loaded: this.isReady(),
+      modelPath: this.config.modelPath,
+      config: this.config,
+    };
   }
 
   /**
    * Cleanup resources
    */
   async cleanup(): Promise<void> {
-    log.info('Cleaning up Llama service...');
+    try {
+      if (this.session) {
+        // Session cleanup is automatic
+        this.session = null;
+      }
 
-    if (this.session) {
-      // Session cleanup is automatic
-      this.session = null;
+      if (this.context) {
+        await this.context.dispose();
+        this.context = null;
+      }
+
+      if (this.model) {
+        await this.model.dispose();
+        this.model = null;
+      }
+
+      this.conversationHistory = [];
+      log.ai.info('Llama service cleaned up');
+    } catch (error) {
+      log.ai.error('Error during cleanup', error);
+      throw error;
     }
-
-    if (this.context) {
-      // Context cleanup is automatic
-      this.context = null;
-    }
-
-    if (this.model) {
-      // Model cleanup is automatic
-      this.model = null;
-    }
-
-    this.isInitialized = false;
-    log.info('Llama service cleaned up');
   }
 }
 
 // Singleton instance
-let llamaServiceInstance: LlamaService | null = null;
+// Model path will be set during first-run setup
+const defaultModelPath = path.join(
+  process.env.HOME || process.env.USERPROFILE || '.',
+  '.garden-of-eden-v3',
+  'models',
+  'llama-3.1-8b-instruct-q4_k_m.gguf'
+);
 
-export function getLlamaService(): LlamaService {
-  if (!llamaServiceInstance) {
-    llamaServiceInstance = new LlamaService();
-  }
-  return llamaServiceInstance;
-}
-
-export async function cleanupLlamaService(): Promise<void> {
-  if (llamaServiceInstance) {
-    await llamaServiceInstance.cleanup();
-    llamaServiceInstance = null;
-  }
-}
+export const llamaService = new LlamaService({
+  modelPath: defaultModelPath,
+});

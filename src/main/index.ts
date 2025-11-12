@@ -8,10 +8,9 @@ import { WindowManager } from './window';
 import { initializeDatabase, closeDatabase } from './database';
 import { registerSystemHandlers } from './ipc/system.handler';
 import { registerSettingsHandlers } from './ipc/settings.handler';
-import { registerAIHandlers } from './ipc/ai.handler';
+import { registerAIHandlers, cleanupAIResources } from './ipc/ai.handler';
 import { registerFileHandlers } from './ipc/file.handler';
 import { registerGitHandlers } from './ipc/git.handler';
-import { getAIManager, cleanupAIManager } from './services/ai/ai-manager.service';
 import log from 'electron-log';
 
 // Lazy-load electron to avoid module loading issues
@@ -61,25 +60,16 @@ const initialize = async () => {
     // Initialize database
     initializeDatabase();
 
-    // Initialize AI services
-    try {
-      const aiManager = getAIManager();
-      await aiManager.initialize();
-      log.info('AI services initialized');
-    } catch (error) {
-      log.warn('AI services initialization failed (app will continue without AI):', error);
-    }
-
-    // Register IPC handlers
-    registerSystemHandlers();
-    registerSettingsHandlers();
-    registerAIHandlers();
-    registerFileHandlers();
-    registerGitHandlers();
-
     // Create window manager
     windowManager = new WindowManager();
     await windowManager.createMainWindow();
+
+    // Register IPC handlers (AI handler needs mainWindow)
+    registerSystemHandlers();
+    registerSettingsHandlers();
+    registerAIHandlers(windowManager.mainWindow!);
+    registerFileHandlers();
+    registerGitHandlers();
 
     log.info('Application initialized successfully');
   } catch (error) {
@@ -159,7 +149,7 @@ electronApp.on('before-quit', async () => {
   closeDatabase();
 
   // Cleanup AI services
-  await cleanupAIManager();
+  await cleanupAIResources();
 });
 
 /**
