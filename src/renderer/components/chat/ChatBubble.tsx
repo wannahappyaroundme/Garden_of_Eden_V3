@@ -3,6 +3,7 @@
  * KakaoTalk-inspired message bubble with timestamp
  */
 
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -15,6 +16,7 @@ export interface ChatBubbleProps {
 
 export function ChatBubble({ message, role, timestamp, isStreaming = false }: ChatBubbleProps) {
   const isUser = role === 'user';
+  const [copied, setCopied] = useState(false);
 
   // Format timestamp to HH:MM
   const timeString = new Intl.DateTimeFormat('ko-KR', {
@@ -22,6 +24,16 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
     minute: '2-digit',
     hour12: false,
   }).format(timestamp);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+    }
+  };
 
   return (
     <div className={cn('flex w-full gap-2 mb-3', isUser ? 'justify-end' : 'justify-start')}>
@@ -34,19 +46,41 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
 
       {/* Message content */}
       <div className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
-        <div
-          className={cn(
-            'max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words',
-            isUser
-              ? 'bg-[hsl(var(--chat-user-bg))] text-gray-900 dark:text-white rounded-tr-sm'
-              : 'bg-[hsl(var(--chat-ai-bg))] text-foreground rounded-tl-sm',
-            isStreaming && 'animate-pulse'
-          )}
-        >
-          {!isUser && message ? (
-            <MarkdownRenderer content={message} />
-          ) : (
-            <div className="whitespace-pre-wrap">{message || (isStreaming ? '...' : '')}</div>
+        <div className="relative group">
+          <div
+            className={cn(
+              'max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words',
+              isUser
+                ? 'bg-[hsl(var(--chat-user-bg))] text-gray-900 dark:text-white rounded-tr-sm'
+                : 'bg-[hsl(var(--chat-ai-bg))] text-foreground rounded-tl-sm',
+              isStreaming && 'animate-pulse'
+            )}
+          >
+            {!isUser && message ? (
+              <MarkdownRenderer content={message} />
+            ) : (
+              <div className="whitespace-pre-wrap">{message || (isStreaming ? '...' : '')}</div>
+            )}
+          </div>
+
+          {/* Copy button for AI messages */}
+          {!isUser && message && !isStreaming && (
+            <button
+              onClick={handleCopy}
+              className="absolute -right-10 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+              title={copied ? 'Copied!' : 'Copy message'}
+            >
+              {copied ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                </svg>
+              )}
+            </button>
           )}
         </div>
 
