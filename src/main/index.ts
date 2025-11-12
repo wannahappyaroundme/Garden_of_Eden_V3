@@ -5,6 +5,7 @@
 
 import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './window';
+import { initializeDatabase, closeDatabase } from './database';
 import log from 'electron-log';
 
 // Initialize logger
@@ -25,6 +26,9 @@ if (require('electron-squirrel-startup')) {
 const initialize = async () => {
   try {
     log.info('Initializing application...');
+
+    // Initialize database
+    initializeDatabase();
 
     // Create window manager
     windowManager = new WindowManager();
@@ -99,6 +103,9 @@ app.on('before-quit', () => {
   if (windowManager) {
     windowManager.cleanup();
   }
+
+  // Close database
+  closeDatabase();
 });
 
 /**
