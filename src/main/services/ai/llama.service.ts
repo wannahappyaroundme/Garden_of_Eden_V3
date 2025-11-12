@@ -3,7 +3,11 @@
  * Handles Llama 3.1 8B model for conversation generation
  */
 
-import { LlamaModel, LlamaContext, LlamaChatSession } from 'node-llama-cpp';
+// Type-only imports for node-llama-cpp (package not installed yet)
+type LlamaModel = any;
+type LlamaContext = any;
+type LlamaChatSession = any;
+
 import path from 'path';
 import fs from 'fs';
 import log from 'electron-log';

@@ -57,10 +57,24 @@ export function Chat() {
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error('Failed to send message:', error);
+
+      // Determine error message based on error type
+      let errorContent = '죄송합니다. 메시지 전송에 실패했습니다.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('Ollama')) {
+          errorContent = 'AI 서비스에 연결할 수 없습니다. Ollama가 실행 중인지 확인해주세요.';
+        } else if (error.message.includes('timeout')) {
+          errorContent = 'AI 응답 시간이 초과되었습니다. 다시 시도해주세요.';
+        } else if (error.message.includes('database')) {
+          errorContent = '데이터베이스 오류가 발생했습니다. 앱을 재시작해주세요.';
+        }
+      }
+
       // Add error message
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
-        content: '죄송합니다. 메시지 전송에 실패했습니다. 다시 시도해주세요.',
+        content: errorContent + '\n\n다시 시도하시겠습니까?',
         role: 'assistant',
         timestamp: new Date(),
       };
@@ -73,7 +87,7 @@ export function Chat() {
   const handleVoiceStart = async () => {
     try {
       const result = await window.api.voiceInputStart();
-      if (result.recording) {
+      if (result) {
         setIsRecording(true);
       }
     } catch (error) {
@@ -83,12 +97,12 @@ export function Chat() {
 
   const handleVoiceStop = async () => {
     try {
-      const result = await window.api.voiceInputStop();
+      const transcript = await window.api.voiceInputStop();
       setIsRecording(false);
 
       // If transcript is available, send it as a message
-      if (result.transcript && result.transcript.trim()) {
-        await handleSendMessage(result.transcript);
+      if (transcript && transcript.trim()) {
+        await handleSendMessage(transcript);
       }
     } catch (error) {
       console.error('Failed to stop voice recording:', error);

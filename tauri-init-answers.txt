@@ -1,0 +1,6 @@
+garden-of-eden-v3
+Garden of Eden V3
+http://localhost:5173
+dist
+npm run dev:renderer
+npm run build:renderer

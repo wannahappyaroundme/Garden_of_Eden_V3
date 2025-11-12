@@ -3,7 +3,7 @@
  * Garden of Eden V3 - 100% Local AI Assistant
  */
 
-import { app, BrowserWindow } from 'electron';
+import type { WebContents } from 'electron';
 import { WindowManager } from './window';
 import { initializeDatabase, closeDatabase } from './database';
 import { registerSystemHandlers } from './ipc/system.handler';
@@ -11,6 +11,21 @@ import { registerSettingsHandlers } from './ipc/settings.handler';
 import { registerAIHandlers } from './ipc/ai.handler';
 import { getAIManager, cleanupAIManager } from './services/ai/ai-manager.service';
 import log from 'electron-log';
+
+// Lazy-load electron to avoid module loading issues
+let app: any;
+let BrowserWindow: any;
+
+function getElectron() {
+  if (!app) {
+    const electron = require('electron');
+    app = electron.app;
+    BrowserWindow = electron.BrowserWindow;
+    console.log('Electron loaded - app type:', typeof app);
+    console.log('Electron loaded - BrowserWindow type:', typeof BrowserWindow);
+  }
+  return { app, BrowserWindow };
+}
 
 // Initialize logger
 log.transports.file.level = 'info';
@@ -23,7 +38,10 @@ let windowManager: WindowManager | null = null;
 try {
   const squirrelStartup = require('electron-squirrel-startup');
   if (squirrelStartup) {
-    app.quit();
+    const { app: electronApp } = getElectron();
+    if (electronApp) {
+      electronApp.quit();
+    }
   }
 } catch (error) {
   log.warn('electron-squirrel-startup not available:', error);
@@ -33,6 +51,8 @@ try {
  * Initialize the application
  */
 const initialize = async () => {
+  const { app: electronApp } = getElectron();
+
   try {
     log.info('Initializing application...');
 
@@ -60,26 +80,29 @@ const initialize = async () => {
     log.info('Application initialized successfully');
   } catch (error) {
     log.error('Failed to initialize application:', error);
-    app.quit();
+    electronApp.quit();
   }
 };
 
 /**
  * App lifecycle: Ready
  */
-app.on('ready', async () => {
+// Load electron and set up event handlers
+const { app: electronApp } = getElectron();
+
+electronApp.on('ready', async () => {
   log.info('App ready event');
 
   // Single instance lock
-  const gotTheLock = app.requestSingleInstanceLock();
+  const gotTheLock = electronApp.requestSingleInstanceLock();
 
   if (!gotTheLock) {
     log.warn('Another instance is already running');
-    app.quit();
+    electronApp.quit();
     return;
   }
 
-  app.on('second-instance', () => {
+  electronApp.on('second-instance', () => {
     // Someone tried to run a second instance, focus our window
     if (windowManager?.mainWindow) {
       if (windowManager.mainWindow.isMinimized()) {
@@ -95,23 +118,24 @@ app.on('ready', async () => {
 /**
  * App lifecycle: All windows closed
  */
-app.on('window-all-closed', () => {
+electronApp.on('window-all-closed', () => {
   log.info('All windows closed');
 
   // On macOS, keep app running even when all windows are closed
   if (process.platform !== 'darwin') {
-    app.quit();
+    electronApp.quit();
   }
 });
 
 /**
  * App lifecycle: Activate (macOS)
  */
-app.on('activate', async () => {
+electronApp.on('activate', async () => {
+  const { BrowserWindow: ElectronBrowserWindow } = getElectron();
   log.info('App activate event');
 
   // On macOS, re-create window when dock icon is clicked and no windows exist
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (ElectronBrowserWindow.getAllWindows().length === 0) {
     await initialize();
   }
 });
@@ -119,7 +143,7 @@ app.on('activate', async () => {
 /**
  * App lifecycle: Before quit
  */
-app.on('before-quit', async () => {
+electronApp.on('before-quit', async () => {
   log.info('App quitting...');
 
   // Cleanup
@@ -149,8 +173,8 @@ process.on('unhandledRejection', (reason, promise) => {
 /**
  * Security: Disable navigation to external URLs
  */
-app.on('web-contents-created', (_event, contents) => {
-  contents.on('will-navigate', (event, navigationUrl) => {
+electronApp.on('web-contents-created', (_event: any, contents: WebContents) => {
+  contents.on('will-navigate', (event: any, navigationUrl: string) => {
     const parsedUrl = new URL(navigationUrl);
 
     // Only allow localhost during development
@@ -160,9 +184,9 @@ app.on('web-contents-created', (_event, contents) => {
     }
   });
 
-  contents.setWindowOpenHandler(({ url }) => {
+  contents.setWindowOpenHandler(({ url }: { url: string }) => {
     log.warn('Blocked new window:', url);
-    return { action: 'deny' };
+    return { action: 'deny' as const };
   });
 });
 

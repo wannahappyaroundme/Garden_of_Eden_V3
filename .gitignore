@@ -87,6 +87,11 @@ plugins/*.js
 .electron/
 .webpack/
 
+# Tauri / Rust build artifacts
+src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/WixTools/
+
 # macOS
 .AppleDouble
 .LSOverride
