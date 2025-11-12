@@ -1,16 +1,18 @@
 /**
  * AI IPC Handler
  * Handles AI-related operations (chat, voice, screen analysis)
- * TODO: Integrate actual AI models in Phase 2
  */
 
 import { ipcMain } from 'electron';
 import log from 'electron-log';
 import { ConversationRepository } from '../database/repositories/conversation.repository';
 import { MessageRepository } from '../database/repositories/message.repository';
+import { getAIManager } from '../services/ai/ai-manager.service';
+import { DEFAULT_PERSONA } from '../../../shared/types/persona.types';
 
 const conversationRepo = new ConversationRepository();
 const messageRepo = new MessageRepository();
+const aiManager = getAIManager();
 
 export function registerAIHandlers(): void {
   log.info('Registering AI IPC handlers');
@@ -42,20 +44,27 @@ export function registerAIHandlers(): void {
           contextLevel,
         });
 
-        // TODO: Phase 2 - Generate AI response using Llama 3.1 8B
-        // For now, return a placeholder response
-        const placeholderResponse = `안녕하세요! 저는 Eden입니다. 현재 AI 모델 통합 중입니다.
-입력하신 메시지: "${message}"
-곧 실제 AI 응답을 제공할 예정입니다! 🌟`;
+        // Get conversation history for context
+        const history = messageRepo.getRecentMessages(conversation.id, 10).map((msg) => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+        }));
+
+        // Generate AI response using AI Manager
+        const { response: aiResponse, metrics } = await aiManager.generateResponse(
+          message,
+          DEFAULT_PERSONA, // TODO: Load user's custom persona from database
+          history
+        );
 
         // Save AI message
         const assistantMessage = messageRepo.create(
           conversation.id,
           'assistant',
-          placeholderResponse,
+          aiResponse,
           {
-            responseTime: 100,
-            tokens: 50,
+            responseTime: metrics?.responseTime,
+            tokens: metrics?.tokens,
             contextLevel,
           }
         );
@@ -69,7 +78,7 @@ export function registerAIHandlers(): void {
         return {
           conversationId: conversation.id,
           messageId: assistantMessage.id,
-          response: placeholderResponse,
+          response: aiResponse,
         };
       } catch (error) {
         log.error('Failed to process chat message:', error);
@@ -80,25 +89,20 @@ export function registerAIHandlers(): void {
 
   /**
    * Start voice input
-   * TODO: Integrate with Whisper Large V3
    */
   ipcMain.handle('ai:voice-input-start', async () => {
-    log.info('Voice input started (placeholder)');
-    // TODO: Phase 2 - Start Whisper recording
-    return { recording: true };
+    log.info('Starting voice input...');
+    const recording = await aiManager.startVoiceInput();
+    return { recording };
   });
 
   /**
    * Stop voice input and get transcript
-   * TODO: Integrate with Whisper Large V3
    */
   ipcMain.handle('ai:voice-input-stop', async () => {
-    log.info('Voice input stopped (placeholder)');
-    // TODO: Phase 2 - Stop Whisper and get transcript
-    return {
-      transcript: '음성 인식 기능은 Phase 2에서 구현됩니다',
-      language: 'ko' as const,
-    };
+    log.info('Stopping voice input...');
+    const result = await aiManager.stopVoiceInput();
+    return result;
   });
 
   /**

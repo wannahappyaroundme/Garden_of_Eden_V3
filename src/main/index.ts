@@ -9,6 +9,7 @@ import { initializeDatabase, closeDatabase } from './database';
 import { registerSystemHandlers } from './ipc/system.handler';
 import { registerSettingsHandlers } from './ipc/settings.handler';
 import { registerAIHandlers } from './ipc/ai.handler';
+import { getAIManager, cleanupAIManager } from './services/ai/ai-manager.service';
 import log from 'electron-log';
 
 // Initialize logger
@@ -32,6 +33,15 @@ const initialize = async () => {
 
     // Initialize database
     initializeDatabase();
+
+    // Initialize AI services
+    try {
+      const aiManager = getAIManager();
+      await aiManager.initialize();
+      log.info('AI services initialized');
+    } catch (error) {
+      log.warn('AI services initialization failed (app will continue without AI):', error);
+    }
 
     // Register IPC handlers
     registerSystemHandlers();
@@ -104,7 +114,7 @@ app.on('activate', async () => {
 /**
  * App lifecycle: Before quit
  */
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   log.info('App quitting...');
 
   // Cleanup
@@ -114,6 +124,9 @@ app.on('before-quit', () => {
 
   // Close database
   closeDatabase();
+
+  // Cleanup AI services
+  await cleanupAIManager();
 });
 
 /**
