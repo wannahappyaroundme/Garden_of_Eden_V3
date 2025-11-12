@@ -54,6 +54,32 @@ const api = {
     return await ipcRenderer.invoke('ai:chat', args) as { conversationId: string; messageId: string; response: string };
   },
 
+  // Chat with streaming support
+  chatStream: async (
+    args: { message: string; conversationId?: string; contextLevel?: 1 | 2 | 3 },
+    onToken: (token: string) => void
+  ) => {
+    // Setup streaming listeners
+    const tokenHandler = (_event: IpcRendererEvent, data: { token: string; messageId: string }) => {
+      onToken(data.token);
+    };
+
+    ipcRenderer.on('ai:stream-token', tokenHandler);
+
+    try {
+      const response = await ipcRenderer.invoke('ai:chat', args) as { conversationId: string; messageId: string; response: string };
+
+      // Cleanup listener
+      ipcRenderer.removeListener('ai:stream-token', tokenHandler);
+
+      return response;
+    } catch (error) {
+      // Cleanup listener on error
+      ipcRenderer.removeListener('ai:stream-token', tokenHandler);
+      throw error;
+    }
+  },
+
   voiceInputStart: async () => {
     return await ipcRenderer.invoke('ai:voice-input-start') as { recording: boolean };
   },
