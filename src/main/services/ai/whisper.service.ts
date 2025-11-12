@@ -7,11 +7,11 @@
 import path from 'path';
 import fs from 'fs';
 import log from 'electron-log';
-import type { WhisperConfig } from '../../../shared/types/ai.types';
+import type { WhisperConfig } from '@shared/types/ai.types';
 
 export class WhisperService {
   private modelPath: string;
-  private config: WhisperConfig;
+  private _config: WhisperConfig;
   private isInitialized = false;
   private isRecording = false;
 
@@ -25,11 +25,18 @@ export class WhisperService {
     this.modelPath = path.join(resourcesPath, 'models', 'whisper-large-v3.bin');
 
     // Default configuration
-    this.config = {
+    this._config = {
       modelPath: this.modelPath,
       language: config?.language ?? 'auto',
       task: config?.task ?? 'transcribe',
     };
+  }
+
+  /**
+   * Get current config
+   */
+  getConfig(): WhisperConfig {
+    return this._config;
   }
 
   /**

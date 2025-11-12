@@ -6,7 +6,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import log from 'electron-log';
-import type { TTSConfig } from '../../../shared/types/ai.types';
+import type { TTSConfig } from '@shared/types/ai.types';
 
 const execAsync = promisify(exec);
 

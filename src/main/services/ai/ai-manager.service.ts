@@ -6,7 +6,7 @@
 import log from 'electron-log';
 import { getTTSService, cleanupTTSService } from './tts.service';
 import { getWhisperService, cleanupWhisperService } from './whisper.service';
-import type { PersonaParameters } from '../../../shared/types/persona.types';
+import type { PersonaParameters } from '@shared/types/persona.types';
 
 export class AIManagerService {
   private ttsService = getTTSService();

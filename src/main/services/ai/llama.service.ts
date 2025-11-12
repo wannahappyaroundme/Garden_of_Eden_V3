@@ -5,18 +5,17 @@
 
 import { LlamaModel, LlamaContext, LlamaChatSession } from 'node-llama-cpp';
 import path from 'path';
-import { app } from 'electron';
 import fs from 'fs';
 import log from 'electron-log';
-import type { LLMConfig, StreamToken, GenerationMetrics } from '../../../shared/types/ai.types';
-import type { PersonaParameters } from '../../../shared/types/persona.types';
+import type { LLMConfig, StreamToken, GenerationMetrics } from '@shared/types/ai.types';
+import type { PersonaParameters } from '@shared/types/persona.types';
 
 export class LlamaService {
   private model: LlamaModel | null = null;
   private context: LlamaContext | null = null;
   private session: LlamaChatSession | null = null;
   private modelPath: string;
-  private config: LLMConfig;
+  private _config: LLMConfig;
   private isInitialized = false;
 
   constructor(config?: Partial<LLMConfig>) {
@@ -29,7 +28,7 @@ export class LlamaService {
     this.modelPath = path.join(resourcesPath, 'models', 'llama-3.1-8b-instruct-q4.gguf');
 
     // Default configuration
-    this.config = {
+    this._config = {
       modelPath: this.modelPath,
       contextSize: config?.contextSize ?? 8192,
       temperature: config?.temperature ?? 0.7,
@@ -39,6 +38,13 @@ export class LlamaService {
       repeatPenalty: config?.repeatPenalty ?? 1.1,
       seed: config?.seed,
     };
+  }
+
+  /**
+   * Get current config
+   */
+  getConfig(): LLMConfig {
+    return this._config;
   }
 
   /**
@@ -62,21 +68,14 @@ export class LlamaService {
 
       const startTime = Date.now();
 
-      // Load model
-      this.model = new LlamaModel({
-        modelPath: this.modelPath,
-      });
+      // TODO: Load model with node-llama-cpp once arm64 compatible
+      // For now, keep as placeholder structure
+      throw new Error('Llama model integration pending - awaiting arm64 Node.js or alternative');
 
-      // Create context
-      this.context = new LlamaContext({
-        model: this.model,
-        contextSize: this.config.contextSize,
-      });
-
-      // Create chat session
-      this.session = new LlamaChatSession({
-        context: this.context,
-      });
+      // This will be enabled in Phase 3:
+      // this.model = await LlamaModel.load({ modelPath: this.modelPath });
+      // this.context = await this.model.createContext({ contextSize: this.config.contextSize });
+      // this.session = new LlamaChatSession({ contextSequence: this.context.getSequence() });
 
       const loadTime = Date.now() - startTime;
       log.info(`Llama model loaded successfully in ${loadTime}ms`);
@@ -146,13 +145,15 @@ Your role is to assist users with their tasks, provide emotional support, and he
       fullPrompt += `User: ${prompt}\nEden:`;
 
       // Generate response
-      const response = await this.session!.prompt(fullPrompt, {
-        temperature: this.config.temperature,
-        topP: this.config.topP,
-        topK: this.config.topK,
-        maxTokens: this.config.maxTokens,
-        repeatPenalty: this.config.repeatPenalty,
-      });
+      // TODO: Uncomment when node-llama-cpp is compatible
+      // const response = await this.session!.prompt(fullPrompt, {
+      //   temperature: this.config.temperature,
+      //   topP: this.config.topP,
+      //   topK: this.config.topK,
+      //   maxTokens: this.config.maxTokens,
+      //   repeatPenalty: { ... },
+      // });
+      const response = 'Placeholder response';
 
       const totalTime = Date.now() - startTime;
       const tokenCount = response.split(' ').length; // Rough estimate
@@ -209,17 +210,15 @@ Your role is to assist users with their tasks, provide emotional support, and he
       let index = 0;
 
       // Stream tokens
-      for await (const token of this.session!.promptTokens(fullPrompt, {
-        temperature: this.config.temperature,
-        topP: this.config.topP,
-        topK: this.config.topK,
-        maxTokens: this.config.maxTokens,
-        repeatPenalty: this.config.repeatPenalty,
-      })) {
-        yield {
-          token,
-          index: index++,
-        };
+      // TODO: Uncomment when node-llama-cpp is compatible
+      // for await (const token of this.session!.promptTokens(fullPrompt, { ... })) {
+      //   yield { token, index: index++ };
+      // }
+
+      // Placeholder: yield the full prompt in chunks
+      const words = fullPrompt.split(' ');
+      for (const word of words) {
+        yield { token: word + ' ', index: index++ };
       }
     } catch (error) {
       log.error('Failed to stream response:', error);

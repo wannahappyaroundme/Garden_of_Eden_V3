@@ -49,6 +49,19 @@ const api = {
     ipcRenderer.removeAllListeners(channel);
   },
 
+  // Type-safe helper methods
+  chat: async (args: { message: string; conversationId?: string; contextLevel?: 1 | 2 | 3 }) => {
+    return await ipcRenderer.invoke('ai:chat', args) as { conversationId: string; messageId: string; response: string };
+  },
+
+  voiceInputStart: async () => {
+    return await ipcRenderer.invoke('ai:voice-input-start') as { recording: boolean };
+  },
+
+  voiceInputStop: async () => {
+    return await ipcRenderer.invoke('ai:voice-input-stop') as { transcript: string; language: 'ko' | 'en' };
+  },
+
   // Platform info
   platform: process.platform,
   versions: {

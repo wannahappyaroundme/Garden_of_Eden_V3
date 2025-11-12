@@ -35,6 +35,10 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.1",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-toast": "^1.2.15",
     "better-sqlite3": "^11.7.0",
     "chromadb": "^1.7.3",
     "electron-log": "^5.0.1",
@@ -65,8 +69,8 @@
     "@typescript-eslint/parser": "^6.16.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "concurrently": "^8.2.2",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
@@ -79,7 +83,7 @@
     "lucide-react": "^0.303.0",
     "postcss": "^8.4.32",
     "prettier": "^3.1.1",
-    "tailwind-merge": "^2.2.0",
+    "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "ts-jest": "^29.1.1",
@@ -108,11 +112,17 @@
       {
         "from": "resources/models",
         "to": "models",
-        "filter": ["*.gguf", "*.bin"]
+        "filter": [
+          "*.gguf",
+          "*.bin"
+        ]
       }
     ],
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.productivity",
       "icon": "resources/icons/icon.icns",
       "hardenedRuntime": true,
@@ -121,11 +131,17 @@
       "entitlementsInherit": "resources/entitlements.mac.plist"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "resources/icons/icon.ico"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Utility"
     },
     "nsis": {

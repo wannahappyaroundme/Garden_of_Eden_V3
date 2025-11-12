@@ -8,7 +8,7 @@ import log from 'electron-log';
 import { ConversationRepository } from '../database/repositories/conversation.repository';
 import { MessageRepository } from '../database/repositories/message.repository';
 import { getAIManager } from '../services/ai/ai-manager.service';
-import { DEFAULT_PERSONA } from '../../../shared/types/persona.types';
+import { DEFAULT_PERSONA } from '@shared/types/persona.types';
 
 const conversationRepo = new ConversationRepository();
 const messageRepo = new MessageRepository();
