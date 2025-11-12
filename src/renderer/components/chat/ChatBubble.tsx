@@ -4,6 +4,7 @@
  */
 
 import { cn } from '../../lib/utils';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 export interface ChatBubbleProps {
   message: string;
@@ -35,14 +36,18 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
       <div className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
-            'max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words',
+            'max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words',
             isUser
               ? 'bg-[hsl(var(--chat-user-bg))] text-gray-900 dark:text-white rounded-tr-sm'
               : 'bg-[hsl(var(--chat-ai-bg))] text-foreground rounded-tl-sm',
             isStreaming && 'animate-pulse'
           )}
         >
-          {message || (isStreaming ? '...' : '')}
+          {!isUser && message ? (
+            <MarkdownRenderer content={message} />
+          ) : (
+            <div className="whitespace-pre-wrap">{message || (isStreaming ? '...' : '')}</div>
+          )}
         </div>
 
         {/* Timestamp */}
