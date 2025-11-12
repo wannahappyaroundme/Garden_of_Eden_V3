@@ -3,7 +3,7 @@
  * Main chat interface with KakaoTalk-style design and conversation history sidebar
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
 import { ChatInput, ChatInputHandle } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
@@ -52,14 +52,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
     delay: 100,
   });
 
-  // Load conversation messages when switching conversations
-  useEffect(() => {
-    if (currentConversationId) {
-      loadConversationMessages(currentConversationId);
-    }
-  }, [currentConversationId]);
-
-  const loadConversationMessages = async (conversationId: string) => {
+  const loadConversationMessages = useCallback(async (conversationId: string) => {
     try {
       const loadedMessages = await window.api.getConversationMessages(conversationId);
       // Convert timestamps to Date objects
@@ -73,9 +66,16 @@ export function Chat({ onOpenSettings }: ChatProps) {
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
     }
-  };
+  }, []);
 
-  const handleSelectConversation = (conversationId: string | null) => {
+  // Load conversation messages when switching conversations
+  useEffect(() => {
+    if (currentConversationId) {
+      loadConversationMessages(currentConversationId);
+    }
+  }, [currentConversationId, loadConversationMessages]);
+
+  const handleSelectConversation = useCallback((conversationId: string | null) => {
     if (conversationId === null) {
       // New conversation - clear messages
       setMessages([]);
@@ -84,7 +84,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
       // Load existing conversation
       setCurrentConversationId(conversationId);
     }
-  };
+  }, []);
 
   const handleSendMessage = async (content: string) => {
     // Add user message
@@ -168,9 +168,9 @@ export function Chat({ onOpenSettings }: ChatProps) {
   };
 
   // Handle retry for failed messages
-  const handleRetry = (originalMessage: string) => {
+  const handleRetry = useCallback((originalMessage: string) => {
     handleSendMessage(originalMessage);
-  };
+  }, []);
 
   const handleVoiceStart = async () => {
     try {
@@ -198,18 +198,20 @@ export function Chat({ onOpenSettings }: ChatProps) {
     }
   };
 
-  // Group messages by date for date dividers
-  const groupedMessages = messages.reduce(
-    (groups, message) => {
-      const dateKey = new Date(message.timestamp).toDateString();
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
-      groups[dateKey].push(message);
-      return groups;
-    },
-    {} as Record<string, Message[]>
-  );
+  // Group messages by date for date dividers (memoized)
+  const groupedMessages = useMemo(() => {
+    return messages.reduce(
+      (groups, message) => {
+        const dateKey = new Date(message.timestamp).toDateString();
+        if (!groups[dateKey]) {
+          groups[dateKey] = [];
+        }
+        groups[dateKey].push(message);
+        return groups;
+      },
+      {} as Record<string, Message[]>
+    );
+  }, [messages]);
 
   return (
     <div className="flex h-screen bg-background">
