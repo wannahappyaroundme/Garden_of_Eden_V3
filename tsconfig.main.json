@@ -5,7 +5,7 @@
     "module": "commonjs",
     "lib": ["ES2022"],
     "outDir": "./dist/main",
-    "rootDir": "./src/main",
+    "rootDir": "./src",
     "types": ["node", "better-sqlite3"]
   },
   "include": ["src/main/**/*", "src/shared/**/*"],

@@ -3,8 +3,7 @@
  * Garden of Eden V3 - 100% Local AI Assistant
  */
 
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
+import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './window';
 import log from 'electron-log';
 
@@ -117,7 +116,7 @@ process.on('unhandledRejection', (reason, promise) => {
 /**
  * Security: Disable navigation to external URLs
  */
-app.on('web-contents-created', (event, contents) => {
+app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event, navigationUrl) => {
     const parsedUrl = new URL(navigationUrl);
 

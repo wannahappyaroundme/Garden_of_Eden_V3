@@ -2,7 +2,7 @@
  * Root App Component
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 function App() {
   const [platform, setPlatform] = useState<string>('unknown');

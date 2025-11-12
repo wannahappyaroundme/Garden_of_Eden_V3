@@ -18,7 +18,7 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:win": "npm run build && electron-builder --win",
     "build:linux": "npm run build && electron-builder --linux",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit && tsc -p tsconfig.preload.json --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "test": "jest",

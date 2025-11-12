@@ -124,7 +124,7 @@ export class WindowManager {
 
     // Create tray icon (placeholder - replace with actual icon)
     const iconPath = path.join(__dirname, '../../resources/icons/tray-icon.png');
-    let icon: nativeImage;
+    let icon: ReturnType<typeof nativeImage.createFromPath>;
 
     try {
       icon = nativeImage.createFromPath(iconPath);
@@ -190,7 +190,7 @@ export class WindowManager {
     const saved = this.store.get('windowState');
 
     // Ensure window is visible on current screen
-    const { width, height, x, y } = saved;
+    const { x, y } = saved;
     const bounds = screen.getPrimaryDisplay().bounds;
 
     // If saved position is off-screen, reset to center
