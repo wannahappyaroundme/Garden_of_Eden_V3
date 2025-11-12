@@ -6,6 +6,9 @@
 import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './window';
 import { initializeDatabase, closeDatabase } from './database';
+import { registerSystemHandlers } from './ipc/system.handler';
+import { registerSettingsHandlers } from './ipc/settings.handler';
+import { registerAIHandlers } from './ipc/ai.handler';
 import log from 'electron-log';
 
 // Initialize logger
@@ -29,6 +32,11 @@ const initialize = async () => {
 
     // Initialize database
     initializeDatabase();
+
+    // Register IPC handlers
+    registerSystemHandlers();
+    registerSettingsHandlers();
+    registerAIHandlers();
 
     // Create window manager
     windowManager = new WindowManager();
