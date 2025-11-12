@@ -1,0 +1,136 @@
+{
+  "name": "garden-of-eden-v3",
+  "version": "1.0.0",
+  "description": "100% Local AI Assistant - Privacy-first desktop companion inspired by JARVIS",
+  "main": "dist/main/index.js",
+  "author": "Garden of Eden Team",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev:main": "tsc -p tsconfig.main.json && electron --inspect=5858 -w .",
+    "dev:renderer": "vite",
+    "build": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "build:native": "npm rebuild better-sqlite3 --build-from-source",
+    "package": "npm run build && electron-builder",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:win": "npm run build && electron-builder --win",
+    "build:linux": "npm run build && electron-builder --linux",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "test:e2e": "playwright test",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "download:models": "node scripts/download-models.js",
+    "download:llama": "node scripts/download-models.js --model=llama",
+    "download:whisper": "node scripts/download-models.js --model=whisper",
+    "download:llava": "node scripts/download-models.js --model=llava",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "chromadb": "^1.7.3",
+    "electron-log": "^5.0.1",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.7",
+    "i18next": "^23.7.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^14.0.0",
+    "react-window": "^1.8.10",
+    "screenshot-desktop": "^1.15.0",
+    "simple-git": "^3.22.0",
+    "winston": "^3.11.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.1",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.46",
+    "@types/react-dom": "^18.2.18",
+    "@types/react-window": "^1.8.8",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "lucide-react": "^0.303.0",
+    "postcss": "^8.4.32",
+    "prettier": "^3.1.1",
+    "tailwind-merge": "^2.2.0",
+    "tailwindcss": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vite-plugin-electron": "^0.28.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "build": {
+    "appId": "com.garden-of-eden.v3",
+    "productName": "Garden of Eden V3",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "dist/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/models",
+        "to": "models",
+        "filter": ["*.gguf", "*.bin"]
+      }
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.productivity",
+      "icon": "resources/icons/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "resources/icons/icon.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

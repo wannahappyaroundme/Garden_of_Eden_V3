@@ -1,0 +1,89 @@
+appId: com.garden-of-eden.v3
+productName: Garden of Eden V3
+copyright: Copyright © 2025 Garden of Eden Team
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - dist/**/*
+  - resources/**/*
+  - package.json
+  - "!**/*.ts"
+  - "!**/*.map"
+  - "!tests"
+  - "!scripts"
+  - "!docs"
+
+extraResources:
+  - from: resources/models
+    to: models
+    filter:
+      - "*.gguf"
+      - "*.bin"
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.productivity
+  icon: resources/icons/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  darkModeSupport: true
+
+dmg:
+  title: "${productName} ${version}"
+  icon: resources/icons/icon.icns
+  background: resources/dmg-background.png
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 144
+      y: 200
+      type: file
+    - x: 396
+      y: 200
+      type: link
+      path: /Applications
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: resources/icons/icon.ico
+  publisherName: Garden of Eden Team
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "${productName}"
+  include: resources/installer.nsh
+  deleteAppDataOnUninstall: false
+
+linux:
+  target:
+    - target: AppImage
+    - target: deb
+  category: Utility
+  icon: resources/icons/icon.png
+
+publish:
+  provider: github
+  releaseType: release

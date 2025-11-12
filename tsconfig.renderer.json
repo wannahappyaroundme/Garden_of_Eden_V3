@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "outDir": "./dist/renderer",
+    "rootDir": "./src/renderer",
+    "types": ["vite/client"],
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/renderer/*"],
+      "@shared/*": ["./src/shared/*"]
+    }
+  },
+  "include": ["src/renderer/**/*", "src/shared/**/*"],
+  "exclude": ["node_modules", "dist", "src/main"]
+}
