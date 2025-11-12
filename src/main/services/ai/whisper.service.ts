@@ -57,24 +57,26 @@ export class WhisperService {
     try {
       log.info(`Initializing Whisper model from: ${this.modelPath}`);
 
-      // Check if model directory exists
-      try {
-        await fs.access(this.modelPath);
-      } catch {
-        log.warn(
-          `Model directory not found: ${this.modelPath}. Please run 'npm run download:whisper' first.`
-        );
-        // Don't throw error, allow app to run without Whisper
-        this.isLoading = false;
-        return;
-      }
-
       // Dynamically import @huggingface/transformers (ES Module)
       const { pipeline } = await import('@huggingface/transformers');
 
+      // Check if local model exists, otherwise use Hugging Face model
+      let modelSource = this.modelPath;
+      try {
+        await fs.access(this.modelPath);
+        log.info('Using local Whisper model');
+      } catch {
+        log.warn(
+          `Local model not found at ${this.modelPath}. Using Hugging Face model (will auto-download)`
+        );
+        // Use Hugging Face model - Xenova/whisper-small for faster initial setup
+        // Can be changed to whisper-large-v3 for better accuracy (but much larger)
+        modelSource = 'Xenova/whisper-small';
+      }
+
       // Create Whisper pipeline for automatic speech recognition
-      log.info('Creating Whisper pipeline...');
-      this.pipeline = await pipeline('automatic-speech-recognition', this.modelPath, {
+      log.info('Creating Whisper pipeline...', { model: modelSource });
+      this.pipeline = await pipeline('automatic-speech-recognition', modelSource, {
         device: 'cpu', // Use CPU for stability
       });
 

@@ -63,27 +63,30 @@ export class LLaVAService {
     try {
       log.info('Loading LLaVA model...', { path: this.config.modelPath });
 
-      // Check if model directory exists
-      try {
-        await fs.access(this.config.modelPath);
-      } catch {
-        log.warn(
-          `LLaVA model not found: ${this.config.modelPath}. Please run 'npm run download:llava' first.`
-        );
-        this.isLoading = false;
-        return;
-      }
-
       // Dynamically import @huggingface/transformers (ES Module)
       const { pipeline } = await import('@huggingface/transformers');
 
+      // Check if local model exists, otherwise use Hugging Face model
+      let modelSource = this.config.modelPath;
+      try {
+        await fs.access(this.config.modelPath);
+        log.info('Using local LLaVA model');
+      } catch {
+        log.warn(
+          `Local model not found at ${this.config.modelPath}. Using Hugging Face model (will auto-download)`
+        );
+        // Use Hugging Face vision model - Xenova/vit-gpt2-image-captioning for fast initial setup
+        // This is smaller than LLaVA but provides basic image-to-text functionality
+        modelSource = 'Xenova/vit-gpt2-image-captioning';
+      }
+
       // Create vision-text-to-text pipeline
-      log.info('Creating LLaVA pipeline...');
-      this.pipeline = await pipeline('image-to-text', this.config.modelPath, {
+      log.info('Creating vision pipeline...', { model: modelSource });
+      this.pipeline = await pipeline('image-to-text', modelSource, {
         device: 'cpu', // Use CPU for stability (GPU acceleration coming soon)
       });
 
-      log.info('LLaVA model loaded successfully');
+      log.info('Vision model loaded successfully');
       this.isInitialized = true;
     } catch (error) {
       log.error('Failed to initialize LLaVA model:', error);
