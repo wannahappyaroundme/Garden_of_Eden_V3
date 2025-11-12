@@ -41,10 +41,15 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
         'flex w-full gap-2 mb-3',
         isUser ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'
       )}
+      role="article"
+      aria-label={`${isUser ? '사용자' : 'AI'} 메시지`}
     >
       {/* Avatar for AI */}
       {!isUser && (
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+        <div
+          className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold"
+          aria-hidden="true"
+        >
           E
         </div>
       )}
@@ -72,8 +77,9 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
           {!isUser && message && !isStreaming && (
             <button
               onClick={handleCopy}
-              className="absolute -right-10 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+              className="absolute -right-10 top-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
               title={copied ? 'Copied!' : 'Copy message'}
+              aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
             >
               {copied ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -90,11 +96,13 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
         </div>
 
         {/* Timestamp */}
-        <span className="text-xs text-[hsl(var(--chat-timestamp))] px-1">{timeString}</span>
+        <span className="text-xs text-[hsl(var(--chat-timestamp))] px-1" aria-label={`전송 시간: ${timeString}`}>
+          {timeString}
+        </span>
       </div>
 
       {/* Avatar placeholder for user (to maintain alignment) */}
-      {isUser && <div className="flex-shrink-0 w-10" />}
+      {isUser && <div className="flex-shrink-0 w-10" aria-hidden="true" />}
     </div>
   );
 }
@@ -112,7 +120,7 @@ export function ChatDateDivider({ date }: { date: Date }) {
   }).format(date);
 
   return (
-    <div className="flex items-center justify-center my-4">
+    <div className="flex items-center justify-center my-4" role="separator" aria-label={`날짜: ${dateString}`}>
       <div className="px-4 py-1.5 bg-muted/50 rounded-full text-xs text-muted-foreground">
         {dateString}
       </div>

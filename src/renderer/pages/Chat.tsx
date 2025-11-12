@@ -236,6 +236,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
               size="sm"
               onClick={onOpenSettings}
               className="h-8 w-8 p-0"
+              aria-label="설정 열기"
             >
               <svg
                 width="18"
@@ -268,6 +269,9 @@ export function Chat({ onOpenSettings }: ChatProps) {
         <div
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto px-6 py-4 smooth-scroll"
+          role="log"
+          aria-live="polite"
+          aria-label="대화 메시지 목록"
         >
           {messages.length === 0 ? (
             // Empty state
