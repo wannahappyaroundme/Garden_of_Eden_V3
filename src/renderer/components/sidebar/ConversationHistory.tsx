@@ -3,7 +3,7 @@
  * Lists all conversations with search and management
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Button } from '../ui/button';
 import { HistoryItem } from './HistoryItem';
 import { HistoryListSkeleton } from './HistoryItemSkeleton';
@@ -14,10 +14,14 @@ interface ConversationHistoryProps {
   onSelectConversation: (id: string | null) => void;
 }
 
-export function ConversationHistory({
+export interface ConversationHistoryHandle {
+  refresh: () => Promise<void>;
+}
+
+export const ConversationHistory = forwardRef<ConversationHistoryHandle, ConversationHistoryProps>(({
   currentConversationId,
   onSelectConversation,
-}: ConversationHistoryProps) {
+}, ref) => {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,6 +50,13 @@ export function ConversationHistory({
       setIsLoading(false);
     }
   };
+
+  // Expose refresh method to parent via ref
+  useImperativeHandle(ref, () => ({
+    refresh: async () => {
+      await loadConversations();
+    },
+  }));
 
   const handleNewConversation = () => {
     onSelectConversation(null);
@@ -151,4 +162,4 @@ export function ConversationHistory({
       )}
     </aside>
   );
-}
+});

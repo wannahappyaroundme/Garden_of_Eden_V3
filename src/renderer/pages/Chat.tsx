@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
 import { ChatInput, ChatInputHandle } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
-import { ConversationHistory } from '../components/sidebar/ConversationHistory';
+import { ConversationHistory, ConversationHistoryHandle } from '../components/sidebar/ConversationHistory';
 import { ErrorBubble } from '../components/chat/ErrorBubble';
 import { Button } from '../components/ui/button';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -32,6 +32,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
   const [isRecording, setIsRecording] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<ChatInputHandle>(null);
+  const conversationHistoryRef = useRef<ConversationHistoryHandle>(null);
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
@@ -101,6 +102,9 @@ export function Chat({ onOpenSettings }: ChatProps) {
         const newConversation: any = await window.api.conversationCreate({ title, mode: 'user-led' });
         conversationId = newConversation.id;
         setCurrentConversationId(conversationId);
+
+        // Refresh conversation list to show the new conversation
+        await conversationHistoryRef.current?.refresh();
       } catch (error) {
         console.error('Failed to create conversation:', error);
         // Use fallback conversation ID
@@ -285,6 +289,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
     <div className="flex h-screen bg-background">
       {/* Conversation History Sidebar */}
       <ConversationHistory
+        ref={conversationHistoryRef}
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
       />
