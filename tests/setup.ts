@@ -3,6 +3,8 @@
  * Runs before each test file in the main process
  */
 
+import '@testing-library/jest-dom';
+
 // Mock electron-log
 jest.mock('electron-log', () => ({
   info: jest.fn(),
