@@ -23,28 +23,23 @@ extraResources:
       - "*.gguf"
       - "*.bin"
 
+asar: true
+compression: normal
+
 mac:
   target:
     - target: dmg
       arch:
-        - x64
         - arm64
     - target: zip
       arch:
-        - x64
         - arm64
   category: public.app-category.productivity
-  icon: resources/icons/icon.icns
-  hardenedRuntime: true
-  gatekeeperAssess: false
-  entitlements: resources/entitlements.mac.plist
-  entitlementsInherit: resources/entitlements.mac.plist
+  identity: null
   darkModeSupport: true
 
 dmg:
   title: "${productName} ${version}"
-  icon: resources/icons/icon.icns
-  background: resources/dmg-background.png
   window:
     width: 540
     height: 380
@@ -65,7 +60,6 @@ win:
     - target: portable
       arch:
         - x64
-  icon: resources/icons/icon.ico
   publisherName: Garden of Eden Team
 
 nsis:
@@ -74,7 +68,6 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: "${productName}"
-  include: resources/installer.nsh
   deleteAppDataOnUninstall: false
 
 linux:
@@ -82,7 +75,6 @@ linux:
     - target: AppImage
     - target: deb
   category: Utility
-  icon: resources/icons/icon.png
 
 publish:
   provider: github
