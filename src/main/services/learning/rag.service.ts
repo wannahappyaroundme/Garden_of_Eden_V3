@@ -1,10 +1,11 @@
 /**
  * RAG (Retrieval-Augmented Generation) Service
- * Manages episodic memory using ChromaDB for semantic search
+ * Manages episodic memory using BGE-M3 embeddings and cosine similarity
  */
 
-import { ChromaClient, Collection } from 'chromadb';
 import log from 'electron-log';
+import { getEmbeddingService, type EmbeddingVector, type SimilarityResult } from '../ai/embedding.service';
+import { getDatabase } from '../../database';
 import type {
   ConversationEpisode,
   RetrievedEpisode,
@@ -14,46 +15,34 @@ import type {
   EpisodeContext,
 } from '@shared/types/memory.types';
 
-// Dynamic import for ESM module
-type FeatureExtractionPipeline = any;
+interface StoredEpisode {
+  id: string;
+  conversationId: string;
+  userMessage: string;
+  edenResponse: string;
+  context: EpisodeContext;
+  embedding: number[];
+  timestamp: Date;
+  satisfaction?: 'positive' | 'negative' | null;
+}
 
 export class RAGService {
-  private client: ChromaClient | null = null;
-  private collection: Collection | null = null;
-  private embeddingModel: FeatureExtractionPipeline | null = null;
-  private readonly collectionName = 'conversation_episodes';
-  private readonly embeddingModelName = 'Xenova/all-MiniLM-L6-v2';
+  private embeddingService = getEmbeddingService();
+  private episodes: StoredEpisode[] = [];
   private isInitialized = false;
 
   /**
-   * Initialize ChromaDB and embedding model
+   * Initialize RAG service with BGE-M3
    */
   async initialize(): Promise<void> {
     try {
-      log.info('Initializing RAG service...');
+      log.info('Initializing RAG service with BGE-M3...');
 
-      // Initialize ChromaDB client
-      this.client = new ChromaClient({
-        path: 'http://localhost:8000', // ChromaDB default port
-      });
+      // Initialize embedding service
+      await this.embeddingService.initialize();
 
-      // Check if collection exists, create if not
-      try {
-        this.collection = await this.client.getOrCreateCollection({
-          name: this.collectionName,
-          metadata: { description: 'Garden of Eden conversation episodes' },
-        });
-        log.info('Connected to ChromaDB collection');
-      } catch (error) {
-        log.error('Failed to get/create collection', error);
-        throw error;
-      }
-
-      // Initialize embedding model (dynamic import for ESM)
-      log.info('Loading embedding model...');
-      const { pipeline } = await import('@xenova/transformers');
-      this.embeddingModel = await pipeline('feature-extraction', this.embeddingModelName);
-      log.info('Embedding model loaded');
+      // Load existing episodes from database
+      await this.loadEpisodesFromDatabase();
 
       this.isInitialized = true;
       log.info('RAG service initialized successfully');
@@ -64,168 +53,185 @@ export class RAGService {
   }
 
   /**
+   * Load episodes from database
+   */
+  private async loadEpisodesFromDatabase(): Promise<void> {
+    try {
+      const db = getDatabase();
+      const rows = db.prepare(`
+        SELECT
+          id,
+          conversation_id as conversationId,
+          user_message as userMessage,
+          assistant_response as assistantResponse,
+          context,
+          embedding,
+          timestamp,
+          satisfaction
+        FROM episodes
+        ORDER BY timestamp DESC
+        LIMIT 1000
+      `).all() as any[];
+
+      this.episodes = rows.map(row => ({
+        ...row,
+        context: JSON.parse(row.context),
+        embedding: JSON.parse(row.embedding),
+      }));
+
+      log.info(`Loaded ${this.episodes.length} episodes from database`);
+    } catch (error) {
+      log.error('Failed to load episodes from database:', error);
+      // Don't throw - allow service to continue with empty episodes
+      this.episodes = [];
+    }
+  }
+
+  /**
    * Ensure service is initialized
    */
   private ensureInitialized(): void {
-    if (!this.isInitialized || !this.collection || !this.embeddingModel) {
+    if (!this.isInitialized) {
       throw new Error('RAG service not initialized. Call initialize() first.');
     }
   }
 
   /**
-   * Generate embedding for text using Transformers.js
+   * Store conversation episode in memory
    */
-  private async generateEmbedding(text: string): Promise<number[]> {
+  async storeEpisode(episode: ConversationEpisode): Promise<string> {
     this.ensureInitialized();
 
     try {
-      // Generate embedding
-      const output = await this.embeddingModel!(text, {
-        pooling: 'mean',
-        normalize: true,
-      });
+      log.info(`Storing episode: ${episode.id}`);
 
-      // Extract embedding array
-      const embedding = Array.from(output.data as Float32Array);
+      // Create searchable text from episode
+      const searchableText = this.createSearchableText(episode);
 
-      return embedding;
-    } catch (error) {
-      log.error('Failed to generate embedding', error);
-      throw error;
-    }
-  }
+      // Generate embedding using BGE-M3
+      const embeddingVector = await this.embeddingService.embed(searchableText);
 
-  /**
-   * Store conversation episode in vector database
-   */
-  async storeEpisode(episode: Omit<ConversationEpisode, 'id' | 'embedding'>): Promise<string> {
-    this.ensureInitialized();
+      // Store in database
+      const db = getDatabase();
+      db.prepare(`
+        INSERT OR REPLACE INTO episodes (
+          id,
+          conversation_id,
+          user_message,
+          assistant_response,
+          context,
+          embedding,
+          timestamp,
+          satisfaction
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        episode.id,
+        episode.conversationId,
+        episode.userMessage,
+        episode.assistantResponse,
+        JSON.stringify(episode.context),
+        JSON.stringify(embeddingVector.values),
+        episode.timestamp,
+        episode.satisfaction || null
+      );
 
-    try {
-      log.info('Storing episode in RAG memory');
-
-      // Generate unique ID
-      const episodeId = `episode-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-      // Combine user message and response for embedding
-      const textToEmbed = `User: ${episode.userMessage}\nEden: ${episode.edenResponse}`;
-
-      // Generate embedding
-      const embedding = await this.generateEmbedding(textToEmbed);
-
-      // Prepare metadata
-      const metadata = {
+      // Add to in-memory cache
+      this.episodes.push({
+        id: episode.id,
         conversationId: episode.conversationId,
-        timestamp: episode.timestamp.toISOString(),
         userMessage: episode.userMessage,
-        edenResponse: episode.edenResponse,
-        satisfaction: episode.satisfaction || 'null',
-        contextJSON: JSON.stringify(episode.context),
-      };
-
-      // Store in ChromaDB
-      await this.collection!.add({
-        ids: [episodeId],
-        embeddings: [embedding],
-        metadatas: [metadata],
-        documents: [textToEmbed],
+        assistantResponse: episode.assistantResponse,
+        context: episode.context,
+        embedding: embeddingVector.values,
+        timestamp: episode.timestamp,
+        satisfaction: episode.satisfaction,
       });
 
-      log.info('Episode stored successfully', { episodeId });
+      // Keep only recent 1000 episodes in memory
+      if (this.episodes.length > 1000) {
+        this.episodes.shift();
+      }
 
-      return episodeId;
+      log.info(`Episode ${episode.id} stored successfully`);
+      return episode.id;
     } catch (error) {
-      log.error('Failed to store episode', error);
+      log.error('Failed to store episode:', error);
       throw error;
     }
   }
 
   /**
-   * Search for relevant episodes using semantic similarity
+   * Search for relevant episodes using cosine similarity
    */
   async searchEpisodes(request: MemorySearchRequest): Promise<MemorySearchResult> {
     this.ensureInitialized();
 
-    const startTime = Date.now();
-
     try {
-      log.info('Searching episodes', { query: request.query, topK: request.topK });
+      const { query, topK = 5, minSimilarity = 0.7, conversationId, timeRange } = request;
+
+      log.info(`Searching episodes for query: "${query.substring(0, 50)}..."`);
 
       // Generate query embedding
-      const queryEmbedding = await this.generateEmbedding(request.query);
+      const queryEmbedding = await this.embeddingService.embed(query);
 
-      // Build where filter
-      const where: Record<string, unknown> = {};
-      if (request.conversationId) {
-        where.conversationId = request.conversationId;
+      // Filter episodes by criteria
+      let filteredEpisodes = this.episodes;
+
+      if (conversationId) {
+        filteredEpisodes = filteredEpisodes.filter(e => e.conversationId === conversationId);
       }
-      if (request.timeRange) {
-        where.timestamp = {
-          $gte: request.timeRange.start.toISOString(),
-          $lte: request.timeRange.end.toISOString(),
+
+      if (timeRange) {
+        filteredEpisodes = filteredEpisodes.filter(
+          e => e.timestamp >= timeRange.start.getTime() && e.timestamp <= timeRange.end.getTime()
+        );
+      }
+
+      // Calculate cosine similarity for each episode
+      const results = filteredEpisodes.map(episode => {
+        const episodeEmbedding: EmbeddingVector = {
+          values: episode.embedding,
+          dimensions: episode.embedding.length,
         };
-      }
 
-      // Query ChromaDB
-      const results = await this.collection!.query({
-        queryEmbeddings: [queryEmbedding],
-        nResults: request.topK || 5,
-        where: Object.keys(where).length > 0 ? where : undefined,
+        const similarity = this.embeddingService.cosineSimilarity(queryEmbedding, episodeEmbedding);
+
+        return {
+          episode,
+          similarity,
+        };
       });
 
-      // Parse results
-      const episodes: RetrievedEpisode[] = [];
+      // Filter by minimum similarity
+      const filtered = results.filter(r => r.similarity >= minSimilarity);
 
-      if (results.ids && results.ids[0] && results.metadatas && results.distances) {
-        for (let i = 0; i < results.ids[0].length; i++) {
-          const id = results.ids[0][i];
-          const metadata = results.metadatas[0][i] as any;
-          const distance = results.distances[0][i];
+      // Sort by similarity (descending)
+      filtered.sort((a, b) => b.similarity - a.similarity);
 
-          // Convert distance to similarity (ChromaDB uses cosine distance)
-          const similarity = 1 - distance;
+      // Take top K
+      const topResults = filtered.slice(0, topK);
 
-          // Skip if below minimum similarity threshold
-          if (request.minSimilarity && similarity < request.minSimilarity) {
-            continue;
-          }
+      // Convert to RetrievedEpisode format
+      const retrievedEpisodes: RetrievedEpisode[] = topResults.map(r => ({
+        id: r.episode.id,
+        conversationId: r.episode.conversationId,
+        userMessage: r.episode.userMessage,
+        assistantResponse: r.episode.assistantResponse,
+        context: r.episode.context,
+        timestamp: r.episode.timestamp,
+        similarity: r.similarity,
+        satisfaction: r.episode.satisfaction,
+      }));
 
-          // Parse context JSON
-          let context: EpisodeContext = { filesAccessed: [] };
-          try {
-            context = JSON.parse(metadata.contextJSON);
-          } catch {
-            log.warn('Failed to parse episode context');
-          }
-
-          episodes.push({
-            id,
-            conversationId: metadata.conversationId,
-            timestamp: new Date(metadata.timestamp),
-            userMessage: metadata.userMessage,
-            edenResponse: metadata.edenResponse,
-            satisfaction: metadata.satisfaction === 'null' ? null : metadata.satisfaction,
-            context,
-            similarity,
-            relevanceScore: similarity * 100,
-          });
-        }
-      }
-
-      const searchTime = Date.now() - startTime;
-
-      log.info('Search completed', {
-        found: episodes.length,
-        searchTime: `${searchTime}ms`,
-      });
+      log.info(`Found ${retrievedEpisodes.length} relevant episodes`);
 
       return {
-        episodes,
-        totalFound: episodes.length,
-        searchTime,
+        episodes: retrievedEpisodes,
+        totalFound: filtered.length,
+        searchTime: 0, // TODO: Add timing
       };
     } catch (error) {
-      log.error('Failed to search episodes', error);
+      log.error('Failed to search episodes:', error);
       throw error;
     }
   }
@@ -236,38 +242,21 @@ export class RAGService {
   async getEpisode(episodeId: string): Promise<ConversationEpisode | null> {
     this.ensureInitialized();
 
-    try {
-      const result = await this.collection!.get({
-        ids: [episodeId],
-      });
+    const episode = this.episodes.find(e => e.id === episodeId);
 
-      if (!result.ids || result.ids.length === 0 || !result.metadatas) {
-        return null;
-      }
-
-      const metadata = result.metadatas[0] as any;
-
-      // Parse context
-      let context: EpisodeContext = { filesAccessed: [] };
-      try {
-        context = JSON.parse(metadata.contextJSON);
-      } catch {
-        log.warn('Failed to parse episode context');
-      }
-
-      return {
-        id: result.ids[0],
-        conversationId: metadata.conversationId,
-        timestamp: new Date(metadata.timestamp),
-        userMessage: metadata.userMessage,
-        edenResponse: metadata.edenResponse,
-        satisfaction: metadata.satisfaction === 'null' ? null : metadata.satisfaction,
-        context,
-      };
-    } catch (error) {
-      log.error('Failed to get episode', error);
+    if (!episode) {
       return null;
     }
+
+    return {
+      id: episode.id,
+      conversationId: episode.conversationId,
+      userMessage: episode.userMessage,
+      assistantResponse: episode.assistantResponse,
+      context: episode.context,
+      timestamp: episode.timestamp,
+      satisfaction: episode.satisfaction,
+    };
   }
 
   /**
@@ -277,46 +266,46 @@ export class RAGService {
     this.ensureInitialized();
 
     try {
-      await this.collection!.delete({
-        ids: [episodeId],
-      });
+      // Delete from database
+      const db = getDatabase();
+      const result = db.prepare('DELETE FROM episodes WHERE id = ?').run(episodeId);
 
-      log.info('Episode deleted', { episodeId });
-      return true;
+      // Remove from in-memory cache
+      const index = this.episodes.findIndex(e => e.id === episodeId);
+      if (index !== -1) {
+        this.episodes.splice(index, 1);
+      }
+
+      log.info(`Episode ${episodeId} deleted`);
+      return result.changes > 0;
     } catch (error) {
-      log.error('Failed to delete episode', error);
+      log.error('Failed to delete episode:', error);
       return false;
     }
   }
 
   /**
-   * Clear all episodes (or for specific conversation)
+   * Clear all episodes (optionally filtered by conversation)
    */
-  async clearEpisodes(conversationId?: string): Promise<number> {
+  async clearEpisodes(conversationId?: string): Promise<{ deletedCount: number }> {
     this.ensureInitialized();
 
     try {
+      const db = getDatabase();
+
+      let result;
       if (conversationId) {
-        // Delete by conversation ID
-        await this.collection!.delete({
-          where: { conversationId },
-        });
-
-        log.info('Episodes cleared for conversation', { conversationId });
+        result = db.prepare('DELETE FROM episodes WHERE conversation_id = ?').run(conversationId);
+        this.episodes = this.episodes.filter(e => e.conversationId !== conversationId);
       } else {
-        // Delete all by recreating collection
-        await this.client!.deleteCollection({ name: this.collectionName });
-        this.collection = await this.client!.createCollection({
-          name: this.collectionName,
-          metadata: { description: 'Garden of Eden conversation episodes' },
-        });
-
-        log.info('All episodes cleared');
+        result = db.prepare('DELETE FROM episodes').run();
+        this.episodes = [];
       }
 
-      return 1; // ChromaDB doesn't return delete count easily
+      log.info(`Cleared ${result.changes} episodes`);
+      return { deletedCount: result.changes };
     } catch (error) {
-      log.error('Failed to clear episodes', error);
+      log.error('Failed to clear episodes:', error);
       throw error;
     }
   }
@@ -328,86 +317,132 @@ export class RAGService {
     this.ensureInitialized();
 
     try {
-      const count = await this.collection!.count();
+      const db = getDatabase();
 
-      // Get all episodes to calculate stats (not efficient for large datasets)
-      const allEpisodes = await this.collection!.get({});
+      const totalEpisodes = (db.prepare('SELECT COUNT(*) as count FROM episodes').get() as any).count;
+      const conversationCount = (db.prepare('SELECT COUNT(DISTINCT conversation_id) as count FROM episodes').get() as any).count;
 
-      let oldestEpisode: Date | null = null;
-      let newestEpisode: Date | null = null;
-
-      if (allEpisodes.metadatas && allEpisodes.metadatas.length > 0) {
-        const timestamps = allEpisodes.metadatas
-          .map((m: any) => new Date(m.timestamp))
-          .sort((a, b) => a.getTime() - b.getTime());
-
-        oldestEpisode = timestamps[0];
-        newestEpisode = timestamps[timestamps.length - 1];
-      }
+      const avgSimilarityRow = db.prepare(`
+        SELECT AVG(CAST(satisfaction AS INTEGER)) as avg
+        FROM episodes
+        WHERE satisfaction IS NOT NULL
+      `).get() as any;
 
       return {
-        totalEpisodes: count,
-        oldestEpisode,
-        newestEpisode,
-        averageSimilarity: 0, // Would need to compute this with sample queries
-        storageSize: count * 1024, // Rough estimate (1KB per episode)
+        totalEpisodes,
+        conversationCount,
+        avgRelevanceScore: avgSimilarityRow?.avg || 0,
+        storageSize: this.episodes.length * 1024, // Rough estimate
+        oldestEpisode: this.episodes.length > 0 ? Math.min(...this.episodes.map(e => e.timestamp)) : null,
+        newestEpisode: this.episodes.length > 0 ? Math.max(...this.episodes.map(e => e.timestamp)) : null,
       };
     } catch (error) {
-      log.error('Failed to get stats', error);
+      log.error('Failed to get stats:', error);
       throw error;
     }
   }
 
   /**
-   * Retrieve relevant context for AI prompt
-   * This is the key RAG function - inject memory into LLM context
+   * Create searchable text from episode
    */
-  async retrieveContextForPrompt(
-    userMessage: string,
-    conversationId?: string,
-    topK: number = 3
-  ): Promise<string> {
-    try {
-      const searchResult = await this.searchEpisodes({
-        query: userMessage,
-        topK,
-        minSimilarity: 0.5, // Only include if >50% similar
-        conversationId,
+  private createSearchableText(episode: ConversationEpisode): string {
+    const parts = [
+      episode.userMessage,
+      episode.assistantResponse,
+    ];
+
+    // Add context information
+    if (episode.context) {
+      if (episode.context.screenContext) {
+        parts.push(episode.context.screenContext);
+      }
+      if (episode.context.workspaceContext) {
+        parts.push(JSON.stringify(episode.context.workspaceContext));
+      }
+    }
+
+    return parts.join(' ');
+  }
+
+  /**
+   * Find similar episodes to a given episode (for recommendation)
+   */
+  async findSimilarEpisodes(episodeId: string, topK: number = 5): Promise<RetrievedEpisode[]> {
+    this.ensureInitialized();
+
+    const sourceEpisode = this.episodes.find(e => e.id === episodeId);
+    if (!sourceEpisode) {
+      return [];
+    }
+
+    const sourceEmbedding: EmbeddingVector = {
+      values: sourceEpisode.embedding,
+      dimensions: sourceEpisode.embedding.length,
+    };
+
+    // Calculate similarity with all other episodes
+    const similarities = this.episodes
+      .filter(e => e.id !== episodeId)
+      .map(episode => {
+        const episodeEmbedding: EmbeddingVector = {
+          values: episode.embedding,
+          dimensions: episode.embedding.length,
+        };
+
+        return {
+          episode,
+          similarity: this.embeddingService.cosineSimilarity(sourceEmbedding, episodeEmbedding),
+        };
       });
 
-      if (searchResult.episodes.length === 0) {
-        return '';
+    // Sort and take top K
+    similarities.sort((a, b) => b.similarity - a.similarity);
+    const topResults = similarities.slice(0, topK);
+
+    return topResults.map(r => ({
+      id: r.episode.id,
+      conversationId: r.episode.conversationId,
+      userMessage: r.episode.userMessage,
+      assistantResponse: r.episode.assistantResponse,
+      context: r.episode.context,
+      timestamp: r.episode.timestamp,
+      similarity: r.similarity,
+      satisfaction: r.episode.satisfaction,
+    }));
+  }
+
+  /**
+   * Update episode satisfaction
+   */
+  async updateSatisfaction(episodeId: string, satisfaction: 'positive' | 'negative'): Promise<boolean> {
+    this.ensureInitialized();
+
+    try {
+      const db = getDatabase();
+      const result = db.prepare('UPDATE episodes SET satisfaction = ? WHERE id = ?').run(satisfaction, episodeId);
+
+      // Update in-memory cache
+      const episode = this.episodes.find(e => e.id === episodeId);
+      if (episode) {
+        episode.satisfaction = satisfaction;
       }
 
-      // Format retrieved episodes into prompt context
-      let context = '\n\n---\nRelevant past conversations:\n\n';
-
-      searchResult.episodes.forEach((episode, index) => {
-        context += `[Episode ${index + 1} - ${episode.timestamp.toLocaleDateString()} - Relevance: ${Math.round(episode.relevanceScore)}%]\n`;
-        context += `User: ${episode.userMessage}\n`;
-        context += `Eden: ${episode.edenResponse}\n\n`;
-      });
-
-      context += '---\n\n';
-
-      return context;
+      return result.changes > 0;
     } catch (error) {
-      log.error('Failed to retrieve context for prompt', error);
-      return '';
+      log.error('Failed to update satisfaction:', error);
+      return false;
     }
   }
 
   /**
-   * Cleanup resources
+   * Get embedding service status
    */
-  async cleanup(): Promise<void> {
-    log.info('Cleaning up RAG service');
-
-    // ChromaDB client doesn't need explicit cleanup
-    this.client = null;
-    this.collection = null;
-    this.embeddingModel = null;
-    this.isInitialized = false;
+  getStatus(): { isInitialized: boolean; embeddingModel: string; episodesCount: number } {
+    return {
+      isInitialized: this.isInitialized,
+      embeddingModel: 'BGE-M3',
+      episodesCount: this.episodes.length,
+    };
   }
 }
 
@@ -423,15 +458,5 @@ export function getRAGService(): RAGService {
 
 export async function initializeRAGService(): Promise<void> {
   const service = getRAGService();
-  if (!service) {
-    throw new Error('Failed to get RAG service instance');
-  }
   await service.initialize();
-}
-
-export async function cleanupRAGService(): Promise<void> {
-  if (ragServiceInstance) {
-    await ragServiceInstance.cleanup();
-    ragServiceInstance = null;
-  }
 }

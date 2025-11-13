@@ -74,6 +74,15 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     checksum: '',
     description: 'Speech-to-text model (Korean + English)',
   },
+  {
+    id: 'bge-m3',
+    name: 'BGE-M3',
+    filename: 'bge-m3-q4_k_m.gguf',
+    url: 'https://huggingface.co/CompendiumLabs/bge-m3-gguf/resolve/main/bge-m3-q4_k_m.gguf',
+    size: 229_000_000, // ~229 MB
+    checksum: '',
+    description: 'Embedding model for semantic search and RAG memory',
+  },
 ];
 
 /**
