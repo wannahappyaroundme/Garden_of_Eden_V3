@@ -502,6 +502,118 @@ const api = {
     return await ipcRenderer.invoke('memory:clear-all', args || {}) as Promise<{ success: boolean; deletedCount: number }>;
   },
 
+  // Update operations
+  updateCheck: async () => {
+    return await ipcRenderer.invoke('update:check');
+  },
+
+  updateDownload: async () => {
+    return await ipcRenderer.invoke('update:download');
+  },
+
+  updateInstall: async () => {
+    return await ipcRenderer.invoke('update:install');
+  },
+
+  updateGetStatus: async () => {
+    return await ipcRenderer.invoke('update:get-status');
+  },
+
+  updateGetVersion: async () => {
+    return await ipcRenderer.invoke('update:get-version');
+  },
+
+  updateSetAutoDownload: async (enabled: boolean) => {
+    return await ipcRenderer.invoke('update:set-auto-download', enabled);
+  },
+
+  // Update event listeners
+  onUpdateAvailable: (callback: (data: { version: string; releaseDate: string; releaseNotes: string }) => void) => {
+    const handler = (_event: IpcRendererEvent, data: any) => callback(data);
+    ipcRenderer.on('update:available', handler);
+    return () => ipcRenderer.removeListener('update:available', handler);
+  },
+
+  onUpdateProgress: (callback: (data: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => {
+    const handler = (_event: IpcRendererEvent, data: any) => callback(data);
+    ipcRenderer.on('update:progress', handler);
+    return () => ipcRenderer.removeListener('update:progress', handler);
+  },
+
+  onUpdateDownloaded: (callback: (data: { version: string }) => void) => {
+    const handler = (_event: IpcRendererEvent, data: any) => callback(data);
+    ipcRenderer.on('update:downloaded', handler);
+    return () => ipcRenderer.removeListener('update:downloaded', handler);
+  },
+
+  onUpdateError: (callback: (error: string) => void) => {
+    const handler = (_event: IpcRendererEvent, error: string) => callback(error);
+    ipcRenderer.on('update:error', handler);
+    return () => ipcRenderer.removeListener('update:error', handler);
+  },
+
+  onUpdateStatus: (callback: (status: any) => void) => {
+    const handler = (_event: IpcRendererEvent, status: any) => callback(status);
+    ipcRenderer.on('update:status', handler);
+    return () => ipcRenderer.removeListener('update:status', handler);
+  },
+
+  // Download operations
+  downloadGetModels: async () => {
+    return await ipcRenderer.invoke('download:get-models');
+  },
+
+  downloadGetDirectory: async () => {
+    return await ipcRenderer.invoke('download:get-directory');
+  },
+
+  downloadIsDownloaded: async (modelId: string) => {
+    return await ipcRenderer.invoke('download:is-downloaded', modelId);
+  },
+
+  downloadGetDownloaded: async () => {
+    return await ipcRenderer.invoke('download:get-downloaded');
+  },
+
+  downloadModel: async (modelId: string) => {
+    return await ipcRenderer.invoke('download:model', modelId);
+  },
+
+  downloadAllModels: async () => {
+    return await ipcRenderer.invoke('download:all-models');
+  },
+
+  downloadPause: async (modelId: string) => {
+    return await ipcRenderer.invoke('download:pause', modelId);
+  },
+
+  downloadResume: async (modelId: string) => {
+    return await ipcRenderer.invoke('download:resume', modelId);
+  },
+
+  downloadCancel: async (modelId: string) => {
+    return await ipcRenderer.invoke('download:cancel', modelId);
+  },
+
+  downloadDelete: async (modelId: string) => {
+    return await ipcRenderer.invoke('download:delete', modelId);
+  },
+
+  downloadGetStatus: async () => {
+    return await ipcRenderer.invoke('download:get-status');
+  },
+
+  downloadGetDiskSpace: async () => {
+    return await ipcRenderer.invoke('download:get-disk-space');
+  },
+
+  // Download event listeners
+  onDownloadProgress: (callback: (status: any) => void) => {
+    const handler = (_event: IpcRendererEvent, status: any) => callback(status);
+    ipcRenderer.on('download:progress', handler);
+    return () => ipcRenderer.removeListener('download:progress', handler);
+  },
+
   // Platform info
   platform: process.platform,
   versions: {

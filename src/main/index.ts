@@ -19,6 +19,7 @@ import { registerWebhookHandlers, cleanupWebhookResources } from './ipc/webhook.
 import { registerCalendarHandlers, cleanupCalendarResources } from './ipc/calendar.handler';
 import { registerFeedbackHandlers, cleanupFeedbackResources } from './ipc/feedback.handler';
 import { registerMemoryHandlers, cleanupMemoryResources} from './ipc/memory.handler';
+import { registerDownloadHandlers } from './ipc/download.handler';
 import log from 'electron-log';
 
 // Import electron directly
@@ -80,6 +81,20 @@ const initialize = async () => {
     registerCalendarHandlers();
     registerFeedbackHandlers();
     registerMemoryHandlers();
+    registerDownloadHandlers();
+
+    // Initialize auto-updater (production only)
+    if (process.env.NODE_ENV === 'production') {
+      const { getAutoUpdaterService } = await import('./services/update/auto-updater.service');
+      const autoUpdater = getAutoUpdaterService();
+      autoUpdater.setMainWindow(windowManager.mainWindow!);
+      autoUpdater.checkForUpdatesOnStartup(10000); // Check after 10s
+    }
+
+    // Initialize model downloader
+    const { getModelDownloaderService } = await import('./services/download/model-downloader.service');
+    const modelDownloader = getModelDownloaderService();
+    modelDownloader.setMainWindow(windowManager.mainWindow!);
 
     log.info('Application initialized successfully');
   } catch (error) {
