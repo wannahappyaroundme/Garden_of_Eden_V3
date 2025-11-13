@@ -9,14 +9,26 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 
 export interface ChatBubbleProps {
   message: string;
+  messageId?: string;
   role: 'user' | 'assistant';
   timestamp: Date;
   isStreaming?: boolean;
+  satisfaction?: 'positive' | 'negative' | null;
+  onFeedback?: (messageId: string, satisfaction: 'positive' | 'negative') => void;
 }
 
-export function ChatBubble({ message, role, timestamp, isStreaming = false }: ChatBubbleProps) {
+export function ChatBubble({
+  message,
+  messageId,
+  role,
+  timestamp,
+  isStreaming = false,
+  satisfaction,
+  onFeedback
+}: ChatBubbleProps) {
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
+  const [currentSatisfaction, setCurrentSatisfaction] = useState<'positive' | 'negative' | null>(satisfaction || null);
 
   // Format timestamp to HH:MM
   const timeString = new Intl.DateTimeFormat('ko-KR', {
@@ -33,6 +45,13 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
     } catch (error) {
       console.error('Failed to copy message:', error);
     }
+  };
+
+  const handleFeedback = (feedbackType: 'positive' | 'negative') => {
+    if (!messageId || !onFeedback) return;
+
+    setCurrentSatisfaction(feedbackType);
+    onFeedback(messageId, feedbackType);
   };
 
   return (
@@ -73,25 +92,60 @@ export function ChatBubble({ message, role, timestamp, isStreaming = false }: Ch
             )}
           </div>
 
-          {/* Copy button for AI messages */}
+          {/* Action buttons for AI messages */}
           {!isUser && message && !isStreaming && (
-            <button
-              onClick={handleCopy}
-              className="absolute -right-10 top-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
-              title={copied ? 'Copied!' : 'Copy message'}
-              aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
-            >
-              {copied ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                </svg>
+            <div className="absolute -right-24 top-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+              {/* Feedback buttons */}
+              {messageId && onFeedback && (
+                <>
+                  <button
+                    onClick={() => handleFeedback('positive')}
+                    className={cn(
+                      'p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all',
+                      currentSatisfaction === 'positive' ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-muted-foreground'
+                    )}
+                    title="좋아요"
+                    aria-label="좋아요"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={currentSatisfaction === 'positive' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleFeedback('negative')}
+                    className={cn(
+                      'p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all',
+                      currentSatisfaction === 'negative' ? 'text-red-600 bg-red-100 dark:bg-red-900/30' : 'text-muted-foreground'
+                    )}
+                    title="별로에요"
+                    aria-label="별로에요"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={currentSatisfaction === 'negative' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+                    </svg>
+                  </button>
+                </>
               )}
-            </button>
+
+              {/* Copy button */}
+              <button
+                onClick={handleCopy}
+                className="p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-opacity"
+                title={copied ? 'Copied!' : 'Copy message'}
+                aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
+              >
+                {copied ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                  </svg>
+                )}
+              </button>
+            </div>
           )}
         </div>
 

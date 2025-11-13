@@ -10,6 +10,7 @@ interface ShortcutHandlers {
   onOpenSettings?: () => void;
   onCloseSettings?: () => void;
   onEscape?: () => void;
+  onToggleScreenTracking?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
@@ -29,6 +30,13 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       if (cmdOrCtrl && event.key === ',') {
         event.preventDefault();
         handlers.onOpenSettings?.();
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + S - Toggle screen tracking
+      if (cmdOrCtrl && event.shiftKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        handlers.onToggleScreenTracking?.();
         return;
       }
 

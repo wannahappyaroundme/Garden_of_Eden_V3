@@ -214,3 +214,13 @@ export class MessageRepository extends BaseRepository<MessageRow> {
     };
   }
 }
+
+// Singleton instance
+let messageRepositoryInstance: MessageRepository | null = null;
+
+export function getMessageRepository(): MessageRepository {
+  if (!messageRepositoryInstance) {
+    messageRepositoryInstance = new MessageRepository();
+  }
+  return messageRepositoryInstance;
+}

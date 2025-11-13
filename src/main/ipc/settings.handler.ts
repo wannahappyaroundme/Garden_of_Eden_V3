@@ -16,6 +16,17 @@ const settingsStore = new Store({
     mode: 'user-led',
     voiceEnabled: true,
     screenCaptureLevel: 1,
+    // Screen tracking settings
+    screenTrackingEnabled: false,
+    screenCaptureInterval: 10, // seconds
+    idleNotificationEnabled: true,
+    idleThresholdMinutes: 60, // 1 hour
+    // Calendar settings
+    calendarEnabled: false,
+    calendarIcsUrl: '',
+    calendarSyncInterval: 30, // minutes
+    calendarWorkingHoursStart: 9,
+    calendarWorkingHoursEnd: 18,
   },
 });
 

@@ -12,6 +12,8 @@ import { ErrorBubble } from '../components/chat/ErrorBubble';
 import { Button } from '../components/ui/button';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useSmoothScroll } from '../hooks/useSmoothScroll';
+import { DynamicIsland, useDynamicIsland } from '../components/DynamicIsland';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -30,14 +32,44 @@ export function Chat({ onOpenSettings }: ChatProps) {
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [trackingStatus, setTrackingStatus] = useState({
+    isTracking: false,
+    lastCaptureTime: 0,
+    captureCount: 0,
+    captureInterval: 10,
+  });
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<ChatInputHandle>(null);
   const conversationHistoryRef = useRef<ConversationHistoryHandle>(null);
+
+  // Dynamic Island notifications
+  const { notification, showNotification, hideNotification } = useDynamicIsland();
+
+  // Toggle screen tracking
+  const handleToggleTracking = useCallback(async () => {
+    try {
+      const result = await window.api.screenToggleTracking({ interval: 10 });
+      setTrackingStatus(prev => ({
+        ...prev,
+        isTracking: result.isTracking,
+        captureInterval: result.interval,
+      }));
+
+      // Show Dynamic Island notification
+      showNotification(
+        result.isTracking ? 'started' : 'stopped',
+        { interval: result.interval }
+      );
+    } catch (error) {
+      console.error('Failed to toggle screen tracking:', error);
+    }
+  }, [showNotification]);
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
     onFocusInput: () => inputRef.current?.focus(),
     onOpenSettings: onOpenSettings,
+    onToggleScreenTracking: handleToggleTracking,
     onEscape: () => {
       // Blur the input if it's focused
       if (document.activeElement instanceof HTMLElement) {
@@ -78,6 +110,35 @@ export function Chat({ onOpenSettings }: ChatProps) {
       loadConversationMessages(currentConversationId);
     }
   }, [currentConversationId, loadConversationMessages]);
+
+  // Setup screen tracking event listeners
+  useEffect(() => {
+    // Get initial status
+    window.api.screenGetStatus().then(status => {
+      setTrackingStatus(status);
+    }).catch(console.error);
+
+    // Listen for status updates
+    const unsubscribeStatus = window.api.onScreenStatusUpdate((status) => {
+      setTrackingStatus(status);
+    });
+
+    // Listen for tracking notifications (Dynamic Island)
+    const unsubscribeNotification = window.api.onScreenTrackingNotification((data) => {
+      showNotification(data.action, { interval: data.interval });
+    });
+
+    // Listen for idle notifications
+    const unsubscribeIdle = window.api.onScreenIdleNotification((data) => {
+      showNotification('idle-warning', { idleDuration: data.idleDurationMinutes });
+    });
+
+    return () => {
+      unsubscribeStatus();
+      unsubscribeNotification();
+      unsubscribeIdle();
+    };
+  }, [showNotification]);
 
   const handleSelectConversation = useCallback((conversationId: string | null) => {
     if (conversationId === null) {
@@ -306,6 +367,28 @@ export function Chat({ onOpenSettings }: ChatProps) {
             <div className="text-xs text-muted-foreground">
               {messages.length > 0 ? `${messages.length} messages` : 'Start chatting'}
             </div>
+
+            {/* Screen Tracking Toggle Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleTracking}
+              className={`h-8 w-8 p-0 transition-all duration-300 ${
+                trackingStatus.isTracking
+                  ? 'text-green-500 hover:text-green-600 hover:bg-green-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label={trackingStatus.isTracking ? '화면 추적 중지 (Cmd+Shift+S)' : '화면 추적 시작 (Cmd+Shift+S)'}
+              title={trackingStatus.isTracking ? '화면 추적 중지 (Cmd+Shift+S)' : '화면 추적 시작 (Cmd+Shift+S)'}
+            >
+              {trackingStatus.isTracking ? (
+                <Eye className="w-5 h-5 animate-pulse" />
+              ) : (
+                <EyeOff className="w-5 h-5" />
+              )}
+            </Button>
+
+            {/* Settings Button */}
             <Button
               variant="ghost"
               size="sm"
@@ -411,6 +494,18 @@ export function Chat({ onOpenSettings }: ChatProps) {
           placeholder="메시지를 입력하세요..."
         />
       </main>
+
+      {/* Dynamic Island Notification */}
+      {notification && (
+        <DynamicIsland
+          show={notification.show}
+          action={notification.action}
+          interval={notification.interval}
+          idleDuration={notification.idleDuration}
+          onDismiss={hideNotification}
+          onAction={handleToggleTracking}
+        />
+      )}
     </div>
   );
 }

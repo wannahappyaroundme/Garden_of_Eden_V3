@@ -153,3 +153,7 @@ Please embody these characteristics in all your responses.`;
 
 // Singleton instance
 export const personaService = new PersonaService();
+
+export function getPersonaService(): PersonaService {
+  return personaService;
+}

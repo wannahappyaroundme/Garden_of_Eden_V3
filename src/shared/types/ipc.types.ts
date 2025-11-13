@@ -246,12 +246,63 @@ export interface SettingsChannels {
   };
 }
 
+// Screen Tracking IPC channels
+export interface ScreenTrackingStatus {
+  isTracking: boolean;
+  lastCaptureTime: number;
+  captureCount: number;
+  captureInterval: number;
+}
+
+export interface ScreenTrackingChannels {
+  'screen:start-tracking': {
+    request: { interval?: number }; // Interval in seconds
+    response: { started: boolean; interval: number };
+  };
+  'screen:stop-tracking': {
+    request: void;
+    response: { stopped: boolean };
+  };
+  'screen:toggle-tracking': {
+    request: { interval?: number };
+    response: { isTracking: boolean; interval: number };
+  };
+  'screen:get-status': {
+    request: void;
+    response: ScreenTrackingStatus;
+  };
+  'screen:notify-idle': {
+    payload: { idleDurationMinutes: number };
+  };
+}
+
+// Workspace IPC channels (import from workspace.types.ts)
+export type { WorkspaceChannels } from './workspace.types';
+
+// Webhook IPC channels (import from webhook.types.ts)
+export type { WebhookChannels } from './webhook.types';
+
+// Calendar IPC channels (import from calendar.types.ts)
+export type { CalendarChannels } from './calendar.types';
+
+// Feedback IPC channels (import from feedback.types.ts)
+export type { FeedbackChannels } from './feedback.types';
+
+// Memory IPC channels (import from memory.types.ts)
+export type { MemoryChannels } from './memory.types';
+
 // All IPC channels combined
 export type IPCChannels = AIChannels &
   FileChannels &
   GitChannels &
   SystemChannels &
-  SettingsChannels;
+  SettingsChannels &
+  ScreenTrackingChannels &
+  import('./workspace.types').WorkspaceChannels &
+  import('./webhook.types').WebhookChannels &
+  import('./calendar.types').CalendarChannels &
+  import('./feedback.types').FeedbackChannels &
+  import('./memory.types').MemoryChannels;
 
 // Helper type to extract channel names
 export type IPCChannelName = keyof IPCChannels;

@@ -299,6 +299,209 @@ const api = {
     return await ipcRenderer.invoke('conversation:get-count') as Promise<number>;
   },
 
+  // Screen tracking APIs
+  screenStartTracking: async (args?: { interval?: number }) => {
+    return await ipcRenderer.invoke('screen:start-tracking', args || {}) as Promise<{ started: boolean; interval: number }>;
+  },
+
+  screenStopTracking: async () => {
+    return await ipcRenderer.invoke('screen:stop-tracking') as Promise<{ stopped: boolean }>;
+  },
+
+  screenToggleTracking: async (args?: { interval?: number }) => {
+    return await ipcRenderer.invoke('screen:toggle-tracking', args || {}) as Promise<{ isTracking: boolean; interval: number }>;
+  },
+
+  screenGetStatus: async () => {
+    return await ipcRenderer.invoke('screen:get-status') as Promise<{
+      isTracking: boolean;
+      lastCaptureTime: number;
+      captureCount: number;
+      captureInterval: number;
+    }>;
+  },
+
+  // Screen tracking event listeners
+  onScreenStatusUpdate: (callback: (status: {
+    isTracking: boolean;
+    lastCaptureTime: number;
+    captureCount: number;
+    captureInterval: number;
+  }) => void) => {
+    const handler = (_event: IpcRendererEvent, status: any) => callback(status);
+    ipcRenderer.on('screen:status-update', handler);
+    return () => ipcRenderer.removeListener('screen:status-update', handler);
+  },
+
+  onScreenTrackingNotification: (callback: (data: {
+    action: 'started' | 'stopped';
+    interval: number;
+    timestamp: number;
+  }) => void) => {
+    const handler = (_event: IpcRendererEvent, data: any) => callback(data);
+    ipcRenderer.on('screen:tracking-notification', handler);
+    return () => ipcRenderer.removeListener('screen:tracking-notification', handler);
+  },
+
+  onScreenIdleNotification: (callback: (data: { idleDurationMinutes: number }) => void) => {
+    const handler = (_event: IpcRendererEvent, data: any) => callback(data);
+    ipcRenderer.on('screen:notify-idle', handler);
+    return () => ipcRenderer.removeListener('screen:notify-idle', handler);
+  },
+
+  // Workspace operations
+  workspaceOpen: async (args: { rootPath: string }) => {
+    return await ipcRenderer.invoke('workspace:open', args);
+  },
+
+  workspaceGetCurrent: async () => {
+    return await ipcRenderer.invoke('workspace:current');
+  },
+
+  workspaceAnalyze: async (args?: { rootPath?: string }) => {
+    return await ipcRenderer.invoke('workspace:analyze', args || {});
+  },
+
+  workspaceGetRecent: async (args?: { limit?: number }) => {
+    return await ipcRenderer.invoke('workspace:recent', args || {});
+  },
+
+  workspaceDetectType: async (args: { rootPath: string }) => {
+    return await ipcRenderer.invoke('workspace:detect-type', args);
+  },
+
+  workspaceDetectEditor: async () => {
+    return await ipcRenderer.invoke('workspace:detect-editor');
+  },
+
+  workspaceClose: async () => {
+    return await ipcRenderer.invoke('workspace:close') as Promise<{ success: boolean }>;
+  },
+
+  // Webhook operations
+  webhookRegister: async (args: { config: any }) => {
+    return await ipcRenderer.invoke('webhook:register', args);
+  },
+
+  webhookTrigger: async (args: { name: string; payload: any }) => {
+    return await ipcRenderer.invoke('webhook:trigger', args);
+  },
+
+  webhookList: async () => {
+    return await ipcRenderer.invoke('webhook:list');
+  },
+
+  webhookGet: async (args: { name: string }) => {
+    return await ipcRenderer.invoke('webhook:get', args);
+  },
+
+  webhookUpdate: async (args: { name: string; updates: any }) => {
+    return await ipcRenderer.invoke('webhook:update', args);
+  },
+
+  webhookDelete: async (args: { name: string }) => {
+    return await ipcRenderer.invoke('webhook:delete', args) as Promise<{ success: boolean }>;
+  },
+
+  webhookTest: async (args: { name: string }) => {
+    return await ipcRenderer.invoke('webhook:test', args);
+  },
+
+  webhookSendSlack: async (args: { webhookUrl: string; message: any }) => {
+    return await ipcRenderer.invoke('webhook:send-slack', args);
+  },
+
+  webhookSendDiscord: async (args: { webhookUrl: string; message: any }) => {
+    return await ipcRenderer.invoke('webhook:send-discord', args);
+  },
+
+  webhookSendNotion: async (args: { apiKey: string; page: any }) => {
+    return await ipcRenderer.invoke('webhook:send-notion', args);
+  },
+
+  // Calendar operations
+  calendarSync: async (args: { icsUrl: string }) => {
+    return await ipcRenderer.invoke('calendar:sync', args);
+  },
+
+  calendarGetToday: async () => {
+    return await ipcRenderer.invoke('calendar:today');
+  },
+
+  calendarGetUpcoming: async (args: { hours: number }) => {
+    return await ipcRenderer.invoke('calendar:upcoming', args);
+  },
+
+  calendarGetFreeSlots: async (args: { date: Date; minDurationMinutes?: number; workingHoursOnly?: boolean }) => {
+    return await ipcRenderer.invoke('calendar:free-slots', args);
+  },
+
+  calendarGetEvent: async (args: { eventId: string }) => {
+    return await ipcRenderer.invoke('calendar:get-event', args);
+  },
+
+  calendarSearch: async (args: { query: string; limit?: number }) => {
+    return await ipcRenderer.invoke('calendar:search', args);
+  },
+
+  calendarGetDaySchedule: async (args: { date: Date }) => {
+    return await ipcRenderer.invoke('calendar:day-schedule', args);
+  },
+
+  calendarClearCache: async () => {
+    return await ipcRenderer.invoke('calendar:clear-cache') as Promise<{ success: boolean }>;
+  },
+
+  // Feedback operations
+  feedbackUpdateSatisfaction: async (args: { messageId: string; satisfaction: 'positive' | 'negative' }) => {
+    return await ipcRenderer.invoke('feedback:update-satisfaction', args);
+  },
+
+  feedbackGetStats: async () => {
+    return await ipcRenderer.invoke('feedback:get-stats');
+  },
+
+  feedbackGetTrend: async (args: { days: number }) => {
+    return await ipcRenderer.invoke('feedback:get-trend', args);
+  },
+
+  feedbackResetLearning: async () => {
+    return await ipcRenderer.invoke('feedback:reset-learning') as Promise<{ success: boolean; deletedCount: number }>;
+  },
+
+  feedbackGetLearningRate: async () => {
+    return await ipcRenderer.invoke('feedback:get-learning-rate') as Promise<{ rate: number }>;
+  },
+
+  feedbackSetLearningRate: async (args: { rate: number }) => {
+    return await ipcRenderer.invoke('feedback:set-learning-rate', args) as Promise<{ success: boolean }>;
+  },
+
+  // Memory operations
+  memoryStoreEpisode: async (args: { episode: any }) => {
+    return await ipcRenderer.invoke('memory:store-episode', args);
+  },
+
+  memorySearch: async (args: { query: string; topK?: number; minSimilarity?: number; conversationId?: string; timeRange?: { start: Date; end: Date } }) => {
+    return await ipcRenderer.invoke('memory:search', args);
+  },
+
+  memoryGetStats: async () => {
+    return await ipcRenderer.invoke('memory:get-stats');
+  },
+
+  memoryGetEpisode: async (args: { episodeId: string }) => {
+    return await ipcRenderer.invoke('memory:get-episode', args);
+  },
+
+  memoryDeleteEpisode: async (args: { episodeId: string }) => {
+    return await ipcRenderer.invoke('memory:delete-episode', args) as Promise<{ success: boolean }>;
+  },
+
+  memoryClearAll: async (args?: { conversationId?: string }) => {
+    return await ipcRenderer.invoke('memory:clear-all', args || {}) as Promise<{ success: boolean; deletedCount: number }>;
+  },
+
   // Platform info
   platform: process.platform,
   versions: {
