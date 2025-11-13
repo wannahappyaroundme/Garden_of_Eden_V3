@@ -20,23 +20,15 @@ import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { ModelDownload } from '@/components/download/ModelDownload';
 
 type OnboardingStep = 'welcome' | 'language' | 'download' | 'mode' | 'tutorial' | 'permissions' | 'persona' | 'complete';
-
-interface ModelDownloadProgress {
-  model: string;
-  progress: number;
-  speed: string;
-  eta: string;
-}
 
 export function Onboarding() {
   const { t, i18n } = useTranslation();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [selectedLanguage, setSelectedLanguage] = useState<'ko' | 'en'>('ko');
   const [selectedMode, setSelectedMode] = useState<'user-led' | 'ai-led'>('user-led');
-  const [downloadProgress, setDownloadProgress] = useState<ModelDownloadProgress[]>([]);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [personaParams, setPersonaParams] = useState({
     formality: 50,
     humor: 50,
@@ -59,54 +51,6 @@ export function Onboarding() {
   const handleLanguageSelect = (lang: 'ko' | 'en') => {
     setSelectedLanguage(lang);
     i18n.changeLanguage(lang);
-  };
-
-  // Handle model download
-  const handleStartDownload = async () => {
-    setIsDownloading(true);
-
-    // Initialize download progress for all models
-    const models = [
-      { name: 'Llama 3.1 8B', size: '4.8 GB' },
-      { name: 'LLaVA 7B', size: '4.0 GB' },
-      { name: 'Whisper Large V3', size: '3.0 GB' },
-    ];
-
-    setDownloadProgress(
-      models.map((model) => ({
-        model: model.name,
-        progress: 0,
-        speed: '0 MB/s',
-        eta: 'Calculating...',
-      }))
-    );
-
-    // Call IPC to start download
-    try {
-      // TODO: Implement actual download via IPC
-      // await window.api.downloadModels((progress) => {
-      //   setDownloadProgress(progress);
-      // });
-
-      // Simulate download for now
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setDownloadProgress((prev) =>
-          prev.map((item, index) => ({
-            ...item,
-            progress: Math.min(i + index * 5, 100),
-            speed: '5.2 MB/s',
-            eta: `${Math.max(0, (100 - i) * 2)} seconds`,
-          }))
-        );
-      }
-
-      setIsDownloading(false);
-      setCurrentStep('mode');
-    } catch (error) {
-      console.error('Download failed:', error);
-      setIsDownloading(false);
-    }
   };
 
   // Handle permissions request
@@ -220,76 +164,21 @@ export function Onboarding() {
 
       case 'download':
         return (
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <CardTitle>{t('onboarding.download.title', 'Download AI Models')}</CardTitle>
-              <CardDescription>
-                {t('onboarding.download.subtitle', 'Download required AI models (~12GB total)')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {!isDownloading && downloadProgress.length === 0 && (
-                <>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span>Llama 3.1 8B (Conversation)</span>
-                      <span className="text-muted-foreground">4.8 GB</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>LLaVA 7B (Vision)</span>
-                      <span className="text-muted-foreground">4.0 GB</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Whisper Large V3 (Speech)</span>
-                      <span className="text-muted-foreground">3.0 GB</span>
-                    </div>
-                  </div>
-                  <div className="bg-muted p-4 rounded-lg text-sm">
-                    <p className="font-medium mb-2">{t('onboarding.download.note', 'Note:')}</p>
-                    <ul className="space-y-1 text-muted-foreground">
-                      <li>• {t('onboarding.download.requirement1', 'Requires ~12GB disk space')}</li>
-                      <li>• {t('onboarding.download.requirement2', 'Download time: 10-30 minutes depending on connection')}</li>
-                      <li>• {t('onboarding.download.requirement3', 'Download can be paused and resumed')}</li>
-                    </ul>
-                  </div>
-                </>
-              )}
+          <div className="w-full max-w-3xl space-y-6">
+            <ModelDownload onComplete={() => {
+              // Auto-advance to next step when download completes
+              setTimeout(() => setCurrentStep('mode'), 2000);
+            }} />
 
-              {downloadProgress.length > 0 && (
-                <div className="space-y-4">
-                  {downloadProgress.map((item, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">{item.model}</span>
-                        <span className="text-muted-foreground">{item.progress}%</span>
-                      </div>
-                      <Progress value={item.progress} />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{item.speed}</span>
-                        <span>ETA: {item.eta}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button onClick={() => setCurrentStep('language')} variant="outline" className="flex-1" disabled={isDownloading}>
-                  {t('common.back', 'Back')}
-                </Button>
-                {!isDownloading && downloadProgress.length === 0 && (
-                  <Button onClick={handleStartDownload} className="flex-1">
-                    {t('onboarding.download.start', 'Start Download')}
-                  </Button>
-                )}
-                {downloadProgress.length > 0 && downloadProgress.every((item) => item.progress === 100) && (
-                  <Button onClick={() => setCurrentStep('mode')} className="flex-1">
-                    {t('common.continue', 'Continue')}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex gap-3">
+              <Button onClick={() => setCurrentStep('language')} variant="outline" className="flex-1">
+                {t('common.back', 'Back')}
+              </Button>
+              <Button onClick={() => setCurrentStep('mode')} variant="outline" className="flex-1">
+                {t('onboarding.download.skipForNow', 'Skip for Now')}
+              </Button>
+            </div>
+          </div>
         );
 
       case 'mode':
