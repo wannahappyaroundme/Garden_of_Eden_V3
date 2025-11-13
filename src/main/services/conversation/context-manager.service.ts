@@ -11,6 +11,7 @@ import { ProactiveAIService, type ProactiveEvent } from '../ai/proactive-ai.serv
 import { VADService, type VADEvent } from '../voice/vad.service';
 import { WakeWordService, type WakeWordEvent } from '../voice/wakeword.service';
 import { getRAGService } from '../learning/rag.service';
+import { llamaService } from '../ai/llama.service';
 import type { RetrievedEpisode } from '../../../shared/types/memory.types';
 import type { ConversationMode, ConversationState } from '../../../shared/types/conversation.types';
 
@@ -336,34 +337,54 @@ export class ConversationContextManager extends EventEmitter {
   }
 
   /**
-   * Generate response using LLM (placeholder - will integrate with llama.service)
+   * Generate response using Qwen 2.5 32B LLM
    */
   private async generateResponse(
     query: string,
     context: RAFTContext | { documents: RetrievedEpisode[] },
     mode: ConversationMode
   ): Promise<string> {
-    // TODO: Integrate with llama.service.ts
-    // For now, return a mock response
+    try {
+      // Determine prompt mode
+      let promptMode: 'fast' | 'detailed' = 'detailed';
+      if (mode === 'fast') {
+        promptMode = 'fast';
+      } else if (mode === 'detailed') {
+        promptMode = 'detailed';
+      }
 
-    let promptMode: 'fast' | 'detailed' = 'detailed';
-    if (mode === 'fast') {
-      promptMode = 'fast';
-    } else if (mode === 'detailed') {
-      promptMode = 'detailed';
-    }
+      // Create prompt (RAFT or standard)
+      const prompt = this.config.raftEnabled
+        ? this.raftService.createRAFTPrompt(query, context as RAFTContext, promptMode)
+        : this.createStandardPrompt(query, context.documents, mode);
 
-    const prompt = this.config.raftEnabled
-      ? this.raftService.createRAFTPrompt(query, context as RAFTContext, promptMode)
-      : this.createStandardPrompt(query, context.documents, mode);
+      log.debug(`Generated prompt (${mode} mode): ${prompt.substring(0, 100)}...`);
 
-    log.debug(`Generated prompt (${mode} mode): ${prompt.substring(0, 100)}...`);
+      // Adjust LLM parameters based on mode
+      const temperature = mode === 'fast' ? 0.8 : 0.7; // Slightly higher temp for casual chat
+      const maxTokens = mode === 'fast' ? 150 : 500; // Shorter responses for fast mode
 
-    // Mock response for now
-    if (mode === 'fast') {
-      return 'Sure, I can help with that!';
-    } else {
-      return 'Let me analyze this in detail. Based on the context...';
+      // Initialize LLM if needed
+      if (!llamaService.isInitialized()) {
+        log.info('Initializing Qwen 2.5 32B model...');
+        await llamaService.initialize();
+      }
+
+      // Generate response with Qwen 2.5 32B
+      const response = await llamaService.generateResponse(prompt);
+
+      log.info(`LLM response generated (mode: ${mode}, length: ${response.length})`);
+
+      return response;
+    } catch (error) {
+      log.error('Failed to generate LLM response', error);
+
+      // Fallback to simple response on error
+      if (mode === 'fast') {
+        return '죄송해요, 지금은 응답할 수 없어요. 다시 시도해주세요!';
+      } else {
+        return '죄송합니다. 응답을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      }
     }
   }
 

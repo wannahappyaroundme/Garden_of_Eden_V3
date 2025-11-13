@@ -2,14 +2,18 @@
  * AI Model and Service Type Definitions
  */
 
+export type ModelType = 'qwen-2.5-32b' | 'qwen-2.5-14b' | 'whisper-large-v3' | 'llava-7b';
+
 export interface LLMConfig {
   modelPath: string;
-  contextSize: number;
+  modelType?: ModelType;
+  contextSize: number; // Qwen 2.5 32B: 8K default, 32K max
   temperature: number;
   topP: number;
   topK: number;
   maxTokens: number;
   repeatPenalty: number;
+  gpuLayers?: number; // Number of layers to offload to GPU (Metal/CUDA)
   seed?: number;
 }
 
@@ -32,10 +36,13 @@ export interface TTSConfig {
 }
 
 export interface AIModelStatus {
-  llama: {
+  qwen: {
     loaded: boolean;
-    modelSize?: number;
-    contextSize?: number;
+    modelType: ModelType;
+    modelSize?: number; // Qwen 2.5 32B Q4_K_M: ~18.9GB
+    contextSize?: number; // 8K default
+    ramUsage?: number; // ~18-20GB
+    tokensPerSecond?: number; // ~22-26 t/s on M3 MAX
   };
   whisper: {
     loaded: boolean;

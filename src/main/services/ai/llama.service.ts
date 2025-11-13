@@ -1,6 +1,6 @@
 /**
- * Llama Service
- * Manages Llama 3.1 8B model for AI conversations
+ * LLM Service
+ * Manages Qwen 2.5 32B Instruct model for AI conversations
  */
 
 import * as path from 'path';
@@ -53,8 +53,8 @@ export class LlamaService {
       topP: 0.9,
       topK: 40,
       maxTokens: 2048,
-      contextSize: 4096,
-      gpuLayers: 33, // Default for M3 chips (offload most layers to GPU)
+      contextSize: 8192, // Qwen 2.5 32B supports up to 32K, using 8K for efficiency
+      gpuLayers: 50, // Qwen 2.5 32B has more layers, offload more to GPU (M3 MAX)
       ...config,
     };
   }
@@ -267,9 +267,11 @@ const defaultModelPath = path.join(
   process.env.HOME || process.env.USERPROFILE || '.',
   '.garden-of-eden-v3',
   'models',
-  'llama-3.1-8b-instruct-q4_k_m.gguf'
+  'qwen2.5-32b-instruct-q4_k_m.gguf'
 );
 
 export const llamaService = new LlamaService({
   modelPath: defaultModelPath,
+  contextSize: 8192, // Qwen 2.5 32B: 32K max, using 8K for performance
+  gpuLayers: 50, // Offload most layers to Metal GPU (M3 MAX)
 });

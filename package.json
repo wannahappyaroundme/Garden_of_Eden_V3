@@ -30,7 +30,7 @@
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "download:models": "node scripts/download-models.js",
-    "download:llama": "node scripts/download-models.js --model=llama",
+    "download:qwen": "node scripts/download-models.js --model=qwen",
     "download:whisper": "node scripts/download-models.js --model=whisper",
     "download:llava": "node scripts/download-models.js --model=llava",
     "generate:icons": "node scripts/generate-placeholder-icon.js",

@@ -32,14 +32,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Screen Capture**: screenshot-desktop
 
 ### AI Stack (100% Local)
-- **Primary LLM**: Llama 3.1 8B (~4.8GB) - Conversation, reasoning, code generation
+- **Primary LLM**: Qwen 2.5 32B Instruct Q4_K_M (~18.9GB) - Conversation, reasoning, code generation, Korean language
+  - 32B parameters (Q4 quantization for speed/quality balance)
+  - 29+ language support including Korean (KMMLU 70-71)
+  - Speed: 22-26 tokens/sec on M3 MAX 36GB
+  - Context: 8K tokens (32K max)
+  - Stable for continual fine-tuning (low catastrophic forgetting)
 - **Vision Model**: LLaVA 7B (~4GB) - Screen analysis, image understanding
 - **Speech-to-Text**: Whisper Large V3 (~3GB) - Voice input (Korean + English)
 - **Text-to-Speech**: System native TTS (platform-specific)
 - **AI Runtime**: llama.cpp with Metal (macOS) / CUDA (Windows) acceleration
 
-**Total AI Storage**: ~12GB
-**RAM Usage During Operation**: 12-15GB
+**Total AI Storage**: ~26GB
+**RAM Usage During Operation**: 22-25GB (Qwen 32B: 18-20GB + OS + other models)
 
 ## Key Architectural Decisions
 
@@ -98,10 +103,14 @@ garden-of-eden-v3/
 │   │   │   └── system.handler.ts
 │   │   ├── services/           # Core business logic
 │   │   │   ├── ai/
-│   │   │   │   ├── llama.service.ts      # Llama 3.1 8B integration
+│   │   │   │   ├── llama.service.ts      # Qwen 2.5 32B integration
 │   │   │   │   ├── llava.service.ts      # LLaVA vision model
 │   │   │   │   ├── whisper.service.ts    # Speech-to-text
-│   │   │   │   └── tts.service.ts        # Text-to-speech
+│   │   │   │   ├── tts.service.ts        # Text-to-speech
+│   │   │   │   ├── raft.service.ts       # RAFT hallucination reduction
+│   │   │   │   ├── proactive-ai.service.ts # Proactive conversation
+│   │   │   │   ├── chunking.service.ts   # Text chunking for BGE-M3
+│   │   │   │   └── synthetic-data.service.ts # Training data generation
 │   │   │   ├── integration/
 │   │   │   │   ├── file.service.ts       # File system access
 │   │   │   │   ├── git.service.ts        # Git operations
@@ -326,11 +335,14 @@ npm run test:watch
 
 ## Performance Targets
 
-- **Response Time**: 2-3s on M3 MAX, 3-5s on M3 Pro
-- **Memory Usage**: <15GB RAM during operation
-- **Startup Time**: <5s cold start, <2s warm start
+- **Response Time**: 1.9-2.3s for 50 tokens on M3 MAX 36GB (Qwen 2.5 32B @ 22-26 t/s)
+  - Fast mode (casual chat): 1.9-2.3s for 50 tokens
+  - Detailed mode (complex queries): 3.8-4.6s for 100 tokens
+  - Exceeds original 2-3s target ✅
+- **Memory Usage**: 22-25GB RAM during operation (Qwen 32B: 18-20GB + system)
+- **Startup Time**: <10s cold start (model loading), <2s warm start
 - **UI Responsiveness**: <16ms frame time (60 FPS)
-- **Model Load Time**: <10s for all models on first launch
+- **Model Load Time**: 10-15s for Qwen 2.5 32B on first launch
 
 ## Development Guidelines
 
