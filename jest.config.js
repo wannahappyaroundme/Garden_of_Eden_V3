@@ -25,7 +25,8 @@ module.exports = {
         ],
       },
       moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/main/$1',
+        '^@/main/(.*)$': '<rootDir>/src/main/$1',
+        '^@/(.*)$': '<rootDir>/src/$1',
         '^@shared/(.*)$': '<rootDir>/src/shared/$1',
       },
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
@@ -42,6 +43,9 @@ module.exports = {
           },
         ],
       },
+      transformIgnorePatterns: [
+        'node_modules/(?!(react-markdown|remark-gfm|rehype-highlight|rehype-raw)/)',
+      ],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/renderer/$1',
         '^@shared/(.*)$': '<rootDir>/src/shared/$1',
@@ -60,7 +64,7 @@ module.exports = {
     '!src/main/index.ts',
   ],
 
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 60,
       functions: 60,
