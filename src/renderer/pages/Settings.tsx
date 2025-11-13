@@ -48,7 +48,7 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
 
   const loadSettings = async () => {
     try {
-      const settings = await window.api.getSettings();
+      const settings = await window.api.getSettings() as { persona: PersonaSettings; theme: string };
       setPersona(settings.persona);
       setTheme(settings.theme);
     } catch (error) {

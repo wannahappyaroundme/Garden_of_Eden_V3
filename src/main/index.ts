@@ -22,9 +22,13 @@ import { registerMemoryHandlers, cleanupMemoryResources} from './ipc/memory.hand
 import { registerDownloadHandlers } from './ipc/download.handler';
 import log from 'electron-log';
 
-// Import electron
-import * as electron from 'electron';
-const { app, BrowserWindow } = electron;
+// Import electron - Electron should inject this module at runtime
+// Try to access it from the global/built-in modules, not node_modules
+// @ts-ignore
+const electronModule = process.electronBinding ? process.electronBinding('electron') : require('electron');
+console.log('DEBUG: electronModule type:', typeof electronModule);
+console.log('DEBUG: electronModule.app:', typeof electronModule?.app);
+const { app, BrowserWindow } = electronModule;
 
 // Initialize logger
 log.transports.file.level = 'info';

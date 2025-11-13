@@ -17,7 +17,7 @@ function App() {
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        const settings = await window.api.getSettings();
+        const settings = await window.api.getSettings() as { theme: string };
         setTheme(settings.theme as 'light' | 'dark');
       } catch (error) {
         console.error('Failed to load theme:', error);

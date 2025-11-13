@@ -90,7 +90,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
       const loadedMessages = await window.api.messageGetByConversation({
         conversationId,
         limit: 100,
-      });
+      }) as any[];
       // Convert timestamps to Date objects
       const formattedMessages: Message[] = loadedMessages.map((msg: any) => ({
         id: msg.id,
@@ -230,7 +230,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
       // Save user message to database
       try {
         await window.api.messageSave({
-          conversationId,
+          conversationId: conversationId || '',
           role: 'user',
           content,
           metadata: {
@@ -243,19 +243,8 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
       // Save AI response to database
       try {
-        // Get the final AI response content
-        const finalAiMessage = await new Promise<string>((resolve) => {
-          setMessages((prev) => {
-            const aiMsg = prev.find((msg) => msg.id === aiMessageId);
-            if (aiMsg) {
-              resolve(aiMsg.content);
-            }
-            return prev;
-          });
-        });
-
         await window.api.messageSave({
-          conversationId,
+          conversationId: conversationId || '',
           role: 'assistant',
           content: response.response,
           metadata: {
@@ -318,12 +307,12 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   const handleVoiceStop = async () => {
     try {
-      const transcript = await window.api.voiceInputStop();
+      const result = await window.api.voiceInputStop() as { transcript: string; language: string };
       setIsRecording(false);
 
       // If transcript is available, send it as a message
-      if (transcript && transcript.trim()) {
-        await handleSendMessage(transcript);
+      if (result && result.transcript && result.transcript.trim()) {
+        await handleSendMessage(result.transcript);
       }
     } catch (error) {
       console.error('Failed to stop voice recording:', error);

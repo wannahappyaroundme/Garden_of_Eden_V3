@@ -5,12 +5,6 @@
 
 import { useEffect, useRef } from 'react';
 
-interface PerformanceMetrics {
-  componentName: string;
-  renderTime: number;
-  timestamp: number;
-}
-
 /**
  * Hook to measure component render performance
  */
@@ -24,12 +18,6 @@ export function usePerformance(componentName: string, enabled: boolean = process
     const renderEnd = performance.now();
     const renderTime = renderEnd - renderStart.current;
     renderCount.current += 1;
-
-    const metrics: PerformanceMetrics = {
-      componentName,
-      renderTime,
-      timestamp: Date.now(),
-    };
 
     // Log slow renders (> 16ms for 60fps)
     if (renderTime > 16) {
