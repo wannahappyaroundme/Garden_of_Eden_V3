@@ -626,11 +626,5 @@ const api = {
 // Expose API to renderer process
 contextBridge.exposeInMainWorld('api', api);
 
-// TypeScript declaration for window.api
-declare global {
-  interface Window {
-    api: typeof api;
-  }
-}
-
-export type { };
+// Export the api type for shared type definitions
+export type { api };

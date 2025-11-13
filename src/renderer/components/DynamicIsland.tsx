@@ -50,6 +50,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
     } else {
       setIsVisible(false);
       setIsExpanded(false);
+      return undefined;
     }
   }, [show, onDismiss]);
 

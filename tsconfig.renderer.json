@@ -7,15 +7,16 @@
     "jsx": "react-jsx",
     "outDir": "./dist/renderer",
     "rootDir": "./src",
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/renderer/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@/components/*": ["./src/renderer/components/*"]
     }
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*"],
-  "exclude": ["node_modules", "dist", "src/main"]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/preload/**/*"],
+  "exclude": ["node_modules", "dist", "src/main", "**/*.test.ts", "**/*.test.tsx"]
 }
