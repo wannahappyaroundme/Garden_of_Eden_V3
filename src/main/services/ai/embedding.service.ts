@@ -7,6 +7,7 @@ import path from 'path';
 import { app } from 'electron';
 import log from 'electron-log';
 import { getLlama, LlamaModel, LlamaContext, LlamaEmbedding } from 'node-llama-cpp';
+import { getChunkingService, type TextChunk } from './chunking.service';
 
 export interface EmbeddingVector {
   values: number[];
@@ -18,6 +19,12 @@ export interface SimilarityResult {
   score: number;
   text: string;
   metadata?: Record<string, any>;
+}
+
+export interface ChunkedEmbedding {
+  chunks: TextChunk[];
+  embeddings: EmbeddingVector[];
+  aggregated: EmbeddingVector; // Averaged or max-pooled embedding
 }
 
 /**
@@ -130,6 +137,100 @@ export class EmbeddingService {
     }
 
     return embeddings;
+  }
+
+  /**
+   * Embed long text with chunking (for texts > 512 tokens)
+   */
+  async embedLongText(text: string, strategy: 'average' | 'maxpool' | 'first' = 'average'): Promise<ChunkedEmbedding> {
+    const chunkingService = getChunkingService();
+
+    // Check if chunking is needed
+    if (!chunkingService.needsChunking(text, 512)) {
+      const embedding = await this.embed(text);
+      return {
+        chunks: [
+          {
+            text,
+            index: 0,
+            startChar: 0,
+            endChar: text.length,
+          },
+        ],
+        embeddings: [embedding],
+        aggregated: embedding,
+      };
+    }
+
+    log.info(`Text requires chunking (length: ${text.length})`);
+
+    // Chunk the text
+    const chunks = await chunkingService.chunk(text, {
+      maxTokens: 512,
+      overlap: 50,
+      strategy: 'semantic',
+      preserveSentences: true,
+    });
+
+    log.info(`Created ${chunks.length} chunks`);
+
+    // Generate embeddings for each chunk
+    const embeddings: EmbeddingVector[] = [];
+    for (const chunk of chunks) {
+      const embedding = await this.embed(chunk.text);
+      embeddings.push(embedding);
+    }
+
+    // Aggregate embeddings
+    const aggregated = this.aggregateEmbeddings(embeddings, strategy);
+
+    return {
+      chunks,
+      embeddings,
+      aggregated,
+    };
+  }
+
+  /**
+   * Aggregate multiple embeddings into one
+   */
+  private aggregateEmbeddings(
+    embeddings: EmbeddingVector[],
+    strategy: 'average' | 'maxpool' | 'first'
+  ): EmbeddingVector {
+    if (embeddings.length === 0) {
+      throw new Error('Cannot aggregate empty embeddings');
+    }
+
+    if (strategy === 'first' || embeddings.length === 1) {
+      return embeddings[0];
+    }
+
+    const dimensions = embeddings[0].dimensions;
+    const aggregated = new Array(dimensions).fill(0);
+
+    if (strategy === 'average') {
+      // Average pooling
+      for (const embedding of embeddings) {
+        for (let i = 0; i < dimensions; i++) {
+          aggregated[i] += embedding.values[i];
+        }
+      }
+
+      for (let i = 0; i < dimensions; i++) {
+        aggregated[i] /= embeddings.length;
+      }
+    } else if (strategy === 'maxpool') {
+      // Max pooling
+      for (let i = 0; i < dimensions; i++) {
+        aggregated[i] = Math.max(...embeddings.map((e) => e.values[i]));
+      }
+    }
+
+    return {
+      values: aggregated,
+      dimensions,
+    };
   }
 
   /**
