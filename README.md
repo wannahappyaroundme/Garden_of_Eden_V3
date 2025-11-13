@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3%2B-blue.svg)](https://www.typescriptlang.org/)
-[![Electron](https://img.shields.io/badge/Electron-39.1-47848F.svg)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-28.0-47848F.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)](https://reactjs.org/)
 
 > "사람의 외로움을 제거하면서 옆에서 친구처럼 도와주고 위로해주기도하고 나의 생산성을 올려주는 자비스를 만든다"
@@ -72,9 +72,10 @@ Garden of Eden V3 is a **production-quality, privacy-first desktop AI assistant*
 
 ### 🤖 AI Intelligence
 - **Llama 3.1 8B Instruct** (~4.9GB) - Conversation, reasoning, code generation with streaming responses
-- **Whisper Large V3** (~3.1GB) - Speech-to-text for Korean and English with auto-download
-- **LLaVA 7B** (~4.4GB) - Vision model for screen context analysis with auto-download
+- **Whisper Large V3** (~3.1GB) - Speech-to-text for Korean and English
+- **LLaVA 7B** (~4.4GB) - Vision model for screen context analysis
 - **System TTS** - Native text-to-speech (macOS AVFoundation / Windows SAPI)
+- **One-Click Download** - Beautiful UI with real-time progress, pause/resume, and auto-detection
 - **2-3 second response times** on Apple Silicon (M3 MAX)
 
 ### 🎭 Persona Learning System
