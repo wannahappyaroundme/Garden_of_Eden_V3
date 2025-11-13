@@ -5,13 +5,12 @@
     "module": "commonjs",
     "lib": ["ES2022"],
     "outDir": "./dist/main",
-    "rootDir": "./src",
     "types": ["node", "better-sqlite3"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src/main/**/*", "src/shared/**/*"],
+  "include": ["src/main/**/*"],
   "exclude": ["node_modules", "dist", "src/renderer", "src/preload"]
 }

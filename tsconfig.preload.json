@@ -5,9 +5,8 @@
     "module": "commonjs",
     "lib": ["ES2022", "DOM"],
     "outDir": "./dist/preload",
-    "rootDir": "./src",
     "types": ["node"]
   },
-  "include": ["src/preload/**/*", "src/shared/**/*"],
+  "include": ["src/preload/**/*"],
   "exclude": ["node_modules", "dist"]
 }
