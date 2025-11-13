@@ -4,39 +4,29 @@
 
 ---
 
-## 🚨 현재 상태: 빌드 이슈 있음
+## ✅ 현재 상태: macOS 빌드 성공!
 
-**빌드 차단 이유**: `better-sqlite3` 네이티브 모듈이 Electron 39.1.2와 호환되지 않습니다.
+**해결 방법**: Electron을 28.0.0으로 다운그레이드하여 `better-sqlite3` 네이티브 모듈 호환성 문제 해결
 
-### 에러 상세
-```
-error: no member named 'GetIsolate' in 'v8::Context'
-```
+### 빌드 완료 항목
+- ✅ **macOS (Apple Silicon)**: DMG + ZIP 빌드 완료
+  - `Garden of Eden V3-1.0.0-arm64.dmg` (285MB)
+  - `Garden of Eden V3-1.0.0-arm64-mac.zip` (276MB)
+  - `latest-mac.yml` (자동 업데이트 메타데이터)
 
-이는 Electron 39에서 V8 API가 변경되어 발생하는 문제입니다.
+### Windows 빌드 제한사항
+⚠️ **Windows 빌드는 Windows 머신에서만 가능**합니다.
 
----
+macOS에서는 네이티브 모듈 크로스 컴파일이 불가능합니다. Windows 빌드를 생성하려면:
 
-## 🔧 해결 방법
-
-### Option 1: Electron 버전 다운그레이드 (권장)
+1. Windows 10/11 머신에서 다음 명령 실행:
 ```bash
-npm install electron@28.0.0 --save-dev
-npm run build:mac  # macOS
-npm run build:win  # Windows
-npm run build:linux  # Linux
+npm install
+npm run build:electron
+npx electron-builder --win
 ```
 
-### Option 2: better-sqlite3 업데이트
-```bash
-npm install better-sqlite3@latest --save
-npm run build:native
-npm run build:mac
-```
-
-### Option 3: 다른 데이터베이스 라이브러리 사용
-- `sql.js` (WebAssembly 기반, 네이티브 모듈 불필요)
-- `better-sqlite3` 대신 Prisma ORM 고려
+2. 생성된 파일을 `program/Windows/` 폴더로 복사
 
 ---
 
@@ -181,5 +171,6 @@ gh release create v1.0.0 \
 ---
 
 **Last Updated**: 2025-01-13
-**Build Status**: ⚠️ Blocked by native module compatibility issue
-**Next Step**: Resolve better-sqlite3 + Electron 39 compatibility
+**Build Status**: ✅ macOS build complete | ⏳ Windows build requires Windows machine
+**Electron Version**: 28.0.0 (downgraded from 39.1.2 for native module compatibility)
+**Next Step**: Build Windows version on Windows machine

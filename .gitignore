@@ -122,3 +122,10 @@ $RECYCLE.BIN/
 
 # Keep example config
 !.vscode/settings.example.json
+
+# Distribution binaries (too large for git)
+program/macOS/*.dmg
+program/macOS/*.zip
+program/Windows/*.exe
+program/Linux/*.AppImage
+program/Linux/*.deb
