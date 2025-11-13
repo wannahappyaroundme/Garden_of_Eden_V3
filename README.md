@@ -82,7 +82,8 @@ Garden of Eden V3 is a **production-quality, privacy-first desktop AI assistant*
 - **28 Customizable Parameters** - Formality, humor, verbosity, emoji usage, technical depth, and more
 - **6 Preset Personalities** - Default, Professional, Friendly, Teacher, Technical, Creative
 - **Adaptive Learning** - Gradient descent optimization based on thumbs up/down feedback
-- **RAG Memory System** - ChromaDB vector database for episodic memory and semantic search
+- **RAG Memory System** - LanceDB vector database for episodic memory and semantic search
+- **BGE-M3 Embeddings** - 1024-dimensional multilingual embeddings for accurate semantic matching
 - **Context Injection** - Retrieves relevant past conversations to maintain continuity
 
 ### 🖥️ Screen Context Analysis
