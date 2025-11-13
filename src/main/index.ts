@@ -4,7 +4,6 @@
  */
 
 import type { WebContents } from 'electron';
-import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './window';
 import { initializeDatabase, closeDatabase } from './database';
 import { registerSystemHandlers } from './ipc/system.handler';
@@ -19,8 +18,11 @@ import { registerWorkspaceHandlers, cleanupWorkspaceResources } from './ipc/work
 import { registerWebhookHandlers, cleanupWebhookResources } from './ipc/webhook.handler';
 import { registerCalendarHandlers, cleanupCalendarResources } from './ipc/calendar.handler';
 import { registerFeedbackHandlers, cleanupFeedbackResources } from './ipc/feedback.handler';
-import { registerMemoryHandlers, cleanupMemoryResources } from './ipc/memory.handler';
+import { registerMemoryHandlers, cleanupMemoryResources} from './ipc/memory.handler';
 import log from 'electron-log';
+
+// Import electron directly
+import { app as electronApp, BrowserWindow } from 'electron';
 
 // Initialize logger
 log.transports.file.level = 'info';
@@ -29,25 +31,40 @@ log.info('Starting Garden of Eden V3...');
 // Global reference to window manager
 let windowManager: WindowManager | null = null;
 
+// Handle creating/removing shortcuts on Windows when installing/uninstalling
+try {
+  const squirrelStartup = require('electron-squirrel-startup');
+  if (squirrelStartup) {
+    
+    if (electronApp) {
+      electronApp.quit();
+    }
+  }
+} catch (error) {
+  log.warn('electron-squirrel-startup not available:', error);
+}
+
 /**
  * Initialize the application
  */
 const initialize = async () => {
+  
+
   try {
     log.info('Initializing application...');
 
     // Initialize database
     initializeDatabase();
 
+    // Create window manager
+    windowManager = new WindowManager();
+    await windowManager.createMainWindow();
+
     // Initialize RAG service
     const { initializeRAGService } = await import('./services/learning/rag.service');
     await initializeRAGService().catch((error) => {
       log.warn('Failed to initialize RAG service (ChromaDB may not be running):', error);
     });
-
-    // Create window manager
-    windowManager = new WindowManager();
-    await windowManager.createMainWindow();
 
     // Register IPC handlers (AI and Screen handlers need mainWindow)
     registerSystemHandlers();
@@ -67,16 +84,29 @@ const initialize = async () => {
     log.info('Application initialized successfully');
   } catch (error) {
     log.error('Failed to initialize application:', error);
-    app.quit();
+    electronApp.quit();
   }
 };
 
 /**
- * Setup all app lifecycle event handlers
+ * App lifecycle: Ready
  */
-const setupEventHandlers = () => {
-  // Handle second instance
-  app.on('second-instance', () => {
+// Load electron and set up event handlers
+
+
+electronApp.on('ready', async () => {
+  log.info('App ready event');
+
+  // Single instance lock
+  const gotTheLock = electronApp.requestSingleInstanceLock();
+
+  if (!gotTheLock) {
+    log.warn('Another instance is already running');
+    electronApp.quit();
+    return;
+  }
+
+  electronApp.on('second-instance', () => {
     // Someone tried to run a second instance, focus our window
     if (windowManager?.mainWindow) {
       if (windowManager.mainWindow.isMinimized()) {
@@ -86,76 +116,69 @@ const setupEventHandlers = () => {
     }
   });
 
-  // All windows closed
-  app.on('window-all-closed', () => {
-    log.info('All windows closed');
-    // On macOS, keep app running even when all windows are closed
-    if (process.platform !== 'darwin') {
-      app.quit();
-    }
-  });
+  await initialize();
+});
 
-  // Activate (macOS)
-  app.on('activate', async () => {
-    log.info('App activate event');
-    // On macOS, re-create window when dock icon is clicked and no windows exist
-    if (BrowserWindow.getAllWindows().length === 0) {
-      await initialize();
-    }
-  });
+/**
+ * App lifecycle: All windows closed
+ */
+electronApp.on('window-all-closed', () => {
+  log.info('All windows closed');
 
-  // Before quit
-  app.on('before-quit', async () => {
-    log.info('App quitting...');
+  // On macOS, keep app running even when all windows are closed
+  if (process.platform !== 'darwin') {
+    electronApp.quit();
+  }
+});
 
-    // Cleanup
-    if (windowManager) {
-      windowManager.cleanup();
-    }
+/**
+ * App lifecycle: Activate (macOS)
+ */
+electronApp.on('activate', async () => {
+  
+  log.info('App activate event');
 
-    // Close database
-    closeDatabase();
+  // On macOS, re-create window when dock icon is clicked and no windows exist
+  if (BrowserWindow.getAllWindows().length === 0) {
+    await initialize();
+  }
+});
 
-    // Cleanup AI services
-    await cleanupAIResources();
+/**
+ * App lifecycle: Before quit
+ */
+electronApp.on('before-quit', async () => {
+  log.info('App quitting...');
 
-    // Cleanup screen tracking
-    await cleanupScreenResources();
+  // Cleanup
+  if (windowManager) {
+    windowManager.cleanup();
+  }
 
-    // Cleanup workspace
-    await cleanupWorkspaceResources();
+  // Close database
+  closeDatabase();
 
-    // Cleanup webhooks
-    await cleanupWebhookResources();
+  // Cleanup AI services
+  await cleanupAIResources();
 
-    // Cleanup calendar
-    await cleanupCalendarResources();
+  // Cleanup screen tracking
+  await cleanupScreenResources();
 
-    // Cleanup feedback
-    await cleanupFeedbackResources();
+  // Cleanup workspace
+  await cleanupWorkspaceResources();
 
-    // Cleanup memory
-    await cleanupMemoryResources();
-  });
+  // Cleanup webhooks
+  await cleanupWebhookResources();
 
-  // Security: Disable navigation to external URLs
-  app.on('web-contents-created', (_event: any, contents: WebContents) => {
-    contents.on('will-navigate', (event: any, navigationUrl: string) => {
-      const parsedUrl = new URL(navigationUrl);
+  // Cleanup calendar
+  await cleanupCalendarResources();
 
-      // Only allow localhost during development
-      if (parsedUrl.origin !== 'http://localhost:5173' && !navigationUrl.startsWith('file://')) {
-        log.warn('Blocked navigation to:', navigationUrl);
-        event.preventDefault();
-      }
-    });
+  // Cleanup feedback
+  await cleanupFeedbackResources();
 
-    contents.setWindowOpenHandler(({ url }: { url: string }) => {
-      log.warn('Blocked new window:', url);
-      return { action: 'deny' as const };
-    });
-  });
-};
+  // Cleanup memory
+  await cleanupMemoryResources();
+});
 
 /**
  * Handle uncaught exceptions
@@ -170,45 +193,29 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 /**
- * Main app initialization
+ * Security: Disable navigation to external URLs
  */
-(async () => {
-  try {
-    // Handle creating/removing shortcuts on Windows when installing/uninstalling
-    try {
-      const squirrelStartup = require('electron-squirrel-startup');
-      if (squirrelStartup) {
-        app.quit();
-        return;
-      }
-    } catch (error) {
-      log.warn('electron-squirrel-startup not available:', error);
+electronApp.on('web-contents-created', (_event: any, contents: WebContents) => {
+  contents.on('will-navigate', (event: any, navigationUrl: string) => {
+    const parsedUrl = new URL(navigationUrl);
+
+    // Only allow localhost during development
+    if (parsedUrl.origin !== 'http://localhost:5173' && !navigationUrl.startsWith('file://')) {
+      log.warn('Blocked navigation to:', navigationUrl);
+      event.preventDefault();
     }
+  });
 
-    // Wait for app to be ready
-    await app.whenReady();
-    log.info('App ready event');
+  contents.setWindowOpenHandler(({ url }: { url: string }) => {
+    log.warn('Blocked new window:', url);
+    return { action: 'deny' as const };
+  });
+});
 
-    // Single instance lock
-    const gotTheLock = app.requestSingleInstanceLock();
-    if (!gotTheLock) {
-      log.warn('Another instance is already running');
-      app.quit();
-      return;
-    }
-
-    // Setup all event handlers
-    setupEventHandlers();
-
-    // Initialize the application
-    await initialize();
-
-    // Enable DevTools in development
-    if (process.env.NODE_ENV === 'development') {
-      log.info('Development mode - DevTools enabled');
-    }
-  } catch (error) {
-    log.error('Fatal error during startup:', error);
-    app.quit();
-  }
-})();
+// Enable DevTools in development
+if (process.env.NODE_ENV === 'development') {
+  electronApp.whenReady().then(() => {
+    // Install React DevTools
+    // Note: electron-devtools-installer is optional
+  });
+}
