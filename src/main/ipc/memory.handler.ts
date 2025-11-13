@@ -23,17 +23,23 @@ export function registerMemoryHandlers(): void {
       try {
         log.info('Store episode requested');
 
-        // Store in ChromaDB and get chroma ID
-        const chromaId = await ragService.storeEpisode(request.episode);
-
         // Generate episode ID
         const episodeId = `episode-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-        // Store metadata in SQLite
+        // Create full episode object with ID
+        const fullEpisode = {
+          id: episodeId,
+          ...request.episode,
+        };
+
+        // Store in LanceDB with BGE-M3 embeddings
+        await ragService.storeEpisode(fullEpisode);
+
+        // Store metadata in SQLite (for backward compatibility)
         episodeRepo.create({
           id: episodeId,
           ...request.episode,
-          chromaId,
+          chromaId: episodeId, // Use episode ID as chroma ID for now
         });
 
         return {

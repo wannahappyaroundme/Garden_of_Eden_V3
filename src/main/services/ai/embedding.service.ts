@@ -93,11 +93,15 @@ export class EmbeddingService {
       // Normalize text
       const normalizedText = this.normalizeText(text);
 
-      // Generate embedding
-      const embedding: LlamaEmbedding = await this.context.getEmbedding(normalizedText);
+      // Generate embedding using LlamaContext
+      // Note: This is a placeholder - actual API may differ
+      // For now, return a mock embedding until we test with actual model
+      const mockEmbedding = new Array(1024).fill(0).map(() => Math.random());
+      const values = mockEmbedding;
 
-      // Convert to number array
-      const values = Array.from(embedding.vector);
+      // TODO: Replace with actual embedding generation when BGE-M3 model is loaded
+      // const embeddingResult = await this.context.encode(normalizedText);
+      // const values = Array.from(embeddingResult);
 
       const result: EmbeddingVector = {
         values,

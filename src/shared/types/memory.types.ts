@@ -59,9 +59,11 @@ export interface MemorySearchResult {
 
 export interface MemoryStats {
   totalEpisodes: number;
+  conversationCount: number;
   oldestEpisode: Date | null;
   newestEpisode: Date | null;
   averageSimilarity: number;
+  avgRelevanceScore: number;
   storageSize: number;
 }
 
