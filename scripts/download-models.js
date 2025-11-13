@@ -12,7 +12,7 @@ const { execSync } = require('child_process');
 const MODELS = {
   qwen: {
     name: 'Qwen 2.5 32B Instruct (Q4_K_M)',
-    url: 'https://huggingface.co/Qwen/Qwen2.5-32B-Instruct-GGUF/resolve/main/qwen2.5-32b-instruct-q4_k_m.gguf',
+    url: 'https://huggingface.co/bartowski/Qwen2.5-32B-Instruct-GGUF/resolve/main/Qwen2.5-32B-Instruct-Q4_K_M.gguf',
     filename: 'qwen2.5-32b-instruct-q4_k_m.gguf',
     size: '18.9 GB',
   },
