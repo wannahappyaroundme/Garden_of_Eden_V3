@@ -414,7 +414,7 @@
 - [x] Write tests for Database repositories
 - [x] Write tests for Llama service (618 lines, 13 test suites)
 - [x] Write tests for Whisper service (571 lines, 13 test suites)
-- [ ] Write tests for LLaVA service
+- [x] Write tests for LLaVA service (674 lines, 14 test suites)
 - [x] Write tests for File service (427 lines, 11 test suites)
 - [x] Write tests for Git service (648 lines, 19 test suites)
 - [ ] Write tests for Calendar service
@@ -425,7 +425,7 @@
 - [x] Write tests for Screen Capture service (731 lines, 12 test suites)
 - [ ] Write tests for IPC handlers
 - [ ] Achieve 80% code coverage
-- [x] **Total: 4,207 lines of tests, 87 test suites, covering 7 core services**
+- [x] **Total: 4,881 lines of tests, 101 test suites, covering 8 core services**
 
 ### Integration Tests
 - [ ] Test full conversation flow (text input → AI response)
