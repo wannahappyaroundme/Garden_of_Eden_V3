@@ -7,9 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Current Version: 0.7.0-alpha (2025-01-12)
+### Current Version: 1.0.0-beta (2025-01-13)
 
-**12 Major Commits | ~70% MVP Complete | ~50% Production Ready**
+**Phase 7 Complete - Distribution Infrastructure Ready**
+**~90% MVP Complete | ~80% Production Ready**
+
+---
+
+## [0.8.0] - 2025-01-13
+
+### Added - Phase 7: Distribution Infrastructure
+- **Auto-Updater Service** (Commit: fd435c5)
+  - electron-updater integration with event handling
+  - Automatic update checking on startup (production only)
+  - Download progress tracking with percent, speed, ETA
+  - Manual download control (autoDownload: false)
+  - Auto-install on quit functionality
+  - Update notifications to renderer process
+  - IPC handlers: update:check, update:download, update:install
+  - Status monitoring: update:get-status, update:get-version
+
+- **Model Downloader Service** (Commit: fd435c5)
+  - Download management for 3 AI models (~12GB total):
+    - Llama 3.1 8B Instruct (~4.92GB)
+    - LLaVA v1.6 Mistral 7B (~4.37GB)
+    - Whisper Large V3 (~3.09GB)
+  - Per-model progress tracking (downloaded, total, percent, speed, ETA)
+  - Overall download progress aggregation
+  - Resume capability for interrupted downloads
+  - Pause/cancel/delete operations for individual models
+  - Disk space checking before download
+  - SHA-256 checksum verification (planned)
+  - Models directory: `~/Library/Application Support/garden-of-eden-v3/models`
+
+- **First-Run Onboarding UI** (Commit: 1403495)
+  - 7-step wizard with progress bar:
+    1. Welcome - Introduction and vision
+    2. Language - Select Korean or English
+    3. Download - Download 3 AI models with progress
+    4. Mode - Choose User-Led or AI-Led
+    5. Tutorial - Quick interaction guide
+    6. Permissions - Screen recording, microphone, files
+    7. Persona - Customize AI personality
+  - Skip functionality (disabled during downloads)
+  - i18n support for Korean and English
+  - Connected to IPC handlers for backend integration
+  - Persistent onboarding completion flag
+
+- **Icon Generation Script** (Commit: 1403495)
+  - Automated icon generation with ImageMagick
+  - macOS .icns generation (1024x1024 down to 16x16)
+  - Windows .ico generation (256x256 down to 16x16)
+  - Linux PNG icons at multiple sizes
+  - Placeholder icon generator for quick testing
+  - Icon design guide with requirements
+
+- **Distribution Documentation** (Commit: 7540d2c)
+  - DISTRIBUTION.md (591 lines)
+    - Build configuration and electron-builder setup
+    - Code signing process (macOS + Windows)
+    - Auto-updater implementation guide
+    - Release checklist and workflow
+  - macOS entitlements for hardened runtime
+  - Icon requirements and design guidelines
+
+### IPC Integration
+- **System Handler Updates**
+  - 6 new update IPC handlers
+  - Auto-updater service initialization
+  - Event-driven update notifications
+
+- **New Download Handler**
+  - 11 download IPC handlers
+  - Real-time progress events
+  - Model management operations
+
+- **Preload API Additions**
+  - Update APIs: updateCheck, updateDownload, updateInstall, updateGetStatus
+  - Download APIs: downloadModel, downloadAllModels, downloadGetDownloaded
+  - Event listeners: onUpdateAvailable, onUpdateProgress, onDownloadProgress
+  - 20+ new API methods exposed to renderer
+
+### Main Process Integration
+- Register download handlers at startup
+- Initialize auto-updater on production builds
+- Initialize model downloader service
+- Set main window references for IPC communication
 
 ---
 
