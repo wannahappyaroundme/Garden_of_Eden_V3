@@ -22,8 +22,9 @@ import { registerMemoryHandlers, cleanupMemoryResources} from './ipc/memory.hand
 import { registerDownloadHandlers } from './ipc/download.handler';
 import log from 'electron-log';
 
-// Import electron directly
-import { app as electronApp, BrowserWindow } from 'electron';
+// Import electron
+import * as electron from 'electron';
+const { app, BrowserWindow } = electron;
 
 // Initialize logger
 log.transports.file.level = 'info';
@@ -36,9 +37,9 @@ let windowManager: WindowManager | null = null;
 try {
   const squirrelStartup = require('electron-squirrel-startup');
   if (squirrelStartup) {
-    
-    if (electronApp) {
-      electronApp.quit();
+
+    if (app) {
+      app.quit();
     }
   }
 } catch (error) {
@@ -99,7 +100,7 @@ const initialize = async () => {
     log.info('Application initialized successfully');
   } catch (error) {
     log.error('Failed to initialize application:', error);
-    electronApp.quit();
+    app.quit();
   }
 };
 
@@ -109,19 +110,19 @@ const initialize = async () => {
 // Load electron and set up event handlers
 
 
-electronApp.on('ready', async () => {
+app.on('ready', async () => {
   log.info('App ready event');
 
   // Single instance lock
-  const gotTheLock = electronApp.requestSingleInstanceLock();
+  const gotTheLock = app.requestSingleInstanceLock();
 
   if (!gotTheLock) {
     log.warn('Another instance is already running');
-    electronApp.quit();
+    app.quit();
     return;
   }
 
-  electronApp.on('second-instance', () => {
+  app.on('second-instance', () => {
     // Someone tried to run a second instance, focus our window
     if (windowManager?.mainWindow) {
       if (windowManager.mainWindow.isMinimized()) {
@@ -137,20 +138,20 @@ electronApp.on('ready', async () => {
 /**
  * App lifecycle: All windows closed
  */
-electronApp.on('window-all-closed', () => {
+app.on('window-all-closed', () => {
   log.info('All windows closed');
 
   // On macOS, keep app running even when all windows are closed
   if (process.platform !== 'darwin') {
-    electronApp.quit();
+    app.quit();
   }
 });
 
 /**
  * App lifecycle: Activate (macOS)
  */
-electronApp.on('activate', async () => {
-  
+app.on('activate', async () => {
+
   log.info('App activate event');
 
   // On macOS, re-create window when dock icon is clicked and no windows exist
@@ -162,7 +163,7 @@ electronApp.on('activate', async () => {
 /**
  * App lifecycle: Before quit
  */
-electronApp.on('before-quit', async () => {
+app.on('before-quit', async () => {
   log.info('App quitting...');
 
   // Cleanup
@@ -210,7 +211,7 @@ process.on('unhandledRejection', (reason, promise) => {
 /**
  * Security: Disable navigation to external URLs
  */
-electronApp.on('web-contents-created', (_event: any, contents: WebContents) => {
+app.on('web-contents-created', (_event: any, contents: WebContents) => {
   contents.on('will-navigate', (event: any, navigationUrl: string) => {
     const parsedUrl = new URL(navigationUrl);
 
@@ -229,7 +230,7 @@ electronApp.on('web-contents-created', (_event: any, contents: WebContents) => {
 
 // Enable DevTools in development
 if (process.env.NODE_ENV === 'development') {
-  electronApp.whenReady().then(() => {
+  app.whenReady().then(() => {
     // Install React DevTools
     // Note: electron-devtools-installer is optional
   });

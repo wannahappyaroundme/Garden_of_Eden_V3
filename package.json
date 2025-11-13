@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "tauri dev",
     "dev:electron": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
-    "dev:main": "tsc -p tsconfig.main.json && tsc-alias -p tsconfig.main.json && electron --inspect=5858 .",
+    "dev:main": "tsc -p tsconfig.main.json && tsc-alias -p tsconfig.main.json && NODE_ENV=development electron --inspect=5858 .",
     "dev:renderer": "vite",
     "build": "tauri build",
     "build:electron": "npm run build:main && npm run build:renderer",
@@ -33,6 +33,7 @@
     "download:llama": "node scripts/download-models.js --model=llama",
     "download:whisper": "node scripts/download-models.js --model=whisper",
     "download:llava": "node scripts/download-models.js --model=llava",
+    "generate:icons": "node scripts/generate-placeholder-icon.js",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
@@ -106,6 +107,7 @@
     "lucide-react": "^0.303.0",
     "postcss": "^8.4.32",
     "prettier": "^3.1.1",
+    "sharp": "^0.34.5",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
