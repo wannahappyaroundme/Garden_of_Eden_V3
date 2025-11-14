@@ -18,6 +18,7 @@ import { DynamicIsland, useDynamicIsland } from '../components/DynamicIsland';
 import { Eye, EyeOff } from 'lucide-react';
 import SuggestedPromptCard from '../components/SuggestedPromptCard';
 import ModeIndicator from '../components/ModeIndicator';
+import ShortcutHelp from '../components/ShortcutHelp';
 
 interface Message {
   id: string;
@@ -36,6 +37,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [trackingStatus, setTrackingStatus] = useState({
     isTracking: false,
     lastCaptureTime: 0,
@@ -67,6 +69,20 @@ export function Chat({ onOpenSettings }: ChatProps) {
       }
     },
   });
+
+  // Handle ? key for shortcuts help
+  useEffect(() => {
+    const handleQuestionMark = (e: KeyboardEvent) => {
+      // Only trigger if not typing in an input
+      if (e.key === '?' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        setShowShortcutHelp(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleQuestionMark);
+    return () => document.removeEventListener('keydown', handleQuestionMark);
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive using smooth scroll hook
   const messagesEndRef = useSmoothScroll<HTMLDivElement>({
@@ -329,6 +345,33 @@ export function Chat({ onOpenSettings }: ChatProps) {
               onToggle={handleToggleTracking}
             />
 
+            {/* Keyboard Shortcuts Help Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowShortcutHelp(true)}
+              className="h-8 w-8 p-0"
+              aria-label="키보드 단축키 도움말"
+              title="키보드 단축키 (?))"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-muted-foreground"
+              >
+                <path
+                  d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Button>
+
             {/* Settings Button */}
             <Button
               variant="ghost"
@@ -480,6 +523,12 @@ export function Chat({ onOpenSettings }: ChatProps) {
           onAction={handleToggleTracking}
         />
       )}
+
+      {/* Keyboard Shortcuts Help */}
+      <ShortcutHelp
+        isOpen={showShortcutHelp}
+        onClose={() => setShowShortcutHelp(false)}
+      />
     </div>
   );
 }
