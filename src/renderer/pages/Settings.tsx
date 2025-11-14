@@ -232,19 +232,68 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
               {/* About */}
               <section>
                 <h2 className="text-lg font-semibold mb-4">정보</h2>
-                <div className="bg-card p-6 rounded-lg border border-border space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">버전</span>
-                <span className="font-mono">1.0.0</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">플랫폼</span>
-                <span className="font-mono">{window.api.platform}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">AI 모델</span>
-                <span className="font-mono">Llama 3.1 8B</span>
-              </div>
+                <div className="bg-card p-6 rounded-lg border border-border space-y-4">
+                  {/* Version Info */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">버전</span>
+                      <span className="font-mono">1.0.0</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">플랫폼</span>
+                      <span className="font-mono">{window.api.platform}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">AI 모델</span>
+                      <span className="font-mono">Qwen 2.5 32B Instruct</span>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-border" />
+
+                  {/* System Info */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold mb-2">시스템 정보</h3>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>🔒 100% 로컬 실행 - 데이터가 외부로 전송되지 않습니다</p>
+                      <p>🚀 빠른 응답 - 22-26 tokens/sec</p>
+                      <p>💾 메모리 사용량 - 약 22-25GB RAM</p>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-border" />
+
+                  {/* Links */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold mb-2">도움말</h3>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        className="text-xs text-primary hover:underline text-left"
+                        onClick={() => window.open('https://github.com', '_blank')}
+                      >
+                        📖 문서 보기
+                      </button>
+                      <button
+                        className="text-xs text-primary hover:underline text-left"
+                        onClick={() => window.open('https://github.com', '_blank')}
+                      >
+                        🐛 버그 리포트
+                      </button>
+                      <button
+                        className="text-xs text-primary hover:underline text-left"
+                        onClick={() => window.open('https://github.com', '_blank')}
+                      >
+                        💡 기능 제안
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="pt-4 border-t border-border text-center text-xs text-muted-foreground">
+                    Made with ❤️ by Eden Team
+                  </div>
                 </div>
               </section>
             </div>
