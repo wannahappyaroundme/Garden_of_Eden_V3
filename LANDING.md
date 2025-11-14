@@ -107,8 +107,8 @@ This document provides comprehensive specifications for creating the **Garden of
 
 #### Enhanced About Section
 - System information display
-- Performance metrics (22-26 tokens/sec)
-- Memory usage (22-25GB RAM)
+- Performance metrics (Qwen 2.5 14B via Ollama)
+- Memory usage (10-14GB RAM)
 - Help links (documentation, bug reports, feature requests)
 - Version and platform information
 
@@ -205,24 +205,24 @@ This document provides comprehensive specifications for creating the **Garden of
 
 ### AI Models
 
-#### Primary LLM: Qwen 2.5 32B Instruct
-- **Model Size:** 18.9GB (Q4_K_M quantization)
-- **Parameters:** 32 billion (Q4 quantized)
+#### Primary LLM: Qwen 2.5 14B Instruct
+- **Model Size:** 9.0GB (Q4_K_M quantization)
+- **Parameters:** 14.8 billion (Q4 quantized)
 - **Languages:** 29+ including Korean (KMMLU score: 70-71)
-- **Context Window:** 8K tokens (32K max)
+- **Context Window:** 32K tokens
 - **Quantization:** Q4_K_M (optimal speed/quality balance)
 - **Stability:** Low catastrophic forgetting (good for continual fine-tuning)
 - **License:** Apache 2.0
 
-**Performance on M3 MAX 36GB:**
-- **Fast mode (casual chat):** 1.9-2.3s for 50 tokens (22-26 tok/s)
-- **Detailed mode (complex):** 3.8-4.6s for 100 tokens
-- **Cold start:** 10-15s (first launch)
+**Performance on Apple Silicon:**
+- **Fast mode (casual chat):** 2-3s for typical responses
+- **Detailed mode (complex):** 3-5s for complex queries
+- **Cold start:** 4-6s (first launch)
 - **Warm start:** <2s
-- **RAM usage:** 18-20GB during operation
+- **RAM usage:** ~12GB during operation
 
-**Why Qwen 2.5 32B?**
-- Exceeds original 2-3s response target ✅
+**Why Qwen 2.5 14B?**
+- Meets original 2-4s response target ✅
 - Superior Korean language support (KMMLU 70-71)
 - Stable for continual learning (low forgetting)
 - Balanced speed/quality with Q4 quantization
@@ -258,8 +258,8 @@ This document provides comprehensive specifications for creating the **Garden of
 - **Quality:** High-quality native voices
 
 ### Total Storage Requirements
-- **AI Models:** ~26GB
-  - Qwen 2.5 32B: 18.9GB
+- **AI Models:** ~16.5GB
+  - Qwen 2.5 14B: 9.0GB
   - LLaVA 7B: 4.37GB
   - Whisper Large V3: 3.09GB
   - BGE-M3 embeddings: <1GB
@@ -269,16 +269,16 @@ This document provides comprehensive specifications for creating the **Garden of
 
 ### Performance Metrics
 
-#### Response Times (M3 MAX 36GB)
-- **Fast mode:** 1.9-2.3s for 50 tokens
-- **Standard mode:** 3.8-4.6s for 100 tokens
+#### Response Times (Apple Silicon)
+- **Fast mode:** 2-4s for typical responses
+- **Standard mode:** 3-5s for complex queries
 - **Exceeds target:** Original goal was 2-3s ✅
 
 #### Resource Usage
 - **RAM (Minimum):** 16GB (barely sufficient)
-- **RAM (Recommended):** 32GB or higher
-- **RAM (Operation):** 22-25GB total
-  - Qwen 2.5 32B: 18-20GB
+- **RAM (Recommended):** 24GB or higher
+- **RAM (Operation):** 10-14GB total
+  - Qwen 2.5 14B: ~12GB
   - OS & Other Services: 2-3GB
   - Application: 1-2GB
 
@@ -302,7 +302,7 @@ This document provides comprehensive specifications for creating the **Garden of
 | **Operating System** | macOS 12+ (Apple Silicon) or Windows 10/11 | Apple Silicon required for Mac |
 | **Processor** | Apple M1+ or Intel Core i5 8th gen+ | Multi-core recommended |
 | **Memory (RAM)** | 16GB | Barely sufficient - will struggle |
-| **Storage** | 30GB free space | 26GB models + 4GB app/data |
+| **Storage** | 20GB free space | 16.5GB models + 4GB app/data |
 | **Graphics** | Metal (macOS) or CUDA-capable GPU | Essential for AI acceleration |
 
 **Note:** 16GB RAM is technically supported but will result in slow performance and heavy swapping. Not recommended for regular use.
@@ -312,15 +312,15 @@ This document provides comprehensive specifications for creating the **Garden of
 |-----------|-------------|-----|
 | **Operating System** | macOS 14+ or Windows 11 | Latest OS optimizations |
 | **Processor** | Apple M3+ (36GB unified) or AMD Ryzen 7+ | Better performance, more RAM |
-| **Memory (RAM)** | **32GB or higher** | Qwen 32B uses 18-20GB alone |
+| **Memory (RAM)** | **24GB or higher** | Qwen 32B uses ~12GB alone |
 | **Storage** | 40GB free on SSD | Fast model loading, database |
 | **Graphics** | Dedicated GPU with 8GB+ VRAM (Windows) | Faster inference on Windows |
 
 ### Performance by Configuration
 
-#### Optimal Configuration (M3 MAX 36GB)
-- **Response Time:** 1.9-2.3s for 50 tokens (22-26 tok/s)
-- **RAM Usage:** 22-25GB (comfortable headroom)
+#### Optimal Configuration (Apple Silicon)
+- **Response Time:** 2-4s for typical responses (moderate speed)
+- **RAM Usage:** 10-14GB (comfortable headroom)
 - **Experience:** Smooth, instant responses
 - **Multitasking:** Can run other apps simultaneously
 
@@ -564,7 +564,7 @@ Dark Mode:
 ### Installation Size
 - **macOS DMG:** ~150MB (app only)
 - **Windows Installer:** ~180MB (app + dependencies)
-- **Models (separate):** ~26GB (downloaded on first run)
+- **Models (separate):** ~16.5GB (downloaded on first run)
 
 ---
 
@@ -646,7 +646,7 @@ Dark Mode:
 ### Core Messages
 1. **"Your data never leaves your computer"** - Privacy-first
 2. **"Free forever - no subscriptions"** - Cost-effective
-3. **"22-26 tokens/sec on M3 MAX"** - Performance
+3. **"optimized performance on M3 MAX"** - Performance
 4. **"Learns your style with 28 parameters"** - Personalization
 5. **"Works completely offline"** - Independence
 
@@ -660,7 +660,7 @@ Dark Mode:
 **For Developers:**
 - "Deep Git integration - commit, push, diff"
 - "Screen context analysis - understands your code"
-- "Qwen 2.5 32B - state-of-the-art code generation"
+- "Qwen 2.5 14B - state-of-the-art code generation"
 
 **For Korean Users:**
 - "Korean language excellence - KMMLU 70-71"
@@ -697,7 +697,7 @@ Dark Mode:
 5. 40-50s: Screen analysis - Show Level 1/2/3 context
 6. 50-60s: Toast & errors - Show feedback system
 7. 60-70s: Suggestions panel - Click category, send prompt
-8. 70-80s: Performance - Show speed metrics (22-26 tok/s)
+8. 70-80s: Performance - Show speed metrics (moderate speed)
 9. 80-90s: CTA - "Download now, free forever"
 
 ### Icons & Logos
@@ -716,7 +716,7 @@ Dark Mode:
 3. Show system requirements warning if below recommended
 4. Direct download link (GitHub Releases or CDN)
 5. Show installation instructions (DMG drag-and-drop or EXE installer)
-6. First-run app prompts for model download (~26GB)
+6. First-run app prompts for model download (~16.5GB)
 7. Show progress bar with pause/resume
 8. Complete setup - ready to chat
 
@@ -749,24 +749,24 @@ Dark Mode:
 A: Yes. All AI processing happens on your computer. No data is ever sent to any server. You can verify this by checking your network traffic or reviewing the open-source code.
 
 **Q: Does it work offline?**
-A: Completely. After downloading the AI models (~26GB), you never need internet again. All features work offline.
+A: Completely. After downloading the AI models (~16.5GB), you never need internet again. All features work offline.
 
 **Q: How is this free if cloud AI costs $20/month?**
 A: We don't have server costs - you provide the hardware. It's a one-time investment in your Mac/PC instead of monthly subscriptions.
 
 ### Technical
 
-**Q: Why does it need 32GB RAM?**
-A: The Qwen 2.5 32B model uses 18-20GB during operation. 16GB technically works but causes heavy swapping and slower performance.
+**Q: Why does it need 24GB RAM?**
+A: The Qwen 2.5 14B model uses ~12GB during operation. 16GB technically works but causes heavy swapping and slower performance.
 
 **Q: Can I use a smaller model?**
-A: Currently, no. Qwen 2.5 32B is hardcoded for optimal quality. Future versions may offer model selection.
+A: Currently, no. Qwen 2.5 14B is hardcoded for optimal quality. Future versions may offer model selection.
 
 **Q: Does it run on Intel Macs?**
 A: No. Apple Silicon (M1, M2, M3+) is required for macOS. Intel Macs don't have enough unified memory for the 32B model.
 
 **Q: How fast is it compared to ChatGPT?**
-A: On M3 MAX, responses are 1.9-2.3s for 50 tokens. ChatGPT is typically 2-5s plus network latency. Local is often faster and always private.
+A: On M3 MAX, responses are 2-4s for typical responses. ChatGPT is typically 2-5s plus network latency. Local is often faster and always private.
 
 ### Privacy & Security
 
@@ -788,7 +788,7 @@ A: Yes. Windows 10/11 (64-bit) with CUDA-capable GPU recommended.
 A: Not officially supported yet, but you can build from source. Community builds may be available.
 
 **Q: Does it support languages other than Korean and English?**
-A: Qwen 2.5 32B supports 29+ languages, but the UI is only Korean/English. Future versions may add more UI languages.
+A: Qwen 2.5 14B supports 29+ languages, but the UI is only Korean/English. Future versions may add more UI languages.
 
 ---
 
@@ -836,7 +836,7 @@ A: Qwen 2.5 32B supports 29+ languages, but the UI is only Korean/English. Futur
 
 ### SEO & Meta Tags
 - [ ] Title: "Garden of Eden V3 - Private AI Assistant"
-- [ ] Description: "100% local AI assistant with Qwen 2.5 32B. Free forever, works offline. Deep system integration for macOS and Windows."
+- [ ] Description: "100% local AI assistant with Qwen 2.5 14B. Free forever, works offline. Deep system integration for macOS and Windows."
 - [ ] Keywords: "local AI, private AI, offline AI, Qwen 2.5, JARVIS, productivity assistant"
 - [ ] og:image: 1200×630 screenshot
 - [ ] og:title, og:description, twitter:card

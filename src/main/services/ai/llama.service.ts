@@ -1,6 +1,6 @@
 /**
  * LLM Service
- * Manages Qwen 2.5 32B Instruct model for AI conversations
+ * Manages Qwen 2.5 14B Instruct model for AI conversations (via Ollama)
  */
 
 import * as path from 'path';
@@ -53,8 +53,8 @@ export class LlamaService {
       topP: 0.9,
       topK: 40,
       maxTokens: 2048,
-      contextSize: 8192, // Qwen 2.5 32B supports up to 32K, using 8K for efficiency
-      gpuLayers: 50, // Qwen 2.5 32B has more layers, offload more to GPU (M3 MAX)
+      contextSize: 32768, // Qwen 2.5 14B supports 32K context
+      gpuLayers: 33, // Qwen 2.5 14B has 33 layers, offload all to GPU
       ...config,
     };
   }
@@ -262,16 +262,12 @@ export class LlamaService {
   }
 }
 
-// Create default instance with model path
-const defaultModelPath = path.join(
-  process.env.HOME || process.env.USERPROFILE || '.',
-  '.garden-of-eden-v3',
-  'models',
-  'qwen2.5-32b-instruct-q4_k_m.gguf'
-);
+// Create default instance with Ollama model reference
+// Note: This service is legacy. The actual implementation uses Ollama directly via src-tauri/src/services/ollama.rs
+const defaultModelPath = 'qwen2.5:14b'; // Ollama model reference
 
 export const llamaService = new LlamaService({
   modelPath: defaultModelPath,
-  contextSize: 8192, // Qwen 2.5 32B: 32K max, using 8K for performance
-  gpuLayers: 50, // Offload most layers to Metal GPU (M3 MAX)
+  contextSize: 32768, // Qwen 2.5 14B: 32K context window
+  gpuLayers: 33, // Offload all 33 layers to Metal GPU
 });

@@ -48,7 +48,7 @@ All notable changes to Garden of Eden V3 will be documented in this file.
 - **First Message Celebration**: Particle effects 🎉
 
 ### Changed
-- **AI Model**: Qwen 2.5 32B Instruct (22-26 tok/s)
+- **AI Model**: Qwen 2.5 14B Instruct (via Ollama)
 - **Onboarding**: Name first, optimized flow
 - **Settings**: 2-column layout with preview
 

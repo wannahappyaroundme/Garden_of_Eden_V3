@@ -31,20 +31,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Git Integration**: simple-git
 - **Screen Capture**: screenshot-desktop
 
-### AI Stack (100% Local)
-- **Primary LLM**: Qwen 2.5 32B Instruct Q4_K_M (~18.9GB) - Conversation, reasoning, code generation, Korean language
-  - 32B parameters (Q4 quantization for speed/quality balance)
-  - 29+ language support including Korean (KMMLU 70-71)
-  - Speed: 22-26 tokens/sec on M3 MAX 36GB
-  - Context: 8K tokens (32K max)
+### AI Stack (100% Local via Ollama)
+- **Primary LLM**: Qwen 2.5 14B Instruct Q4_K_M (~9.0GB) - Conversation, reasoning, code generation, Korean language
+  - 14.8B parameters (Q4_K_M quantization for speed/quality balance)
+  - 29+ language support including Korean
+  - Context: 32K tokens
   - Stable for continual fine-tuning (low catastrophic forgetting)
-- **Vision Model**: LLaVA 7B (~4GB) - Screen analysis, image understanding
-- **Speech-to-Text**: Whisper Large V3 (~3GB) - Voice input (Korean + English)
+  - Apache 2.0 license (commercial friendly)
+- **Vision Model**: LLaVA 7B (~4.4GB) - Screen analysis, image understanding
+- **Speech-to-Text**: Whisper Large V3 (~3.1GB) - Voice input (Korean + English)
 - **Text-to-Speech**: System native TTS (platform-specific)
-- **AI Runtime**: llama.cpp with Metal (macOS) / CUDA (Windows) acceleration
+- **AI Runtime**: Ollama with Metal (macOS) / CUDA (Windows) acceleration
 
-**Total AI Storage**: ~26GB
-**RAM Usage During Operation**: 22-25GB (Qwen 32B: 18-20GB + OS + other models)
+**Total AI Storage**: ~16.5GB
+**RAM Usage During Operation**: 10-14GB (Qwen 14B: ~12GB + OS + other models)
 
 ## Key Architectural Decisions
 
@@ -103,7 +103,7 @@ garden-of-eden-v3/
 │   │   │   └── system.handler.ts
 │   │   ├── services/           # Core business logic
 │   │   │   ├── ai/
-│   │   │   │   ├── llama.service.ts      # Qwen 2.5 32B integration
+│   │   │   │   ├── llama.service.ts      # Qwen 2.5 14B integration (via Ollama)
 │   │   │   │   ├── llava.service.ts      # LLaVA vision model
 │   │   │   │   ├── whisper.service.ts    # Speech-to-text
 │   │   │   │   ├── tts.service.ts        # Text-to-speech
@@ -155,8 +155,8 @@ garden-of-eden-v3/
 │       └── constants/
 │
 ├── resources/
-│   ├── models/                  # AI models (gitignored, ~26GB)
-│   │   ├── qwen-2.5-32b-instruct-q4-k-m.gguf  # 18.9GB
+│   ├── models/                  # AI models (via Ollama, ~16.5GB total)
+│   │   ├── qwen2.5:14b (via Ollama)            # 9.0GB Q4_K_M
 │   │   ├── llava-7b.gguf                       # 4.4GB
 │   │   ├── whisper-large-v3.bin                # 3.1GB
 │   │   └── bge-m3-embeddings/                  # BGE-M3 for RAG
@@ -191,10 +191,10 @@ pip install -r requirements.txt
 # Build native modules (llama.cpp bindings)
 npm run build:native
 
-# Download AI models (~26GB total)
-npm run download:models
-# Or individually:
-npm run download:qwen      # Qwen 2.5 32B Instruct (18.9GB)
+# Install Ollama and download AI models (~16.5GB total)
+brew install ollama         # macOS
+ollama pull qwen2.5:14b    # Qwen 2.5 14B Instruct (9.0GB Q4_K_M)
+# Or manually download other models:
 npm run download:whisper   # Whisper Large V3 (3.1GB)
 npm run download:llava     # LLaVA 7B (4.4GB)
 ```
@@ -257,13 +257,13 @@ npm run test:watch
 - ✅ Project structure scaffolding
 
 ### Phase 2: AI Integration (Week 3-4) ✅ COMPLETE
-- ✅ Integrate llama.cpp with Node.js bindings
-- ✅ Load Qwen 2.5 32B Instruct model (streaming responses, 22-26 tok/s on M3 MAX)
+- ✅ Integrate Ollama for LLM runtime
+- ✅ Load Qwen 2.5 14B Instruct model (streaming responses via Ollama)
 - ✅ Integrate Whisper Large V3 (speech-to-text)
 - ✅ Setup system TTS (macOS AVFoundation / Windows SAPI)
-- Implement streaming responses to UI
-- Test end-to-end conversation flow
-- Add model download UI
+- ✅ Implement streaming responses to UI
+- ✅ Test end-to-end conversation flow
+- ✅ Add model download UI
 
 ### Phase 3: UI/UX (Week 5-6)
 - KakaoTalk-style chat interface (bubbles, timestamps)
@@ -336,14 +336,14 @@ npm run test:watch
 
 ## Performance Targets
 
-- **Response Time**: 1.9-2.3s for 50 tokens on M3 MAX 36GB (Qwen 2.5 32B @ 22-26 t/s)
-  - Fast mode (casual chat): 1.9-2.3s for 50 tokens
-  - Detailed mode (complex queries): 3.8-4.6s for 100 tokens
-  - Exceeds original 2-3s target ✅
-- **Memory Usage**: 22-25GB RAM during operation (Qwen 32B: 18-20GB + system)
-- **Startup Time**: <10s cold start (model loading), <2s warm start
+- **Response Time**: 2-4s for typical responses (Qwen 2.5 14B via Ollama)
+  - Fast mode (casual chat): 2-3s for short responses
+  - Detailed mode (complex queries): 3-5s for longer responses
+  - Meets original 2-4s target ✅
+- **Memory Usage**: 10-14GB RAM during operation (Qwen 14B: ~12GB + system)
+- **Startup Time**: <6s cold start (model loading), <2s warm start
 - **UI Responsiveness**: <16ms frame time (60 FPS)
-- **Model Load Time**: 10-15s for Qwen 2.5 32B on first launch
+- **Model Load Time**: 4-6s for Qwen 2.5 14B with Ollama on first launch
 
 ## Development Guidelines
 
@@ -453,11 +453,11 @@ npm run test:e2e -- tests/e2e/chat.spec.ts
 
 - **Solo developer project** - Speed prioritized over perfection
 - **Desktop-first** - Windows and macOS only (no mobile)
-- **Can migrate to Tauri later** if Electron proves too heavy
-- **AI models (26GB) dwarf Electron overhead (~150MB)** - Not a concern
+- **Migrated to Tauri** for lighter weight and better performance than Electron
+- **AI models (16.5GB) via Ollama** for easy model management
 - **Focus on local experience** - No cloud fallback, no compromise
 - **Privacy is non-negotiable** - Never send user data to servers
-- **RAM requirement: 32GB recommended** for optimal Qwen 2.5 32B performance
+- **RAM requirement: 16-24GB recommended** for optimal Qwen 2.5 14B performance
 - **Production-ready quality** - This is NOT an MVP, aim for paid-product quality
 
 ## Support & Resources

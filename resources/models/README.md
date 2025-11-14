@@ -4,13 +4,13 @@ This directory contains the AI models for Garden of Eden V3.
 
 ## Models
 
-### Qwen 2.5 32B Instruct (Q4_K_M)
+### Qwen 2.5 14B Instruct (Q4_K_M via Ollama)
 - **Purpose**: Conversation generation, reasoning, code assistance, Korean language
-- **Size**: ~18.9 GB
+- **Size**: ~9.0 GB
 - **Format**: GGUF (quantized to Q4_K_M for optimal speed/quality balance)
-- **File**: qwen2.5-32b-instruct-q4_k_m.gguf
-- **Languages**: 29+ languages including Korean (KMMLU 70-71)
-- **Speed**: ~22-26 tokens/sec on M3 MAX 36GB
+- **File**: qwen2.5:14b (Ollama model reference)
+- **Languages**: 29+ languages including Korean
+- **Context**: 32K tokens
 - **Fine-tuning**: Stable for continual learning (low catastrophic forgetting risk)
 
 ### Whisper Large V3
@@ -43,7 +43,7 @@ npm run download:llava
 
 ## Total Size
 
-~26 GB of disk space required.
+~16.5 GB of disk space required.
 
 ## Model Sources
 

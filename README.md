@@ -36,7 +36,7 @@ Garden of Eden V3 is a **production-quality, privacy-first desktop AI assistant*
 </td>
 <td width="33%" align="center">
 <h3>🤖 Powerful AI</h3>
-<p>Qwen 2.5 32B Instruct (Q4), Whisper Large V3, and LLaVA 7B run directly on your machine with GPU acceleration.</p>
+<p>Qwen 2.5 14B Instruct (Q4_K_M), Whisper Large V3, and LLaVA 7B run directly on your machine with GPU acceleration.</p>
 </td>
 <td width="33%" align="center">
 <h3>🧠 Learns Your Style</h3>
@@ -64,20 +64,20 @@ Garden of Eden V3 is a **production-quality, privacy-first desktop AI assistant*
 ## ✨ Key Features
 
 ### 🔐 Privacy & Security
-- **Zero Cloud Dependency** - All AI models (~26GB) run locally via llama.cpp with Metal/CUDA acceleration
+- **Zero Cloud Dependency** - All AI models (~16GB) run locally via Ollama with Metal/CUDA acceleration
 - **Encrypted Storage** - AES-256 encryption for sensitive data in SQLite database
 - **No Telemetry** - No analytics, no tracking, no data collection
 - **Sandboxed Architecture** - Context isolation with type-safe IPC communication
 - **Works Offline** - Complete functionality without internet after initial model download
 
 ### 🤖 AI Intelligence
-- **Qwen 2.5 32B Instruct** (~18.9GB Q4_K_M) - 32B parameter model, 22-26 tok/s on M3 MAX, 29+ languages, KMMLU score 70-71
+- **Qwen 2.5 14B Instruct** (~9.0GB Q4_K_M) - 14.8B parameter model, 32K context, 29+ languages, optimized for speed/quality balance
 - **Whisper Large V3** (~3.1GB) - Speech-to-text for Korean and English
 - **LLaVA 7B** (~4.4GB) - Vision model for screen context analysis
 - **BGE-M3 Embeddings** - 1024-dimensional multilingual embeddings for RAG
 - **System TTS** - Native text-to-speech (macOS AVFoundation / Windows SAPI)
 - **One-Click Download** - Beautiful UI with real-time progress, pause/resume, and auto-detection
-- **1.9-2.3s for 50 tokens** (fast mode) on Apple Silicon M3 MAX 36GB - exceeds original 2-3s target!
+- **Fast inference** - Optimized performance on Apple Silicon with Metal acceleration
 
 ### 🎭 Persona Learning System
 - **28 Customizable Parameters** - Formality, humor, verbosity, emoji usage, technical depth, and more
@@ -179,8 +179,8 @@ AI understands what you're working on through **3 levels of screen awareness**:
 └────────────────────────────────────────────────────────────┘
 
        ┌─────────────────────────────────────────┐
-       │   LOCAL AI MODELS (~26GB)               │
-       │   • qwen-2.5-32b-instruct.gguf (18.9GB) │
+       │   LOCAL AI MODELS (~16GB via Ollama)    │
+       │   • qwen2.5:14b (9.0GB Q4_K_M)          │
        │   • whisper-large-v3 (3.1GB)            │
        │   • llava-7b (4.4GB)                    │
        │   • bge-m3 embeddings                   │
@@ -196,12 +196,12 @@ AI understands what you're working on through **3 levels of screen awareness**:
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
 | **OS** | macOS 12+ (Apple Silicon) or Windows 10/11 | macOS 14+ or Windows 11 |
-| **CPU** | Apple M1+ or Intel i5 8th gen+ | Apple M3+ (36GB unified) or Ryzen 7+ |
-| **RAM** | 16GB (barely sufficient) | **32GB or higher** |
-| **Disk Space** | 30GB free (26GB models + app) | 40GB free SSD |
-| **GPU** | Metal (macOS) or CUDA-capable | Dedicated GPU with 8GB+ VRAM (Windows) |
+| **CPU** | Apple M1+ or Intel i5 8th gen+ | Apple M3+ or Ryzen 7+ |
+| **RAM** | 16GB | **24GB or higher** |
+| **Disk Space** | 20GB free (16GB models + app) | 30GB free SSD |
+| **GPU** | Metal (macOS) or CUDA-capable | Dedicated GPU with 6GB+ VRAM (Windows) |
 
-**Performance Note:** Qwen 2.5 32B uses 18-20GB RAM during operation. M3 MAX 36GB achieves 22-26 tokens/sec.
+**Performance Note:** Qwen 2.5 14B uses ~12GB RAM during operation. Apple Silicon achieves optimal performance with Metal acceleration.
 
 ### Installation
 
@@ -224,8 +224,8 @@ cd Garden_of_Eden_V3
 # 2. Install dependencies
 npm install
 
-# 3. Download AI models (~12GB, auto-downloads on first run)
-# OR manually: npm run download:models
+# 3. Download AI models (~16GB, auto-downloads on first run via Ollama)
+# OR manually: ollama pull qwen2.5:14b
 
 # 4. Start development mode
 npm run dev
@@ -236,7 +236,7 @@ npm run dev
 When you launch Garden of Eden V3 for the first time:
 
 1. **Welcome Screen** - Introduction to the app
-2. **Model Download** - AI models (~12GB) download with progress tracking
+2. **Model Download** - AI models (~16GB) download with progress tracking via Ollama
 3. **Permissions** - Microphone access (optional) for voice input
 4. **Persona Setup** - Choose from 6 presets or customize 28 parameters
 5. **Screen Tracking** - Configure privacy settings for context analysis
@@ -265,8 +265,8 @@ When you launch Garden of Eden V3 for the first time:
 <td valign="top" width="50%">
 
 ### Backend & AI
-- **[Node.js 20+](https://nodejs.org/)** - Runtime
-- **[node-llama-cpp 3.14](https://github.com/withcatai/node-llama-cpp)** - LLM runtime
+- **[Rust + Tauri](https://tauri.app/)** - Native backend
+- **[Ollama](https://ollama.ai/)** - LLM runtime
 - **[better-sqlite3 11.7](https://github.com/WiseLibs/better-sqlite3)** - Local database
 - **[ChromaDB 1.7](https://www.trychroma.com/)** - Vector database
 - **[@xenova/transformers 2.17](https://huggingface.co/docs/transformers.js)** - Embeddings
@@ -277,13 +277,13 @@ When you launch Garden of Eden V3 for the first time:
 </tr>
 </table>
 
-### AI Models (100% Local)
-- **Llama 3.1 8B Instruct** (4.92GB GGUF) - Meta's flagship conversational model
-- **Whisper Large V3** (3.09GB) - OpenAI's speech recognition (supports 99 languages)
-- **LLaVA 7B** (4.37GB) - Visual language model for screen understanding
-- **all-MiniLM-L6-v2** - Sentence embeddings for RAG memory
+### AI Models (100% Local via Ollama)
+- **Qwen 2.5 14B Instruct** (9.0GB Q4_K_M) - Alibaba's flagship conversational model with 32K context
+- **Whisper Large V3** (3.1GB) - OpenAI's speech recognition (supports 99 languages)
+- **LLaVA 7B** (4.4GB) - Visual language model for screen understanding
+- **BGE-M3** - 1024-dimensional multilingual embeddings for RAG memory
 
-**Total Storage**: ~12.4GB | **RAM Usage**: 12-15GB during operation
+**Total Storage**: ~16.5GB | **RAM Usage**: 10-14GB during operation
 
 ---
 
@@ -297,18 +297,18 @@ When you launch Garden of Eden V3 for the first time:
 </tr>
 <tr>
 <td><b>Response Time</b></td>
-<td>2-3s</td>
-<td>✅ 2-3s</td>
+<td>2-4s</td>
+<td>✅ 2-4s (Qwen 14B)</td>
 </tr>
 <tr>
 <td><b>Startup Time</b></td>
 <td>&lt;5s cold, &lt;2s warm</td>
-<td>✅ ~5s / ~2s</td>
+<td>✅ ~4s / ~2s</td>
 </tr>
 <tr>
 <td><b>Memory Usage</b></td>
 <td>&lt;15GB RAM</td>
-<td>✅ 12-15GB</td>
+<td>✅ 10-14GB</td>
 </tr>
 <tr>
 <td><b>UI Responsiveness</b></td>
@@ -317,8 +317,8 @@ When you launch Garden of Eden V3 for the first time:
 </tr>
 <tr>
 <td><b>Model Load Time</b></td>
-<td>&lt;10s</td>
-<td>✅ ~8s</td>
+<td>&lt;8s</td>
+<td>✅ ~6s (Ollama)</td>
 </tr>
 </table>
 
@@ -340,7 +340,7 @@ When you launch Garden of Eden V3 for the first time:
 <details>
 <summary><b>Phase 2: AI Integration</b> ✅ COMPLETE (100%)</summary>
 
-- [x] Llama 3.1 8B integration via node-llama-cpp
+- [x] Qwen 2.5 14B integration via Ollama
 - [x] GPU acceleration (Metal for macOS, CUDA for Windows)
 - [x] Streaming token generation to UI
 - [x] Whisper STT with auto-download (@xenova/transformers)
@@ -545,7 +545,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 <summary><b>Is my data really private?</b></summary>
 
 **Absolutely.** Every single piece of data processing happens on your local machine:
-- AI models (12GB) run locally via llama.cpp
+- AI models (16GB) run locally via Ollama
 - Database is stored locally (SQLite with AES-256 encryption)
 - No telemetry, analytics, or tracking
 - No internet connection required after initial model download
@@ -564,7 +564,7 @@ You can verify this by monitoring network traffic or running the app completely 
 - No hidden charges
 - No ads
 
-The only cost is your disk space (~12GB for AI models) and electricity to run the app.
+The only cost is your disk space (~16GB for AI models) and electricity to run the app.
 </details>
 
 <details>
@@ -573,22 +573,22 @@ The only cost is your disk space (~12GB for AI models) and electricity to run th
 **Minimum**:
 - macOS 12+ (Apple Silicon) or Windows 10/11
 - 16GB RAM
-- 15GB disk space
+- 20GB disk space
 - Apple M1+ or Intel i5 8th gen+
 
 **Recommended**:
 - macOS 14+ or Windows 11
-- 32GB RAM
-- 20GB disk space
+- 24GB RAM
+- 30GB disk space
 - Apple M3+ or AMD Ryzen 7+ with dedicated GPU
 
-Performance: 2-3s response time on M3 MAX, 3-5s on M3 Pro.
+Performance: 2-4s response time with Qwen 2.5 14B on Apple Silicon.
 </details>
 
 <details>
 <summary><b>Can I use it completely offline?</b></summary>
 
-**Yes!** After the initial model download (~12GB), Garden of Eden V3 works 100% offline:
+**Yes!** After the initial model download (~16GB), Garden of Eden V3 works 100% offline:
 - AI processing happens locally
 - No internet required for chat, voice input, screen analysis
 - Optional features requiring internet:
@@ -621,9 +621,9 @@ Garden of Eden is ideal if you value privacy, want no ongoing costs, or need dee
 Currently, **Korean (한국어) and English** are fully supported:
 - UI is translated (i18next)
 - Whisper STT supports both languages
-- Llama 3.1 8B is trained on multilingual data
+- Qwen 2.5 14B is trained on 29+ languages
 
-While the AI can understand and respond in other languages (Llama 3.1 supports 100+ languages), the UI remains Korean/English only. Additional languages can be added via i18n contributions.
+While the AI can understand and respond in many languages (Qwen 2.5 supports 29+ including Chinese, Japanese, etc.), the UI remains Korean/English only. Additional languages can be added via i18n contributions.
 </details>
 
 <details>

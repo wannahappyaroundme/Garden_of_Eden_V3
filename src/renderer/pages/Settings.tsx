@@ -325,7 +325,7 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">AI 모델</span>
-                      <span className="font-mono">Qwen 2.5 32B Instruct</span>
+                      <span className="font-mono">Qwen 2.5 14B Instruct</span>
                     </div>
                   </div>
 
