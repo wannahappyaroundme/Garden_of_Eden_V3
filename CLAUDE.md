@@ -155,10 +155,11 @@ garden-of-eden-v3/
 │       └── constants/
 │
 ├── resources/
-│   ├── models/                  # AI models (gitignored, ~12GB)
-│   │   ├── llama-3.1-8b.gguf
-│   │   ├── llava-7b.gguf
-│   │   └── whisper-large-v3.bin
+│   ├── models/                  # AI models (gitignored, ~26GB)
+│   │   ├── qwen-2.5-32b-instruct-q4-k-m.gguf  # 18.9GB
+│   │   ├── llava-7b.gguf                       # 4.4GB
+│   │   ├── whisper-large-v3.bin                # 3.1GB
+│   │   └── bge-m3-embeddings/                  # BGE-M3 for RAG
 │   └── icons/                   # App icons (macOS, Windows)
 │
 ├── tests/
@@ -190,12 +191,12 @@ pip install -r requirements.txt
 # Build native modules (llama.cpp bindings)
 npm run build:native
 
-# Download AI models (~12GB)
+# Download AI models (~26GB total)
 npm run download:models
 # Or individually:
-npm run download:llama
-npm run download:whisper
-npm run download:llava
+npm run download:qwen      # Qwen 2.5 32B Instruct (18.9GB)
+npm run download:whisper   # Whisper Large V3 (3.1GB)
+npm run download:llava     # LLaVA 7B (4.4GB)
 ```
 
 ### Development
@@ -255,11 +256,11 @@ npm run test:watch
 - ✅ Window management & system tray
 - ✅ Project structure scaffolding
 
-### Phase 2: AI Integration (Week 3-4)
-- Integrate llama.cpp with Node.js bindings
-- Load Llama 3.1 8B model (streaming responses)
-- Integrate Whisper Large V3 (speech-to-text)
-- Setup system TTS (macOS AVFoundation / Windows SAPI)
+### Phase 2: AI Integration (Week 3-4) ✅ COMPLETE
+- ✅ Integrate llama.cpp with Node.js bindings
+- ✅ Load Qwen 2.5 32B Instruct model (streaming responses, 22-26 tok/s on M3 MAX)
+- ✅ Integrate Whisper Large V3 (speech-to-text)
+- ✅ Setup system TTS (macOS AVFoundation / Windows SAPI)
 - Implement streaming responses to UI
 - Test end-to-end conversation flow
 - Add model download UI
@@ -453,9 +454,10 @@ npm run test:e2e -- tests/e2e/chat.spec.ts
 - **Solo developer project** - Speed prioritized over perfection
 - **Desktop-first** - Windows and macOS only (no mobile)
 - **Can migrate to Tauri later** if Electron proves too heavy
-- **AI models (12GB) dwarf Electron overhead (~150MB)** - Not a concern
+- **AI models (26GB) dwarf Electron overhead (~150MB)** - Not a concern
 - **Focus on local experience** - No cloud fallback, no compromise
 - **Privacy is non-negotiable** - Never send user data to servers
+- **RAM requirement: 32GB recommended** for optimal Qwen 2.5 32B performance
 - **Production-ready quality** - This is NOT an MVP, aim for paid-product quality
 
 ## Support & Resources
