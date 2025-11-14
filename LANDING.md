@@ -312,7 +312,7 @@ This document provides comprehensive specifications for creating the **Garden of
 |-----------|-------------|-----|
 | **Operating System** | macOS 14+ or Windows 11 | Latest OS optimizations |
 | **Processor** | Apple M3+ (36GB unified) or AMD Ryzen 7+ | Better performance, more RAM |
-| **Memory (RAM)** | **24GB or higher** | Qwen 32B uses ~12GB alone |
+| **Memory (RAM)** | **24GB or higher** | Qwen 14B uses ~12GB alone |
 | **Storage** | 40GB free on SSD | Fast model loading, database |
 | **Graphics** | Dedicated GPU with 8GB+ VRAM (Windows) | Faster inference on Windows |
 
@@ -763,7 +763,7 @@ A: The Qwen 2.5 14B model uses ~12GB during operation. 16GB technically works bu
 A: Currently, no. Qwen 2.5 14B is hardcoded for optimal quality. Future versions may offer model selection.
 
 **Q: Does it run on Intel Macs?**
-A: No. Apple Silicon (M1, M2, M3+) is required for macOS. Intel Macs don't have enough unified memory for the 32B model.
+A: No. Apple Silicon (M1, M2, M3+) is required for macOS. Intel Macs don't have enough unified memory and lack Metal acceleration for optimal performance.
 
 **Q: How fast is it compared to ChatGPT?**
 A: On M3 MAX, responses are 2-4s for typical responses. ChatGPT is typically 2-5s plus network latency. Local is often faster and always private.
