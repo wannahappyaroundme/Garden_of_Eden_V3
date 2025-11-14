@@ -4,6 +4,8 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
 import { ChatInput, ChatInputHandle } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
@@ -14,6 +16,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useSmoothScroll } from '../hooks/useSmoothScroll';
 import { DynamicIsland, useDynamicIsland } from '../components/DynamicIsland';
 import { Eye, EyeOff } from 'lucide-react';
+import SuggestedPromptCard from '../components/SuggestedPromptCard';
+import ModeIndicator from '../components/ModeIndicator';
 
 interface Message {
   id: string;
@@ -45,25 +49,11 @@ export function Chat({ onOpenSettings }: ChatProps) {
   // Dynamic Island notifications
   const { notification, showNotification, hideNotification } = useDynamicIsland();
 
-  // Toggle screen tracking
+  // Toggle screen tracking (not implemented in Tauri yet)
   const handleToggleTracking = useCallback(async () => {
-    try {
-      const result = await window.api.screenToggleTracking({ interval: 10 });
-      setTrackingStatus(prev => ({
-        ...prev,
-        isTracking: result.isTracking,
-        captureInterval: result.interval,
-      }));
-
-      // Show Dynamic Island notification
-      showNotification(
-        result.isTracking ? 'started' : 'stopped',
-        { interval: result.interval }
-      );
-    } catch (error) {
-      console.error('Failed to toggle screen tracking:', error);
-    }
-  }, [showNotification]);
+    console.log('Screen tracking not yet implemented in Tauri');
+    // TODO: Implement screen tracking in Tauri
+  }, []);
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
@@ -87,10 +77,9 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   const loadConversationMessages = useCallback(async (conversationId: string) => {
     try {
-      const loadedMessages = await window.api.messageGetByConversation({
+      const loadedMessages = await invoke<any[]>('get_conversation_messages', {
         conversationId,
-        limit: 100,
-      }) as any[];
+      });
       // Convert timestamps to Date objects
       const formattedMessages: Message[] = loadedMessages.map((msg: any) => ({
         id: msg.id,
@@ -101,6 +90,8 @@ export function Chat({ onOpenSettings }: ChatProps) {
       setMessages(formattedMessages);
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
+      // If no messages found, start with empty array
+      setMessages([]);
     }
   }, []);
 
@@ -113,31 +104,35 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   // Setup screen tracking event listeners
   useEffect(() => {
-    // Get initial status
-    window.api.screenGetStatus().then(status => {
-      setTrackingStatus(status);
-    }).catch(console.error);
+    // Check if screen tracking APIs are available (Electron only, not Tauri yet)
+    if (window.api?.screenGetStatus) {
+      // Get initial status
+      window.api.screenGetStatus().then(status => {
+        setTrackingStatus(status);
+      }).catch(console.error);
 
-    // Listen for status updates
-    const unsubscribeStatus = window.api.onScreenStatusUpdate((status) => {
-      setTrackingStatus(status);
-    });
+      // Listen for status updates
+      const unsubscribeStatus = window.api.onScreenStatusUpdate?.((status) => {
+        setTrackingStatus(status);
+      });
 
-    // Listen for tracking notifications (Dynamic Island)
-    const unsubscribeNotification = window.api.onScreenTrackingNotification((data) => {
-      showNotification(data.action, { interval: data.interval });
-    });
+      // Listen for tracking notifications (Dynamic Island)
+      const unsubscribeNotification = window.api.onScreenTrackingNotification?.((data) => {
+        showNotification(data.action, { interval: data.interval });
+      });
 
-    // Listen for idle notifications
-    const unsubscribeIdle = window.api.onScreenIdleNotification((data) => {
-      showNotification('idle-warning', { idleDuration: data.idleDurationMinutes });
-    });
+      // Listen for idle notifications
+      const unsubscribeIdle = window.api.onScreenIdleNotification?.((data) => {
+        showNotification('idle-warning', { idleDuration: data.idleDurationMinutes });
+      });
 
-    return () => {
-      unsubscribeStatus();
-      unsubscribeNotification();
-      unsubscribeIdle();
-    };
+      return () => {
+        unsubscribeStatus?.();
+        unsubscribeNotification?.();
+        unsubscribeIdle?.();
+      };
+    }
+    return undefined;
   }, [showNotification]);
 
   const handleSelectConversation = useCallback((conversationId: string | null) => {
@@ -157,21 +152,8 @@ export function Chat({ onOpenSettings }: ChatProps) {
     // Create new conversation if this is the first message
     let conversationId = currentConversationId;
     if (!conversationId) {
-      try {
-        // Generate title from first message (first 30 chars)
-        const title = content.length > 30 ? content.substring(0, 30) + '...' : content;
-        const newConversation: any = await window.api.conversationCreate({ title, mode: 'user-led' });
-        conversationId = newConversation.id;
-        setCurrentConversationId(conversationId);
-
-        // Refresh conversation list to show the new conversation
-        await conversationHistoryRef.current?.refresh();
-      } catch (error) {
-        console.error('Failed to create conversation:', error);
-        // Use fallback conversation ID
-        conversationId = `conv-${Date.now()}`;
-        setCurrentConversationId(conversationId);
-      }
+      // Use fallback conversation ID (will be created by backend)
+      conversationId = undefined;
     }
 
     // Add user message
@@ -197,64 +179,52 @@ export function Chat({ onOpenSettings }: ChatProps) {
     setIsTyping(true);
 
     try {
-      // Call streaming API
-      const response = await window.api.chatStream(
+      // Setup streaming listener for chat chunks
+      const unlisten = await listen<{ chunk: string }>('chat-stream-chunk', (event) => {
+        // Update AI message with streaming chunks
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiMessageId
+              ? { ...msg, content: msg.content + event.payload.chunk }
+              : msg
+          )
+        );
+      });
+
+      // Call Tauri streaming API
+      const response = await invoke<{ conversation_id: string; message_id: string; response: string }>(
+        'chat_stream',
         {
-          message: content,
-          conversationId: conversationId,
-          contextLevel: 1, // Default context level
-        },
-        (chunk: string) => {
-          // Update AI message with streaming chunks
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === aiMessageId
-                ? { ...msg, content: msg.content + chunk }
-                : msg
-            )
-          );
+          request: {
+            message: content,
+            conversation_id: conversationId,
+            context_level: 1,
+          }
         }
       );
 
+      // Cleanup listener
+      unlisten();
+
       // Use the conversation ID from response if available
-      if (response.conversationId) {
-        conversationId = response.conversationId;
+      if (response.conversation_id) {
+        conversationId = response.conversation_id;
         if (!currentConversationId) {
           setCurrentConversationId(conversationId);
         }
       }
 
-      // Calculate response time
-      const responseTime = Date.now() - startTime;
+      // Update AI message with final response (in case streaming didn't complete)
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === aiMessageId
+            ? { ...msg, content: response.response }
+            : msg
+        )
+      );
 
-      // Save user message to database
-      try {
-        await window.api.messageSave({
-          conversationId: conversationId || '',
-          role: 'user',
-          content,
-          metadata: {
-            contextLevel: 1,
-          },
-        });
-      } catch (saveError) {
-        console.error('Failed to save user message:', saveError);
-      }
-
-      // Save AI response to database
-      try {
-        await window.api.messageSave({
-          conversationId: conversationId || '',
-          role: 'assistant',
-          content: response.response,
-          metadata: {
-            responseTime,
-            contextLevel: 1,
-          },
-        });
-      } catch (saveError) {
-        console.error('Failed to save AI message:', saveError);
-      }
+      // Refresh conversation list to show the new/updated conversation
+      await conversationHistoryRef.current?.refresh();
     } catch (error) {
       console.error('Failed to send message:', error);
 
@@ -292,11 +262,11 @@ export function Chat({ onOpenSettings }: ChatProps) {
   // Handle retry for failed messages
   const handleRetry = useCallback((originalMessage: string) => {
     handleSendMessage(originalMessage);
-  }, []);
+  }, [handleSendMessage]);
 
   const handleVoiceStart = async () => {
     try {
-      const result = await window.api.voiceInputStart();
+      const result = await invoke<boolean>('voice_input_start');
       if (result) {
         setIsRecording(true);
       }
@@ -307,12 +277,12 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   const handleVoiceStop = async () => {
     try {
-      const result = await window.api.voiceInputStop() as { transcript: string; language: string };
+      const transcript = await invoke<string>('voice_input_stop');
       setIsRecording(false);
 
       // If transcript is available, send it as a message
-      if (result && result.transcript && result.transcript.trim()) {
-        await handleSendMessage(result.transcript);
+      if (transcript && transcript.trim() && transcript !== 'Transcript placeholder') {
+        await handleSendMessage(transcript);
       }
     } catch (error) {
       console.error('Failed to stop voice recording:', error);
@@ -353,29 +323,11 @@ export function Chat({ onOpenSettings }: ChatProps) {
             <p className="text-xs text-muted-foreground" aria-label="애플리케이션 설명">AI Assistant</p>
           </div>
           <div className="flex items-center gap-4 titlebar-no-drag">
-            <div className="text-xs text-muted-foreground">
-              {messages.length > 0 ? `${messages.length} messages` : 'Start chatting'}
-            </div>
-
-            {/* Screen Tracking Toggle Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleToggleTracking}
-              className={`h-8 w-8 p-0 transition-all duration-300 ${
-                trackingStatus.isTracking
-                  ? 'text-green-500 hover:text-green-600 hover:bg-green-500/10'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              aria-label={trackingStatus.isTracking ? '화면 추적 중지 (Cmd+Shift+S)' : '화면 추적 시작 (Cmd+Shift+S)'}
-              title={trackingStatus.isTracking ? '화면 추적 중지 (Cmd+Shift+S)' : '화면 추적 시작 (Cmd+Shift+S)'}
-            >
-              {trackingStatus.isTracking ? (
-                <Eye className="w-5 h-5 animate-pulse" />
-              ) : (
-                <EyeOff className="w-5 h-5" />
-              )}
-            </Button>
+            {/* Mode Indicator - Shows user-led vs AI-led mode */}
+            <ModeIndicator
+              isTracking={trackingStatus.isTracking}
+              onToggle={handleToggleTracking}
+            />
 
             {/* Settings Button */}
             <Button
@@ -421,17 +373,50 @@ export function Chat({ onOpenSettings }: ChatProps) {
           aria-label="대화 메시지 목록"
         >
           {messages.length === 0 ? (
-            // Empty state
-            <div className="flex flex-col items-center justify-center h-full text-center">
+            // Empty state with suggested prompts
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold mb-4">
                 E
               </div>
               <h2 className="text-xl font-semibold mb-2">안녕하세요! 👋</h2>
-              <p className="text-muted-foreground max-w-md">
+              <p className="text-muted-foreground max-w-md mb-8">
                 저는 Eden이에요. 무엇을 도와드릴까요?
-                <br />
-                편하게 질문해주세요!
               </p>
+
+              {/* Suggested prompts grid */}
+              <div className="grid grid-cols-2 gap-4 max-w-2xl w-full">
+                <SuggestedPromptCard
+                  icon="💻"
+                  title="코딩 도움"
+                  description="버그 해결, 코드 리뷰, 아키텍처 조언"
+                  onClick={() => handleSendMessage('코딩 관련 질문이 있어')}
+                />
+                <SuggestedPromptCard
+                  icon="📚"
+                  title="학습 지원"
+                  description="개념 설명, 예제 제공, 퀴즈"
+                  onClick={() => handleSendMessage('새로운 것을 배우고 싶어')}
+                />
+                <SuggestedPromptCard
+                  icon="🎯"
+                  title="작업 관리"
+                  description="일정 정리, 우선순위 설정"
+                  onClick={() => handleSendMessage('오늘 할 일을 정리해줘')}
+                />
+                <SuggestedPromptCard
+                  icon="💬"
+                  title="그냥 대화"
+                  description="고민 상담, 잡담"
+                  onClick={() => handleSendMessage('요즘 어때?')}
+                />
+              </div>
+
+              {/* Context-aware suggestion */}
+              {trackingStatus.isTracking && (
+                <div className="mt-6 text-sm text-muted-foreground max-w-md">
+                  💡 화면 추적이 켜져있어요. "현재 화면 설명해줘" 또는 "이 코드 리뷰해줘"를 시도해보세요!
+                </div>
+              )}
             </div>
           ) : (
             // Message list with date dividers

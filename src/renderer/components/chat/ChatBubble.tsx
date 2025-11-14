@@ -92,9 +92,9 @@ export function ChatBubble({
             )}
           </div>
 
-          {/* Action buttons for AI messages */}
+          {/* Action buttons for AI messages - Always visible for better discoverability */}
           {!isUser && message && !isStreaming && (
-            <div className="absolute -right-24 top-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <div className="absolute -right-24 top-2 flex gap-1 transition-opacity">
               {/* Feedback buttons */}
               {messageId && onFeedback && (
                 <>
@@ -102,7 +102,7 @@ export function ChatBubble({
                     onClick={() => handleFeedback('positive')}
                     className={cn(
                       'p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all',
-                      currentSatisfaction === 'positive' ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-muted-foreground'
+                      currentSatisfaction === 'positive' ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-muted-foreground hover:text-foreground'
                     )}
                     title="좋아요"
                     aria-label="좋아요"
@@ -115,7 +115,7 @@ export function ChatBubble({
                     onClick={() => handleFeedback('negative')}
                     className={cn(
                       'p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all',
-                      currentSatisfaction === 'negative' ? 'text-red-600 bg-red-100 dark:bg-red-900/30' : 'text-muted-foreground'
+                      currentSatisfaction === 'negative' ? 'text-red-600 bg-red-100 dark:bg-red-900/30' : 'text-muted-foreground hover:text-foreground'
                     )}
                     title="별로에요"
                     aria-label="별로에요"
@@ -130,7 +130,7 @@ export function ChatBubble({
               {/* Copy button */}
               <button
                 onClick={handleCopy}
-                className="p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-opacity"
+                className="p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-colors text-muted-foreground hover:text-foreground"
                 title={copied ? 'Copied!' : 'Copy message'}
                 aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
               >

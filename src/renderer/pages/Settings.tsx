@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Slider } from '../components/ui/slider';
 import { Switch } from '../components/ui/switch';
+import PersonaPreviewPanel from '../components/PersonaPreviewPanel';
 import type { PersonaSettings } from '../lib/tauri-api';
 
 interface SettingsProps {
@@ -143,11 +144,15 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
 
       {/* Settings Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto space-y-8">
-          {/* AI Persona Settings */}
-          <section>
-            <h2 className="text-lg font-semibold mb-4">AI 성격 설정</h2>
-            <div className="space-y-6 bg-card p-6 rounded-lg border border-border">
+        <div className="max-w-7xl mx-auto">
+          {/* 2-column layout: Settings on left, Preview on right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column: Settings */}
+            <div className="space-y-8">
+              {/* AI Persona Settings */}
+              <section>
+                <h2 className="text-lg font-semibold mb-4">AI 성격 설정</h2>
+                <div className="space-y-6 bg-card p-6 rounded-lg border border-border">
               {/* Formality */}
               <div>
                 <div className="flex justify-between mb-2">
@@ -363,13 +368,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                   낮음: 사실만 전달 | 높음: 적극 격려
                 </p>
               </div>
-            </div>
-          </section>
+                </div>
+              </section>
 
-          {/* Application Settings */}
-          <section>
-            <h2 className="text-lg font-semibold mb-4">앱 설정</h2>
-            <div className="space-y-4 bg-card p-6 rounded-lg border border-border">
+              {/* Application Settings */}
+              <section>
+                <h2 className="text-lg font-semibold mb-4">앱 설정</h2>
+                <div className="space-y-4 bg-card p-6 rounded-lg border border-border">
               {/* Theme */}
               <div className="flex items-center justify-between">
                 <div>
@@ -420,13 +425,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                   <option value="go">Go</option>
                 </select>
               </div>
-            </div>
-          </section>
+                </div>
+              </section>
 
-          {/* About */}
-          <section>
-            <h2 className="text-lg font-semibold mb-4">정보</h2>
-            <div className="bg-card p-6 rounded-lg border border-border space-y-2">
+              {/* About */}
+              <section>
+                <h2 className="text-lg font-semibold mb-4">정보</h2>
+                <div className="bg-card p-6 rounded-lg border border-border space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">버전</span>
                 <span className="font-mono">1.0.0</span>
@@ -439,8 +444,15 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                 <span className="text-muted-foreground">AI 모델</span>
                 <span className="font-mono">Llama 3.1 8B</span>
               </div>
+                </div>
+              </section>
             </div>
-          </section>
+
+            {/* Right Column: Preview Panel */}
+            <div className="hidden lg:block">
+              <PersonaPreviewPanel persona={persona} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
