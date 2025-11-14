@@ -18,6 +18,7 @@ interface SettingsProps {
 }
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
+  const [activeTab, setActiveTab] = useState<'persona' | 'app' | 'about'>('persona');
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -162,15 +163,50 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
         </div>
       </header>
 
+      {/* Tabs Navigation */}
+      <div className="flex-shrink-0 border-b border-border bg-muted/30">
+        <div className="flex gap-1 px-6">
+          <button
+            onClick={() => setActiveTab('persona')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'persona'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🎭 AI 성격
+          </button>
+          <button
+            onClick={() => setActiveTab('app')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'app'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            ⚙️ 앱 설정
+          </button>
+          <button
+            onClick={() => setActiveTab('about')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'about'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            ℹ️ 정보
+          </button>
+        </div>
+      </div>
+
       {/* Settings Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-7xl mx-auto">
-          {/* 2-column layout: Settings on left, Preview on right */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Left Column: Settings */}
-            <div className="space-y-8">
-              {/* AI Persona Settings */}
-              <section>
+          {/* Persona Tab */}
+          {activeTab === 'persona' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column: Settings */}
+              <div className="space-y-3">
                 <div className="mb-4">
                   <h2 className="text-lg font-semibold">AI 성격 설정</h2>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -178,79 +214,104 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                   </p>
                 </div>
 
-                <div className="space-y-3">
-                  {PERSONA_GROUPS.map((group, index) => (
-                    <PersonaParameterGroup
-                      key={group.id}
-                      group={group}
-                      persona={persona}
-                      onUpdate={updatePersona}
-                      defaultExpanded={index === 0} // First group expanded by default
-                    />
-                  ))}
-                </div>
-              </section>
+                {PERSONA_GROUPS.map((group, index) => (
+                  <PersonaParameterGroup
+                    key={group.id}
+                    group={group}
+                    persona={persona}
+                    onUpdate={updatePersona}
+                    defaultExpanded={index === 0}
+                  />
+                ))}
+              </div>
 
-              {/* Application Settings */}
+              {/* Right Column: Preview */}
+              <PersonaPreviewPanel persona={persona} />
+            </div>
+          )}
+
+          {/* App Settings Tab */}
+          {activeTab === 'app' && (
+            <div className="max-w-2xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold mb-2">앱 설정</h2>
+                <p className="text-sm text-muted-foreground">
+                  애플리케이션 동작 및 외관을 설정합니다
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Appearance Section */}
+                <section className="bg-card p-6 rounded-lg border border-border">
+                  <h3 className="text-lg font-semibold mb-4">외관</h3>
+                  <div className="space-y-4">
+                    {/* Theme */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium">다크 모드</label>
+                        <p className="text-xs text-muted-foreground">어두운 테마 사용</p>
+                      </div>
+                      <Switch
+                        checked={theme === 'dark'}
+                        onCheckedChange={(checked) => {
+                          const newTheme = checked ? 'dark' : 'light';
+                          setTheme(newTheme);
+                          onThemeChange?.(newTheme);
+                        }}
+                      />
+                    </div>
+
+                    {/* Language */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium">언어</label>
+                        <p className="text-xs text-muted-foreground">인터페이스 언어</p>
+                      </div>
+                      <select
+                        value={persona.languagePreference}
+                        onChange={(e) => updatePersona('languagePreference', e.target.value)}
+                        className="px-3 py-2 text-sm border border-input rounded-md bg-background"
+                      >
+                        <option value="ko">한국어</option>
+                        <option value="en">English</option>
+                      </select>
+                    </div>
+
+                    {/* Code Language */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium">선호 코드 언어</label>
+                        <p className="text-xs text-muted-foreground">코드 예제 생성 시</p>
+                      </div>
+                      <select
+                        value={persona.codeLanguagePreference}
+                        onChange={(e) => updatePersona('codeLanguagePreference', e.target.value)}
+                        className="px-3 py-2 text-sm border border-input rounded-md bg-background"
+                      >
+                        <option value="typescript">TypeScript</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="rust">Rust</option>
+                        <option value="go">Go</option>
+                      </select>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          )}
+
+          {/* About Tab */}
+          {activeTab === 'about' && (
+            <div className="max-w-2xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold mb-2">정보</h2>
+                <p className="text-sm text-muted-foreground">
+                  Garden of Eden V3에 대한 정보
+                </p>
+              </div>
+
               <section>
-                <h2 className="text-lg font-semibold mb-4">앱 설정</h2>
-                <div className="space-y-4 bg-card p-6 rounded-lg border border-border">
-              {/* Theme */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium">다크 모드</label>
-                  <p className="text-xs text-muted-foreground">어두운 테마 사용</p>
-                </div>
-                <Switch
-                  checked={theme === 'dark'}
-                  onCheckedChange={(checked) => {
-                    const newTheme = checked ? 'dark' : 'light';
-                    setTheme(newTheme);
-                    onThemeChange?.(newTheme);
-                  }}
-                />
-              </div>
-
-              {/* Language */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium">언어</label>
-                  <p className="text-xs text-muted-foreground">인터페이스 언어</p>
-                </div>
-                <select
-                  value={persona.languagePreference}
-                  onChange={(e) => updatePersona('languagePreference', e.target.value)}
-                  className="px-3 py-2 text-sm border border-input rounded-md bg-background"
-                >
-                  <option value="ko">한국어</option>
-                  <option value="en">English</option>
-                </select>
-              </div>
-
-              {/* Code Language */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium">선호 코드 언어</label>
-                  <p className="text-xs text-muted-foreground">코드 예제 생성 시</p>
-                </div>
-                <select
-                  value={persona.codeLanguagePreference}
-                  onChange={(e) => updatePersona('codeLanguagePreference', e.target.value)}
-                  className="px-3 py-2 text-sm border border-input rounded-md bg-background"
-                >
-                  <option value="typescript">TypeScript</option>
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
-                  <option value="rust">Rust</option>
-                  <option value="go">Go</option>
-                </select>
-              </div>
-                </div>
-              </section>
-
-              {/* About */}
-              <section>
-                <h2 className="text-lg font-semibold mb-4">정보</h2>
                 <div className="bg-card p-6 rounded-lg border border-border space-y-4">
                   {/* Version Info */}
                   <div className="space-y-2">

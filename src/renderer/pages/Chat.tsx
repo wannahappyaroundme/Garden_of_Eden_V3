@@ -19,6 +19,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import SuggestedPromptCard from '../components/SuggestedPromptCard';
 import ModeIndicator from '../components/ModeIndicator';
 import ShortcutHelp from '../components/ShortcutHelp';
+import SuggestionsPanel from '../components/SuggestionsPanel';
 
 interface Message {
   id: string;
@@ -38,6 +39,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [suggestionsPanelCollapsed, setSuggestionsPanelCollapsed] = useState(false);
   const [trackingStatus, setTrackingStatus] = useState({
     isTracking: false,
     lastCaptureTime: 0,
@@ -523,6 +525,13 @@ export function Chat({ onOpenSettings }: ChatProps) {
           placeholder="메시지를 입력하세요..."
         />
       </main>
+
+      {/* Suggestions Panel */}
+      <SuggestionsPanel
+        onSendMessage={handleSendMessage}
+        isCollapsed={suggestionsPanelCollapsed}
+        onToggle={() => setSuggestionsPanelCollapsed(!suggestionsPanelCollapsed)}
+      />
 
       {/* Dynamic Island Notification */}
       {notification && (
