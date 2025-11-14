@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import PersonaPreviewPanel from '../components/PersonaPreviewPanel';
@@ -18,6 +19,7 @@ interface SettingsProps {
 }
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<'persona' | 'app' | 'about'>('persona');
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
@@ -44,6 +46,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const [theme, setTheme] = useState('light');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Handle language change
+  const handleLanguageChange = (newLang: string) => {
+    i18n.changeLanguage(newLang);
+    updatePersona('languagePreference', newLang);
+    toast.success(newLang === 'ko' ? '언어가 변경되었습니다' : 'Language changed successfully');
+  };
 
   // Load settings on mount
   useEffect(() => {
@@ -264,16 +273,16 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                     {/* Language */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <label className="text-sm font-medium">언어</label>
-                        <p className="text-xs text-muted-foreground">인터페이스 언어</p>
+                        <label className="text-sm font-medium">{t('settings.app.language')}</label>
+                        <p className="text-xs text-muted-foreground">{t('settings.app.languageDesc')}</p>
                       </div>
                       <select
-                        value={persona.languagePreference}
-                        onChange={(e) => updatePersona('languagePreference', e.target.value)}
+                        value={i18n.language}
+                        onChange={(e) => handleLanguageChange(e.target.value)}
                         className="px-3 py-2 text-sm border border-input rounded-md bg-background"
                       >
-                        <option value="ko">한국어</option>
-                        <option value="en">English</option>
+                        <option value="ko">{t('settings.app.korean')}</option>
+                        <option value="en">{t('settings.app.english')}</option>
                       </select>
                     </div>
 

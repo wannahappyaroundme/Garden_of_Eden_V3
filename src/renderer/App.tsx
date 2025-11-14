@@ -7,6 +7,7 @@ import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
+import './i18n/config'; // Initialize i18n
 
 type Page = 'chat' | 'settings';
 

@@ -1,0 +1,101 @@
+{
+  "app": {
+    "name": "Garden of Eden",
+    "welcome": "Hello! 👋",
+    "welcomeMessage": "How can I help you today?"
+  },
+  "chat": {
+    "title": "Chat",
+    "inputPlaceholder": "Type a message...",
+    "send": "Send",
+    "newChat": "New Chat",
+    "retry": "Retry",
+    "typing": "Typing...",
+    "error": {
+      "generic": "Sorry, your message failed to send.",
+      "ollama": "🔌 Cannot connect to AI service.\n\nPlease ensure Ollama is running:\n1. Run \"ollama serve\" in terminal\n2. Download model with \"ollama pull qwen2.5:14b\"",
+      "timeout": "⏱️ AI response timed out.\nPlease try again.",
+      "database": "💾 Database error occurred.\nPlease restart the app.",
+      "model": "🤖 AI model error.\n\nPlease verify qwen2.5:14b model is installed:\nCheck with \"ollama list\" command",
+      "unknown": "❌ Error occurred:\n\n{error}\n\nPlease contact support if this persists."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "persona": {
+      "tab": "AI Personality",
+      "title": "AI Personality Settings",
+      "subtitle": "Click each group to adjust detailed settings",
+      "presets": "Presets",
+      "custom": "Custom",
+      "preview": "Preview",
+      "groups": {
+        "communication": "Communication Style",
+        "personality": "Personality Traits",
+        "knowledge": "Knowledge & Expertise",
+        "interaction": "Interaction Style"
+      },
+      "parameters": {
+        "formality": "Formality",
+        "formalityDesc": "Level of formal language",
+        "humor": "Humor",
+        "humorDesc": "Frequency of jokes and wit",
+        "verbosity": "Verbosity",
+        "verbosityDesc": "Length and detail of responses",
+        "empathy": "Empathy",
+        "empathyDesc": "Level of emotional empathy",
+        "enthusiasm": "Enthusiasm",
+        "enthusiasmDesc": "Energy and passion expression",
+        "creativity": "Creativity",
+        "creativityDesc": "Creative thinking and suggestions",
+        "technical": "Technical Depth",
+        "technicalDesc": "Depth of technical knowledge",
+        "proactive": "Proactiveness",
+        "proactiveDesc": "Degree of taking initiative",
+        "emoji": "Emoji Usage",
+        "emojiDesc": "Frequency of emoji usage"
+      }
+    },
+    "app": {
+      "tab": "App Settings",
+      "title": "App Settings",
+      "subtitle": "Configure application behavior and appearance",
+      "appearance": "Appearance",
+      "darkMode": "Dark Mode",
+      "darkModeDesc": "Use dark theme",
+      "language": "Language",
+      "languageDesc": "Interface language",
+      "codeLanguage": "Preferred Code Language",
+      "codeLanguageDesc": "For code examples",
+      "korean": "한국어",
+      "english": "English"
+    },
+    "about": {
+      "tab": "About",
+      "title": "About",
+      "subtitle": "Information about Garden of Eden V3",
+      "version": "Version",
+      "platform": "Platform",
+      "aiModel": "AI Model",
+      "systemInfo": "System Information",
+      "systemInfoDetails": "🔒 100% Local - Your data never leaves your machine\n🚀 Fast responses - 22-26 tokens/sec\n💾 Memory usage - ~22-25GB RAM",
+      "help": "Help",
+      "documentation": "📖 Documentation",
+      "bugReport": "🐛 Report Bug",
+      "featureRequest": "💡 Feature Request",
+      "footer": "Made with ❤️ by Eden Team"
+    }
+  },
+  "history": {
+    "title": "Chat History",
+    "empty": "No chat history",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this conversation?"
+  },
+  "mode": {
+    "userLed": "User-Led",
+    "aiLed": "AI-Led (Coming Soon)",
+    "userLedDesc": "Waits for your input",
+    "aiLedDesc": "Analyzes screen and makes suggestions (Coming in v1.1)"
+  }
+}

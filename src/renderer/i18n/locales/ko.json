@@ -1,0 +1,101 @@
+{
+  "app": {
+    "name": "Garden of Eden",
+    "welcome": "안녕하세요! 👋",
+    "welcomeMessage": "무엇을 도와드릴까요?"
+  },
+  "chat": {
+    "title": "대화",
+    "inputPlaceholder": "메시지를 입력하세요...",
+    "send": "전송",
+    "newChat": "새 대화",
+    "retry": "다시 시도",
+    "typing": "입력 중...",
+    "error": {
+      "generic": "죄송합니다. 메시지 전송에 실패했습니다.",
+      "ollama": "🔌 AI 서비스에 연결할 수 없습니다.\n\nOllama가 실행 중인지 확인해주세요:\n1. 터미널에서 \"ollama serve\" 실행\n2. \"ollama pull qwen2.5:14b\" 로 모델 다운로드",
+      "timeout": "⏱️ AI 응답 시간이 초과되었습니다.\n다시 시도해주세요.",
+      "database": "💾 데이터베이스 오류가 발생했습니다.\n앱을 재시작해주세요.",
+      "model": "🤖 AI 모델 오류입니다.\n\nqwen2.5:14b 모델이 설치되어 있는지 확인해주세요:\n\"ollama list\" 명령어로 확인",
+      "unknown": "❌ 오류 발생:\n\n{error}\n\n문제가 계속되면 개발자에게 문의하세요."
+    }
+  },
+  "settings": {
+    "title": "설정",
+    "persona": {
+      "tab": "AI 성격",
+      "title": "AI 성격 설정",
+      "subtitle": "각 그룹을 클릭하여 세부 설정을 조정하세요",
+      "presets": "프리셋",
+      "custom": "커스텀",
+      "preview": "미리보기",
+      "groups": {
+        "communication": "의사소통 스타일",
+        "personality": "성격 특성",
+        "knowledge": "지식 및 전문성",
+        "interaction": "상호작용 방식"
+      },
+      "parameters": {
+        "formality": "격식",
+        "formalityDesc": "말투의 격식 수준",
+        "humor": "유머",
+        "humorDesc": "농담과 위트 사용 빈도",
+        "verbosity": "상세도",
+        "verbosityDesc": "답변의 길이와 상세함",
+        "empathy": "공감",
+        "empathyDesc": "감정적 공감 수준",
+        "enthusiasm": "열정",
+        "enthusiasmDesc": "에너지와 열정 표현",
+        "creativity": "창의성",
+        "creativityDesc": "창의적 사고와 제안",
+        "technical": "기술성",
+        "technicalDesc": "기술적 깊이",
+        "proactive": "주도성",
+        "proactiveDesc": "먼저 제안하는 정도",
+        "emoji": "이모지",
+        "emojiDesc": "이모지 사용 빈도"
+      }
+    },
+    "app": {
+      "tab": "앱 설정",
+      "title": "앱 설정",
+      "subtitle": "애플리케이션 동작 및 외관을 설정합니다",
+      "appearance": "외관",
+      "darkMode": "다크 모드",
+      "darkModeDesc": "어두운 테마 사용",
+      "language": "언어",
+      "languageDesc": "인터페이스 언어",
+      "codeLanguage": "선호 코드 언어",
+      "codeLanguageDesc": "코드 예제 생성 시",
+      "korean": "한국어",
+      "english": "English"
+    },
+    "about": {
+      "tab": "정보",
+      "title": "정보",
+      "subtitle": "Garden of Eden V3에 대한 정보",
+      "version": "버전",
+      "platform": "플랫폼",
+      "aiModel": "AI 모델",
+      "systemInfo": "시스템 정보",
+      "systemInfoDetails": "🔒 100% 로컬 실행 - 데이터가 외부로 전송되지 않습니다\n🚀 빠른 응답 - 22-26 tokens/sec\n💾 메모리 사용량 - 약 22-25GB RAM",
+      "help": "도움말",
+      "documentation": "📖 문서 보기",
+      "bugReport": "🐛 버그 리포트",
+      "featureRequest": "💡 기능 제안",
+      "footer": "Made with ❤️ by Eden Team"
+    }
+  },
+  "history": {
+    "title": "대화 기록",
+    "empty": "대화 기록이 없습니다",
+    "delete": "삭제",
+    "deleteConfirm": "이 대화를 삭제하시겠습니까?"
+  },
+  "mode": {
+    "userLed": "사용자 주도",
+    "aiLed": "AI 주도 (준비 중)",
+    "userLedDesc": "사용자의 입력을 기다립니다",
+    "aiLedDesc": "화면을 분석하고 제안합니다 (v1.1에서 제공 예정)"
+  }
+}
