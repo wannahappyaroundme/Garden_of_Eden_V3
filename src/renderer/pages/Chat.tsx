@@ -55,8 +55,8 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   // Toggle screen tracking (not implemented in Tauri yet)
   const handleToggleTracking = useCallback(async () => {
-    console.log('Screen tracking not yet implemented in Tauri');
-    // TODO: Implement screen tracking in Tauri
+    // Show "Coming Soon" message
+    alert('AI-Led Proactive Mode is coming in v1.1!\n\nThis feature will:\n- Monitor your screen\n- Analyze context\n- Make proactive suggestions\n\nFor now, use User-Led mode where the AI waits for your input.');
   }, []);
 
   // Setup keyboard shortcuts
