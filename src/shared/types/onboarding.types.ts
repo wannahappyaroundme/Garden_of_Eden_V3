@@ -69,6 +69,7 @@ export interface OccupationModifiers {
   patience?: number;
   proactivity?: number;
   actionOriented?: number;
+  verbosity?: number;
 }
 
 export const TONE_PRESETS: Record<TonePreference, TonePresetConfig> = {
