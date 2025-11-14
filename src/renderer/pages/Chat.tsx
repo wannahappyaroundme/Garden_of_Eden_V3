@@ -246,17 +246,24 @@ export function Chat({ onOpenSettings }: ChatProps) {
     } catch (error) {
       console.error('Failed to send message:', error);
 
-      // Determine error message based on error type
+      // Display actual error message from backend for better debugging
       let errorContent = '죄송합니다. 메시지 전송에 실패했습니다.';
 
       if (error instanceof Error) {
-        if (error.message.includes('Ollama')) {
-          errorContent = 'AI 서비스에 연결할 수 없습니다. Ollama가 실행 중인지 확인해주세요.';
+        if (error.message.includes('Ollama') || error.message.includes('connect')) {
+          errorContent = '🔌 AI 서비스에 연결할 수 없습니다.\n\nOllama가 실행 중인지 확인해주세요:\n1. 터미널에서 "ollama serve" 실행\n2. "ollama pull qwen2.5:14b" 로 모델 다운로드';
         } else if (error.message.includes('timeout')) {
-          errorContent = 'AI 응답 시간이 초과되었습니다. 다시 시도해주세요.';
-        } else if (error.message.includes('database')) {
-          errorContent = '데이터베이스 오류가 발생했습니다. 앱을 재시작해주세요.';
+          errorContent = '⏱️ AI 응답 시간이 초과되었습니다.\n다시 시도해주세요.';
+        } else if (error.message.includes('database') || error.message.includes('SQL')) {
+          errorContent = '💾 데이터베이스 오류가 발생했습니다.\n앱을 재시작해주세요.';
+        } else if (error.message.includes('model')) {
+          errorContent = '🤖 AI 모델 오류입니다.\n\nqwen2.5:14b 모델이 설치되어 있는지 확인해주세요:\n"ollama list" 명령어로 확인';
+        } else {
+          // Show the actual error for debugging in production
+          errorContent = `❌ 오류 발생:\n\n${error.message}\n\n문제가 계속되면 개발자에게 문의하세요.`;
         }
+      } else {
+        errorContent = `❌ 알 수 없는 오류:\n\n${String(error)}`;
       }
 
       // Replace AI message with error message
