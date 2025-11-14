@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Garden of Eden V3 - Training Configuration for Overfitting Prevention",
+  "version": "1.0.0",
+
+  "model": {
+    "name": "qwen2.5:14b",
+    "type": "instruction-tuned",
+    "baseParameters": {
+      "temperature": 0.7,
+      "topP": 0.9,
+      "topK": 40,
+      "contextWindow": 8192,
+      "maxTokens": 512
+    }
+  },
+
+  "training": {
+    "comment": "Persona learning and fine-tuning configuration",
+
+    "learningRate": {
+      "initial": 0.02,
+      "min": 0.005,
+      "max": 0.05,
+      "decay": {
+        "enabled": true,
+        "strategy": "exponential",
+        "rate": 0.95,
+        "every_n_epochs": 10
+      }
+    },
+
+    "regularization": {
+      "comment": "Prevent overfitting by constraining parameter updates",
+
+      "l2_penalty": {
+        "enabled": true,
+        "lambda": 0.01,
+        "description": "L2 regularization (weight decay) to prevent extreme parameter values"
+      },
+
+      "maxParameterChange": {
+        "perUpdate": 5.0,
+        "perEpoch": 15.0,
+        "description": "Maximum allowed change in any persona parameter (0-100 scale)"
+      },
+
+      "momentumSmoothing": {
+        "enabled": true,
+        "beta": 0.9,
+        "description": "Smooth parameter updates using momentum to avoid oscillation"
+      },
+
+      "gradientClipping": {
+        "enabled": true,
+        "maxNorm": 1.0,
+        "description": "Clip large gradients to prevent unstable updates"
+      }
+    },
+
+    "validation": {
+      "comment": "Track validation metrics to detect overfitting",
+
+      "enabled": true,
+      "splitRatio": 0.2,
+      "minValidationSamples": 50,
+
+      "metrics": [
+        "feedback_accuracy",
+        "parameter_stability",
+        "user_satisfaction_moving_average"
+      ],
+
+      "validationFrequency": {
+        "every_n_feedbacks": 10,
+        "description": "Run validation every N feedback samples"
+      }
+    },
+
+    "earlyStopping": {
+      "comment": "Stop training if validation performance degrades",
+
+      "enabled": true,
+      "patience": 20,
+      "minDelta": 0.01,
+      "monitorMetric": "validation_satisfaction",
+      "mode": "max",
+      "restoreBestWeights": true,
+      "description": "Stop if validation satisfaction doesn't improve for 20 feedback cycles"
+    },
+
+    "dataAugmentation": {
+      "comment": "Prevent overfitting by diversifying training data",
+
+      "enabled": true,
+      "strategies": [
+        {
+          "name": "feedback_noise",
+          "probability": 0.1,
+          "description": "Randomly flip 10% of feedback to simulate noise"
+        },
+        {
+          "name": "context_dropout",
+          "probability": 0.15,
+          "description": "Randomly drop context features to improve generalization"
+        }
+      ]
+    },
+
+    "checkpointing": {
+      "enabled": true,
+      "saveEvery": 50,
+      "maxCheckpoints": 5,
+      "savePath": "~/.garden-of-eden-v3/checkpoints/",
+      "description": "Save persona snapshots for rollback if overfitting detected"
+    }
+  },
+
+  "overfittingDetection": {
+    "comment": "Automated detection of overfitting symptoms",
+
+    "enabled": true,
+
+    "indicators": [
+      {
+        "name": "train_val_gap",
+        "threshold": 0.2,
+        "description": "If training satisfaction - validation satisfaction > 0.2, likely overfitting"
+      },
+      {
+        "name": "parameter_volatility",
+        "threshold": 10.0,
+        "windowSize": 20,
+        "description": "If parameters change > 10 points within 20 feedbacks, unstable"
+      },
+      {
+        "name": "negative_feedback_spike",
+        "threshold": 0.6,
+        "windowSize": 10,
+        "description": "If >60% negative feedback in last 10 samples, model degrading"
+      }
+    ],
+
+    "actions": [
+      {
+        "trigger": "train_val_gap",
+        "action": "reduce_learning_rate",
+        "factor": 0.5
+      },
+      {
+        "trigger": "parameter_volatility",
+        "action": "increase_momentum",
+        "newValue": 0.95
+      },
+      {
+        "trigger": "negative_feedback_spike",
+        "action": "rollback_to_checkpoint",
+        "lookbackSteps": 20
+      }
+    ]
+  },
+
+  "continualLearning": {
+    "comment": "Settings specific to continual learning (Qwen 2.5 has low catastrophic forgetting)",
+
+    "enabled": true,
+
+    "experienceReplay": {
+      "enabled": true,
+      "bufferSize": 500,
+      "replaySamplesPerUpdate": 3,
+      "description": "Replay old feedback samples to prevent forgetting previous preferences"
+    },
+
+    "elasticWeightConsolidation": {
+      "enabled": false,
+      "lambda": 0.1,
+      "description": "EWC not needed for Qwen 2.5 (inherently stable), but available if needed"
+    },
+
+    "knowledgeDistillation": {
+      "enabled": false,
+      "teacherModel": null,
+      "temperature": 2.0,
+      "description": "Not applicable for persona learning (no teacher model)"
+    }
+  },
+
+  "hyperparameterTuning": {
+    "comment": "Auto-tune learning rate based on feedback quality",
+
+    "enabled": true,
+    "strategy": "adaptive",
+
+    "adaptiveLearningRate": {
+      "increaseOn": "consistent_positive_feedback",
+      "decreaseOn": "consistent_negative_feedback",
+      "adjustmentFactor": 1.1,
+      "evaluationWindow": 15
+    }
+  },
+
+  "safeguards": {
+    "comment": "Safety limits to prevent catastrophic persona changes",
+
+    "parameterBounds": {
+      "min": 0,
+      "max": 100,
+      "enforced": true
+    },
+
+    "maxTotalParameterShift": {
+      "per24Hours": 30.0,
+      "description": "Total sum of absolute parameter changes limited to 30 per day"
+    },
+
+    "minimumFeedbackSamples": {
+      "beforeFirstUpdate": 5,
+      "description": "Require at least 5 feedback samples before making any updates"
+    },
+
+    "resetProtection": {
+      "requireConfirmation": true,
+      "backupBeforeReset": true
+    }
+  },
+
+  "logging": {
+    "enabled": true,
+    "level": "info",
+    "logPath": "~/.garden-of-eden-v3/logs/training/",
+
+    "trackMetrics": [
+      "learning_rate",
+      "parameter_changes",
+      "feedback_distribution",
+      "validation_scores",
+      "overfitting_indicators"
+    ],
+
+    "saveInterval": "every_update",
+    "retentionDays": 90
+  },
+
+  "experimentTracking": {
+    "comment": "Track different learning configurations for A/B testing",
+
+    "enabled": false,
+    "platform": null,
+    "experimentName": "persona_learning_v1",
+    "tags": ["persona", "continual_learning", "qwen2.5"]
+  }
+}
