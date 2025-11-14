@@ -24,6 +24,7 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
 }, ref) => {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load conversations on mount
   useEffect(() => {
@@ -94,11 +95,69 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
     }
   };
 
+  // Filter conversations by search query
+  const filteredConversations = conversations.filter((conv) =>
+    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <aside className="w-64 flex-shrink-0 border-r border-border bg-card flex flex-col h-full" aria-label="대화 목록 사이드바">
       {/* Header */}
-      <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-semibold mb-3">대화 목록</h2>
+      <div className="p-4 border-b border-border space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">대화 목록</h2>
+          {searchQuery && filteredConversations.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {filteredConversations.length}개 결과
+            </span>
+          )}
+        </div>
+
+        {/* Search Input */}
+        <div className="relative">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="대화 검색..."
+            className="w-full pl-9 pr-9 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="검색 초기화"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+
         <Button
           onClick={handleNewConversation}
           className="w-full"
@@ -138,8 +197,35 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
               새 대화를 시작해보세요!
             </p>
           </div>
+        ) : filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center px-4" role="status">
+            <svg
+              className="w-12 h-12 text-muted-foreground mb-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              "{searchQuery}"에 대한
+              <br />
+              검색 결과가 없습니다
+            </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-3 text-sm text-primary hover:underline"
+            >
+              검색 초기화
+            </button>
+          </div>
         ) : (
-          conversations.map((conversation) => (
+          filteredConversations.map((conversation) => (
             <HistoryItem
               key={conversation.id}
               conversation={conversation}
