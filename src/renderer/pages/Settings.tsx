@@ -377,12 +377,7 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                 </div>
               </section>
             </div>
-
-            {/* Right Column: Preview Panel */}
-            <div className="hidden lg:block">
-              <PersonaPreviewPanel persona={persona} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

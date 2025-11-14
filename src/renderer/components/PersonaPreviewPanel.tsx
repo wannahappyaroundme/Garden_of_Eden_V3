@@ -161,8 +161,8 @@ function generatePreviewResponse(persona: PersonaSettings, example: PreviewExamp
         response = isCasual
           ? '아, 힘들었겠다!'
           : isFormal
-          ? '힘드셨겠어요.';
-      : '그럴 수 있지!';
+          ? '힘드셨겠어요.'
+          : '그럴 수 있지!';
       } else {
         response = isCasual ? '어떤 부분이야?' : isFormal ? '어떤 부분인가요?' : '어떤 부분인지 말해봐!';
       }
@@ -191,8 +191,8 @@ function generatePreviewResponse(persona: PersonaSettings, example: PreviewExamp
         response = isCasual
           ? '나? 너랑 대화하느라 바빴지!'
           : isFormal
-          ? '저요? 당신과 대화하느라 바빴어요!';
-      : '대화하느라 바빴어!';
+          ? '저요? 당신과 대화하느라 바빴어요!'
+          : '대화하느라 바빴어!';
       } else {
         response = isCasual
           ? '별로 특별한 건 없었어.'
@@ -245,8 +245,8 @@ function generatePreviewResponse(persona: PersonaSettings, example: PreviewExamp
         response = isCasual
           ? '많이 피곤하구나...'
           : isFormal
-          ? '많이 피곤하시겠어요...';
-      : '많이 피곤해 보여...';
+          ? '많이 피곤하시겠어요...'
+          : '많이 피곤해 보여...';
       } else {
         response = isCasual ? '그래?' : isFormal ? '그러세요?' : '피곤해?';
       }

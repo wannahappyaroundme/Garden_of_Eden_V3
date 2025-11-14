@@ -1,6 +1,7 @@
 /**
- * AI Model Download Script
- * Downloads Llama 3.1 8B, Whisper Large V3, and LLaVA 7B models
+ * AI Model Download Script (LEGACY - Use Ollama for Qwen 2.5 14B)
+ * Downloads Whisper Large V3 and LLaVA 7B models
+ * Note: Qwen 2.5 14B is now managed via Ollama (ollama pull qwen2.5:14b)
  */
 
 const fs = require('fs');
@@ -11,10 +12,10 @@ const { execSync } = require('child_process');
 // Model URLs from HuggingFace
 const MODELS = {
   qwen: {
-    name: 'Qwen 2.5 32B Instruct (Q4_K_M)',
-    url: 'https://huggingface.co/bartowski/Qwen2.5-32B-Instruct-GGUF/resolve/main/Qwen2.5-32B-Instruct-Q4_K_M.gguf',
-    filename: 'qwen2.5-32b-instruct-q4_k_m.gguf',
-    size: '18.9 GB',
+    name: 'Qwen 2.5 14B Instruct (via Ollama - use: ollama pull qwen2.5:14b)',
+    url: 'https://ollama.ai/library/qwen2.5:14b',
+    filename: 'qwen2.5:14b',
+    size: '9.0 GB',
   },
   whisper: {
     name: 'Whisper Large V3',
@@ -155,7 +156,7 @@ async function downloadAllModels() {
   console.log('🌟 Garden of Eden V3 - AI Model Downloader');
   console.log('='.repeat(60));
   console.log(`📁 Models directory: ${MODELS_DIR}`);
-  console.log(`📦 Total download size: ~26 GB`);
+  console.log(`📦 Total download size: ~16.5 GB (Qwen 14B via Ollama + Whisper + LLaVA)`);
   console.log('='.repeat(60));
 
   ensureModelsDir();
@@ -168,7 +169,7 @@ async function downloadAllModels() {
 
   console.log('\n' + '='.repeat(60));
   console.log('📊 Download Summary:');
-  console.log(`   Qwen 2.5 32B: ${results.qwen ? '✅' : '❌'}`);
+  console.log(`   Qwen 2.5 14B: Use "ollama pull qwen2.5:14b" instead`);
   console.log(`   Whisper Large V3: ${results.whisper ? '✅' : '❌'}`);
   console.log(`   LLaVA 7B: ${results.llava ? '✅' : '❌'}`);
   console.log('='.repeat(60));
@@ -196,13 +197,13 @@ This directory contains the AI models for Garden of Eden V3.
 
 ## Models
 
-### Qwen 2.5 32B Instruct (Q4_K_M)
+### Qwen 2.5 14B Instruct (Q4_K_M via Ollama)
 - **Purpose**: Conversation generation, reasoning, code assistance, Korean language
-- **Size**: ~18.9 GB
+- **Size**: ~9.0 GB
 - **Format**: GGUF (quantized to Q4_K_M for optimal speed/quality balance)
-- **File**: qwen2.5-32b-instruct-q4_k_m.gguf
-- **Languages**: 29+ languages including Korean (KMMLU 70-71)
-- **Speed**: ~22-26 tokens/sec on M3 MAX 36GB
+- **Installation**: Run \`ollama pull qwen2.5:14b\`
+- **Languages**: 29+ languages including Korean
+- **Context**: 32K tokens
 - **Fine-tuning**: Stable for continual learning (low catastrophic forgetting risk)
 
 ### Whisper Large V3
@@ -235,12 +236,12 @@ npm run download:llava
 
 ## Total Size
 
-~26 GB of disk space required.
+~16.5 GB of disk space required.
 
 ## Model Sources
 
 All models are from Hugging Face:
-- Qwen 2.5 32B: Qwen2.5-32B-Instruct (official GGUF quantization)
+- Qwen 2.5 14B: Installed via Ollama (ollama.ai/library/qwen2.5)
 - Whisper: OpenAI Whisper Large V3 (GGML format by ggerganov)
 - LLaVA: LLaVA 1.5 7B (GGML format by mys)
 

@@ -1,6 +1,6 @@
 # Garden of Eden V3 - Testing Guide
 
-## 테스트 완료 현황 (2025-01-13)
+## 테스트 완료 현황 (2025-11-14)
 
 ### ✅ 완료된 테스트
 
@@ -62,14 +62,34 @@ npm run build:renderer
 
 **테스트 결과:**
 - ✅ Main 프로세스 TypeScript 컴파일 성공
-- ✅ Renderer 프로세스 Vite 빌드 성공 (814KB)
+- ✅ Renderer 프로세스 Vite 빌드 성공 (875KB)
 - ✅ 모든 서비스 컴파일 오류 없음
+- ✅ JSX 구문 오류 수정 완료 (Settings.tsx, PersonaPreviewPanel.tsx)
 
 **빌드 출력:**
 ```
-dist/renderer/assets/main-DUPWL2VU.js   814.22 kB │ gzip: 257.09 kB
-✓ built in 1.65s
+dist/renderer/assets/main-CJT66Hd3.js   874.61 kB │ gzip: 268.53 kB
+✓ built in 1.88s
 ```
+
+#### 4. UX 성능 테스트 (2025-11-14)
+**실행 명령어:**
+```bash
+node test-ux-flows.js
+```
+
+**테스트 결과:**
+- ✅ Ollama 연결 성공 (qwen2.5:14b)
+- ⚠️ 응답 속도: 느림 (18-28초/응답)
+  - Simple Greeting: 18.1초 (목표: <5초)
+  - Casual Question: 28.6초 (목표: <5초)
+- ✅ Korean 응답 품질: 정상
+- ⚠️ 토큰 생성 속도: 0.25-1.14 t/s (목표: 10+ t/s)
+
+**성능 이슈 분석:**
+- 현재 속도가 예상보다 현저히 느림
+- 원인 분석 필요: 모델 로딩, 시스템 리소스, Ollama 설정
+- Fine-tuning 후 속도 개선 예상
 
 ### 🎯 구현 완료된 기능
 
@@ -290,6 +310,11 @@ dist/renderer/assets/main-DUPWL2VU.js   814.22 kB │ gzip: 257.09 kB
 
 ---
 
-**마지막 업데이트**: 2025-01-13
-**테스트 환경**: macOS (M3 MAX), Node.js 20, Tauri v2
+**마지막 업데이트**: 2025-11-14
+**테스트 환경**: macOS, Node.js 20, Ollama (Qwen 2.5 14B)
 **테스터**: Claude Code
+
+## 수정된 파일 (2025-11-14)
+1. ✅ [src/renderer/pages/Settings.tsx](src/renderer/pages/Settings.tsx) - JSX 구문 오류 수정 (orphaned Preview Panel 제거)
+2. ✅ [src/renderer/components/PersonaPreviewPanel.tsx](src/renderer/components/PersonaPreviewPanel.tsx) - 3개 ternary operator 구문 오류 수정
+3. ✅ [test-ux-flows.js](test-ux-flows.js) - UX 성능 테스트 스크립트 추가
