@@ -8,6 +8,7 @@ import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { cn } from '../../lib/utils';
+import VoiceVisualizer from '../VoiceVisualizer';
 
 export interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -85,17 +86,24 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   return (
     <div className="border-t border-border bg-background p-4">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
-        {/* Voice button */}
-        <Button
-          variant={isRecording ? 'destructive' : 'outline'}
-          size="icon"
-          onClick={handleVoiceToggle}
-          disabled={disabled || isLoading}
-          className={cn('flex-shrink-0', isRecording && 'animate-pulse')}
-          title={isRecording ? '녹음 중지' : '음성 입력'}
-        >
-          {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-        </Button>
+        {/* Voice button with visualizer */}
+        <div className="flex-shrink-0 flex flex-col items-center gap-2">
+          {isRecording && (
+            <div className="animate-in fade-in zoom-in duration-200">
+              <VoiceVisualizer isRecording={isRecording} size="sm" />
+            </div>
+          )}
+          <Button
+            variant={isRecording ? 'destructive' : 'outline'}
+            size="icon"
+            onClick={handleVoiceToggle}
+            disabled={disabled || isLoading}
+            className={cn('flex-shrink-0', isRecording && 'ring-2 ring-destructive ring-offset-2')}
+            title={isRecording ? '녹음 중지' : '음성 입력'}
+          >
+            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </Button>
+        </div>
 
         {/* Message input */}
         <div className="flex-1 relative">
