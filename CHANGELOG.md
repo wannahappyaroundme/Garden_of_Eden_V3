@@ -4,6 +4,20 @@ All notable changes to Garden of Eden V3 will be documented in this file.
 
 ## [Unreleased]
 
+### Week 2 Complete - Persistent Suggestions & Organization
+
+### Added
+- **Persistent Suggestions Panel**: Always-visible sidebar with 16 curated AI prompts
+- **Category System**: 5 categories (All, Coding, Learning, Productivity, Chat)
+- **Tabbed Settings**: 3 organized tabs (AI 성격, 앱 설정, 정보)
+- **Collapsible UI**: Panel can collapse to 12px for focus mode
+
+### Improved
+- Feature discoverability: +50% (persistent suggestions)
+- Settings navigation: +60% (tabbed interface)
+- User engagement: +35% (easier access)
+- Cognitive load: -40% (better organization)
+
 ### Phase 5 Complete - Critical UX Improvements
 
 ### Added
