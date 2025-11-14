@@ -453,7 +453,7 @@ Qwen 2.5 모델은 **catastrophic forgetting에 대한 저항성이 높습니다
 
 - **안정적인 fine-tuning**: 적은 데이터로도 안정적으로 학습
 - **낮은 forgetting 비율**: 새로운 태스크 학습 시 이전 지식 유지
-- **32B 파라미터**: 충분한 용량으로 다양한 스타일 동시 학습 가능
+- **14B 파라미터**: 충분한 용량으로 다양한 스타일 동시 학습 가능
 
 따라서 **Elastic Weight Consolidation (EWC) 같은 복잡한 기법 불필요**하며, 기본적인 experience replay만으로도 충분한 안정성을 확보할 수 있습니다.
 

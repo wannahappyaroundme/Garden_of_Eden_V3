@@ -7,7 +7,7 @@ export type ModelType = 'qwen-2.5-32b' | 'qwen-2.5-14b' | 'whisper-large-v3' | '
 export interface LLMConfig {
   modelPath: string;
   modelType?: ModelType;
-  contextSize: number; // Qwen 2.5 32B: 8K default, 32K max
+  contextSize: number; // Qwen 2.5 14B: 8K default, 32K max
   temperature: number;
   topP: number;
   topK: number;
@@ -39,10 +39,10 @@ export interface AIModelStatus {
   qwen: {
     loaded: boolean;
     modelType: ModelType;
-    modelSize?: number; // Qwen 2.5 32B Q4_K_M: ~18.9GB
-    contextSize?: number; // 8K default
-    ramUsage?: number; // ~18-20GB
-    tokensPerSecond?: number; // ~22-26 t/s on M3 MAX
+    modelSize?: number; // Qwen 2.5 14B Q4_K_M: ~9.0GB
+    contextSize?: number; // 8K default, 32K max
+    ramUsage?: number; // ~12GB
+    tokensPerSecond?: number; // Moderate speed on Apple Silicon
   };
   whisper: {
     loaded: boolean;

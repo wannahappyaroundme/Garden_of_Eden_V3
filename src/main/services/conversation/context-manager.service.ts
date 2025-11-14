@@ -337,7 +337,7 @@ export class ConversationContextManager extends EventEmitter {
   }
 
   /**
-   * Generate response using Qwen 2.5 32B LLM
+   * Generate response using Qwen 2.5 14B LLM
    */
   private async generateResponse(
     query: string,
@@ -366,11 +366,11 @@ export class ConversationContextManager extends EventEmitter {
 
       // Initialize LLM if needed
       if (!llamaService.isInitialized()) {
-        log.info('Initializing Qwen 2.5 32B model...');
+        log.info('Initializing Qwen 2.5 14B model...');
         await llamaService.initialize();
       }
 
-      // Generate response with Qwen 2.5 32B
+      // Generate response with Qwen 2.5 14B
       const response = await llamaService.generateResponse(prompt);
 
       log.info(`LLM response generated (mode: ${mode}, length: ${response.length})`);

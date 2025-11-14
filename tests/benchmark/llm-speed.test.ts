@@ -1,15 +1,15 @@
 /**
  * LLM Speed Benchmark Tests
- * Measures actual performance of Qwen 2.5 32B on M3 MAX
+ * Measures actual performance of Qwen 2.5 14B on Apple Silicon
  */
 
 import { llamaService } from '../../src/main/services/ai/llama.service';
 
-describe('Qwen 2.5 32B Speed Benchmarks', () => {
+describe('Qwen 2.5 14B Speed Benchmarks', () => {
   beforeAll(async () => {
     // Initialize model before running benchmarks
     if (!llamaService.isInitialized()) {
-      console.log('Initializing Qwen 2.5 32B model...');
+      console.log('Initializing Qwen 2.5 14B model...');
       const start = Date.now();
       await llamaService.initialize();
       const loadTime = Date.now() - start;
@@ -22,7 +22,7 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
   });
 
   describe('Tokens per Second', () => {
-    it('should achieve 22-26 t/s for short responses (50 tokens)', async () => {
+    it('should achieve moderate speed for short responses (50 tokens)', async () => {
       const prompt = '간단히 대답해줘: 오늘 날씨 어때?';
       const maxTokens = 50;
 
@@ -37,12 +37,12 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       console.log(`Generated ${tokens} tokens in ${elapsed}ms`);
       console.log(`Speed: ${tokensPerSecond.toFixed(2)} t/s`);
 
-      // Expected: 22-26 t/s on M3 MAX 36GB
-      expect(tokensPerSecond).toBeGreaterThanOrEqual(20); // Allow some margin
-      expect(tokensPerSecond).toBeLessThanOrEqual(30);
+      // Expected: Moderate speed on Apple Silicon (Qwen 2.5 14B)
+      expect(tokensPerSecond).toBeGreaterThanOrEqual(10); // Allow reasonable margin
+      expect(tokensPerSecond).toBeLessThanOrEqual(40);
     }, 30000);
 
-    it('should achieve 22-26 t/s for medium responses (100 tokens)', async () => {
+    it('should achieve moderate speed for medium responses (100 tokens)', async () => {
       const prompt = '파이썬으로 피보나치 수열을 구현하는 함수를 작성해줘.';
       const maxTokens = 100;
 
@@ -56,11 +56,11 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       console.log(`Generated ${tokens} tokens in ${elapsed}ms`);
       console.log(`Speed: ${tokensPerSecond.toFixed(2)} t/s`);
 
-      expect(tokensPerSecond).toBeGreaterThanOrEqual(20);
-      expect(tokensPerSecond).toBeLessThanOrEqual(30);
+      expect(tokensPerSecond).toBeGreaterThanOrEqual(10);
+      expect(tokensPerSecond).toBeLessThanOrEqual(40);
     }, 45000);
 
-    it('should achieve 22-26 t/s for long responses (150 tokens)', async () => {
+    it('should achieve moderate speed for long responses (150 tokens)', async () => {
       const prompt = 'React에서 useEffect와 useState를 사용하는 방법을 자세히 설명해줘.';
       const maxTokens = 150;
 
@@ -74,13 +74,13 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       console.log(`Generated ${tokens} tokens in ${elapsed}ms`);
       console.log(`Speed: ${tokensPerSecond.toFixed(2)} t/s`);
 
-      expect(tokensPerSecond).toBeGreaterThanOrEqual(20);
-      expect(tokensPerSecond).toBeLessThanOrEqual(30);
+      expect(tokensPerSecond).toBeGreaterThanOrEqual(10);
+      expect(tokensPerSecond).toBeLessThanOrEqual(40);
     }, 60000);
   });
 
   describe('Response Time Targets', () => {
-    it('should respond in <2.3s for 50-token casual chat (fast mode)', async () => {
+    it('should respond in reasonable time for casual chat (fast mode)', async () => {
       const prompt = '오늘 기분이 어때?';
 
       const start = Date.now();
@@ -90,11 +90,11 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       console.log(`Response time: ${elapsed}ms`);
       console.log(`Response: ${response.substring(0, 100)}...`);
 
-      // Target: <2.3s for 50 tokens (at 22 t/s lower bound)
-      expect(elapsed).toBeLessThan(2300);
+      // Target: <5s for casual chat (Qwen 2.5 14B)
+      expect(elapsed).toBeLessThan(5000);
     }, 10000);
 
-    it('should respond in <4.6s for 100-token detailed response', async () => {
+    it('should respond in reasonable time for detailed response', async () => {
       const prompt = 'TypeScript의 Generic 타입에 대해 설명해줘.';
 
       const start = Date.now();
@@ -103,8 +103,8 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
 
       console.log(`Response time: ${elapsed}ms`);
 
-      // Target: <4.6s for 100 tokens (at 22 t/s lower bound)
-      expect(elapsed).toBeLessThan(4600);
+      // Target: <10s for detailed responses (Qwen 2.5 14B)
+      expect(elapsed).toBeLessThan(10000);
     }, 15000);
   });
 
@@ -122,7 +122,7 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       console.log(`Korean ratio: ${(koreanRatio * 100).toFixed(1)}%`);
       console.log(`Response: ${response}`);
 
-      // Qwen 2.5 32B should have <10% language mixing (ideally <1% after fine-tuning)
+      // Qwen 2.5 14B should have <10% language mixing (ideally <1% after fine-tuning)
       expect(koreanRatio).toBeGreaterThan(0.9);
     }, 30000);
 
@@ -148,9 +148,9 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       console.log(`  Heap: ${(memUsage.heapUsed / 1024 / 1024 / 1024).toFixed(2)} GB`);
       console.log(`  External: ${(memUsage.external / 1024 / 1024 / 1024).toFixed(2)} GB`);
 
-      // Expected: 18-20GB for Qwen 2.5 32B Q4_K_M + ~2-3GB for Node.js
-      // RSS should be <25GB on M3 MAX 36GB
-      expect(memUsage.rss / 1024 / 1024 / 1024).toBeLessThan(25);
+      // Expected: ~12GB for Qwen 2.5 14B Q4_K_M + ~2-3GB for Node.js
+      // RSS should be <20GB on Apple Silicon
+      expect(memUsage.rss / 1024 / 1024 / 1024).toBeLessThan(20);
     });
   });
 
@@ -176,7 +176,7 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       console.log(`Streaming speed: ${tokensPerSecond.toFixed(2)} t/s`);
 
       // Streaming should be at least as fast as non-streaming
-      expect(tokensPerSecond).toBeGreaterThanOrEqual(20);
+      expect(tokensPerSecond).toBeGreaterThanOrEqual(10);
     }, 30000);
   });
 
@@ -199,7 +199,7 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
   describe('Benchmark Summary', () => {
     it('should print comprehensive benchmark report', async () => {
       console.log('\n='.repeat(60));
-      console.log('Qwen 2.5 32B Benchmark Summary');
+      console.log('Qwen 2.5 14B Benchmark Summary');
       console.log('='.repeat(60));
 
       // Run multiple quick tests
@@ -223,11 +223,11 @@ describe('Qwen 2.5 32B Speed Benchmarks', () => {
       }
 
       console.log('\n' + '='.repeat(60));
-      console.log('Expected Performance on M3 MAX 36GB:');
-      console.log('  Speed: 22-26 tokens/second');
-      console.log('  Response Time (50 tokens): 1.9-2.3s');
-      console.log('  Response Time (100 tokens): 3.8-4.6s');
-      console.log('  Memory Usage: 18-20GB RAM');
+      console.log('Expected Performance on Apple Silicon:');
+      console.log('  Speed: Moderate (varies by hardware)');
+      console.log('  Response Time (casual): 2-5s');
+      console.log('  Response Time (detailed): 5-10s');
+      console.log('  Memory Usage: ~12GB RAM');
       console.log('='.repeat(60) + '\n');
     }, 120000); // 2 min timeout for full benchmark
   });

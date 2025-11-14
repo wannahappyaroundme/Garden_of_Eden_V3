@@ -48,7 +48,7 @@ npm run download:llava
 ## Model Sources
 
 All models are from Hugging Face:
-- Qwen 2.5 32B: Qwen2.5-32B-Instruct (official GGUF quantization)
+- Qwen 2.5 14B: Installed via Ollama (ollama.ai/library/qwen2.5)
 - Whisper: OpenAI Whisper Large V3 (GGML format by ggerganov)
 - LLaVA: LLaVA 1.5 7B (GGML format by mys)
 
