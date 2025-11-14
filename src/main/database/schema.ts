@@ -133,6 +133,27 @@ export const createTableStatements = {
       timestamp INTEGER NOT NULL
     )
   `,
+
+  /**
+   * User profile table
+   * Stores user information from onboarding
+   */
+  user_profile: `
+    CREATE TABLE IF NOT EXISTS user_profile (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      selected_persona TEXT NOT NULL CHECK(selected_persona IN ('Adam', 'Eve')),
+      age_group TEXT,
+      occupation TEXT CHECK(occupation IN ('student', 'employee', 'freelancer', 'entrepreneur', 'other', NULL)),
+      interests TEXT,
+      tone_preference TEXT NOT NULL CHECK(tone_preference IN ('casual', 'friendly-formal', 'professional')),
+      proactive_frequency TEXT NOT NULL CHECK(proactive_frequency IN ('frequent', 'moderate', 'minimal')),
+      onboarding_completed_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `,
 };
 
 /**

@@ -3,7 +3,7 @@ use reqwest::Client;
 use futures_util::StreamExt;
 
 const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
-const MODEL_NAME: &str = "llama3.1:8b";
+const MODEL_NAME: &str = "qwen2.5:14b";
 
 #[derive(Debug, Serialize)]
 struct OllamaRequest {
