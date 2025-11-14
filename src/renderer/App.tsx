@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import ToastContainer from './components/ToastContainer';
 
 type Page = 'chat' | 'settings';
 
@@ -45,6 +46,7 @@ function App() {
       {currentPage === 'settings' && (
         <Settings onClose={() => setCurrentPage('chat')} onThemeChange={handleThemeChange} />
       )}
+      <ToastContainer />
     </ErrorBoundary>
   );
 }

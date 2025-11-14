@@ -4,6 +4,8 @@
  */
 
 import { Component, ReactNode } from 'react';
+import ErrorMessage from './ErrorMessage';
+import { createActionableError } from '@shared/types/error.types';
 
 interface Props {
   children: ReactNode;
@@ -35,47 +37,19 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const actionableError = createActionableError(
+        this.state.error || new Error('Unknown error'),
+        'React 컴포넌트 렌더링'
+      );
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
-          <div className="max-w-md w-full bg-card border border-border rounded-2xl p-8 text-center animate-spring-slide-up">
-            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-destructive"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-
-            <h2 className="text-xl font-semibold mb-2">문제가 발생했습니다</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              앱을 다시 시작하면 해결될 수 있습니다.
-            </p>
-
-            {this.state.error && (
-              <details className="text-left bg-muted p-4 rounded-lg mb-6">
-                <summary className="text-xs font-mono cursor-pointer text-muted-foreground hover:text-foreground">
-                  기술 세부 정보
-                </summary>
-                <pre className="text-xs mt-2 overflow-x-auto text-muted-foreground">
-                  {this.state.error.message}
-                </pre>
-              </details>
-            )}
-
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              앱 새로고침
-            </button>
+          <div className="max-w-2xl w-full">
+            <ErrorMessage
+              error={actionableError}
+              onRetry={() => window.location.reload()}
+              onDismiss={() => this.setState({ hasError: false, error: undefined })}
+            />
           </div>
         </div>
       );

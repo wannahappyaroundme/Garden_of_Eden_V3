@@ -10,6 +10,7 @@ import PersonaPreviewPanel from '../components/PersonaPreviewPanel';
 import PersonaParameterGroup from '../components/PersonaParameterGroup';
 import { PERSONA_GROUPS } from '@shared/types/persona-groups.types';
 import type { PersonaSettings } from '../lib/tauri-api';
+import { toast } from '../stores/toast.store';
 
 interface SettingsProps {
   onClose: () => void;
@@ -71,9 +72,18 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
+
+      // Show success toast
+      toast.success('설정이 저장되었습니다', '변경사항이 즉시 적용됩니다');
     } catch (error) {
       console.error('Failed to save settings:', error);
-      alert('설정 저장에 실패했습니다.');
+
+      // Show error toast with actionable message
+      toast.error(
+        '설정 저장 실패',
+        '네트워크 연결을 확인하거나 다시 시도해주세요',
+        5000
+      );
     } finally {
       setIsSaving(false);
     }
@@ -102,6 +112,9 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+
+      // Show info toast
+      toast.info('설정이 초기화되었습니다', '저장 버튼을 눌러 변경사항을 적용하세요');
     }
   };
 
@@ -114,7 +127,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
       {/* Header */}
       <header className="flex-shrink-0 h-14 border-b border-border px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+            title="뒤로 가기 (Esc)"
+          >
             <svg
               width="20"
               height="20"
@@ -134,10 +153,10 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           <h1 className="text-xl font-semibold">설정</h1>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleReset}>
+          <Button variant="outline" size="sm" onClick={handleReset} title="모든 설정을 기본값으로 되돌리기">
             초기화
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={isSaving}>
+          <Button size="sm" onClick={handleSave} disabled={isSaving} title="변경사항 저장 (⌘S)">
             {isSaving ? '저장 중...' : saveSuccess ? '저장됨!' : '저장'}
           </Button>
         </div>

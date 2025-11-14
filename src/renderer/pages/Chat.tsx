@@ -460,6 +460,18 @@ export function Chat({ onOpenSettings }: ChatProps) {
                   💡 화면 추적이 켜져있어요. "현재 화면 설명해줘" 또는 "이 코드 리뷰해줘"를 시도해보세요!
                 </div>
               )}
+
+              {/* Keyboard shortcuts hint */}
+              <div className="mt-8 flex items-center justify-center gap-6 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <kbd className="px-2 py-1 bg-muted rounded border border-border font-mono">⌘K</kbd>
+                  <span>채팅 입력창 포커스</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <kbd className="px-2 py-1 bg-muted rounded border border-border font-mono">?</kbd>
+                  <span>모든 단축키 보기</span>
+                </div>
+              </div>
             </div>
           ) : (
             // Message list with date dividers

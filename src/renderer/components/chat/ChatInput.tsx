@@ -116,6 +116,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             disabled={disabled || isLoading || isRecording}
             className="min-h-[44px] max-h-[200px] resize-none pr-12"
             rows={1}
+            aria-label="메시지 입력"
+            title="Enter: 전송 | Shift+Enter: 줄바꿈"
           />
         </div>
 
@@ -131,9 +133,26 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         </Button>
       </div>
 
-      {/* Helper text */}
-      <div className="text-xs text-muted-foreground text-center mt-2">
-        Enter로 전송, Shift + Enter로 줄바꿈 • Cmd/Ctrl+K로 포커스
+      {/* Helper text - Enhanced visibility */}
+      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground mt-2">
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono text-[10px]">
+            Enter
+          </kbd>
+          <span>전송</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono text-[10px]">
+            Shift+Enter
+          </kbd>
+          <span>줄바꿈</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono text-[10px]">
+            ⌘K
+          </kbd>
+          <span>포커스</span>
+        </div>
       </div>
     </div>
   );
