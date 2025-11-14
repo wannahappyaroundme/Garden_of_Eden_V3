@@ -5,9 +5,10 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
-import { Slider } from '../components/ui/slider';
 import { Switch } from '../components/ui/switch';
 import PersonaPreviewPanel from '../components/PersonaPreviewPanel';
+import PersonaParameterGroup from '../components/PersonaParameterGroup';
+import { PERSONA_GROUPS } from '@shared/types/persona-groups.types';
 import type { PersonaSettings } from '../lib/tauri-api';
 
 interface SettingsProps {
@@ -151,223 +152,23 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
             <div className="space-y-8">
               {/* AI Persona Settings */}
               <section>
-                <h2 className="text-lg font-semibold mb-4">AI 성격 설정</h2>
-                <div className="space-y-6 bg-card p-6 rounded-lg border border-border">
-              {/* Formality */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">격식 수준</label>
-                  <span className="text-sm text-muted-foreground">{persona.formality}/10</span>
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">AI 성격 설정</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    각 그룹을 클릭하여 세부 설정을 조정하세요
+                  </p>
                 </div>
-                <Slider
-                  value={[persona.formality]}
-                  onValueChange={([value]) => updatePersona('formality', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 편한 말투 | 높음: 존댓말
-                </p>
-              </div>
 
-              {/* Humor */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">유머 감각</label>
-                  <span className="text-sm text-muted-foreground">{persona.humor}/10</span>
-                </div>
-                <Slider
-                  value={[persona.humor]}
-                  onValueChange={([value]) => updatePersona('humor', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 진지함 | 높음: 유머러스
-                </p>
-              </div>
-
-              {/* Verbosity */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">말 많기</label>
-                  <span className="text-sm text-muted-foreground">{persona.verbosity}/10</span>
-                </div>
-                <Slider
-                  value={[persona.verbosity]}
-                  onValueChange={([value]) => updatePersona('verbosity', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 간결한 답변 | 높음: 상세한 설명
-                </p>
-              </div>
-
-              {/* Emoji Usage */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">이모지 사용</label>
-                  <span className="text-sm text-muted-foreground">{persona.emojiUsage}/10</span>
-                </div>
-                <Slider
-                  value={[persona.emojiUsage]}
-                  onValueChange={([value]) => updatePersona('emojiUsage', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 텍스트만 | 높음: 이모지 많이 사용
-                </p>
-              </div>
-
-              {/* Enthusiasm */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">열정</label>
-                  <span className="text-sm text-muted-foreground">{persona.enthusiasm}/10</span>
-                </div>
-                <Slider
-                  value={[persona.enthusiasm]}
-                  onValueChange={([value]) => updatePersona('enthusiasm', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 차분함 | 높음: 열정적
-                </p>
-              </div>
-
-              {/* Empathy */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">공감 능력</label>
-                  <span className="text-sm text-muted-foreground">{persona.empathy}/10</span>
-                </div>
-                <Slider
-                  value={[persona.empathy]}
-                  onValueChange={([value]) => updatePersona('empathy', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 사실 중심 | 높음: 감정 공감
-                </p>
-              </div>
-
-              {/* Directness */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">직설적</label>
-                  <span className="text-sm text-muted-foreground">{persona.directness}/10</span>
-                </div>
-                <Slider
-                  value={[persona.directness]}
-                  onValueChange={([value]) => updatePersona('directness', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 완곡한 표현 | 높음: 직설적 표현
-                </p>
-              </div>
-
-              {/* Technicality */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">기술 수준</label>
-                  <span className="text-sm text-muted-foreground">{persona.technicality}/10</span>
-                </div>
-                <Slider
-                  value={[persona.technicality]}
-                  onValueChange={([value]) => updatePersona('technicality', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 쉬운 설명 | 높음: 전문 용어 사용
-                </p>
-              </div>
-
-              {/* Creativity */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">창의성</label>
-                  <span className="text-sm text-muted-foreground">{persona.creativity}/10</span>
-                </div>
-                <Slider
-                  value={[persona.creativity]}
-                  onValueChange={([value]) => updatePersona('creativity', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 정확성 중시 | 높음: 창의적 제안
-                </p>
-              </div>
-
-              {/* Proactivity */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">주도성</label>
-                  <span className="text-sm text-muted-foreground">{persona.proactivity}/10</span>
-                </div>
-                <Slider
-                  value={[persona.proactivity]}
-                  onValueChange={([value]) => updatePersona('proactivity', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 수동적 대응 | 높음: 먼저 제안
-                </p>
-              </div>
-
-              {/* Patience */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">인내심</label>
-                  <span className="text-sm text-muted-foreground">{persona.patience}/10</span>
-                </div>
-                <Slider
-                  value={[persona.patience]}
-                  onValueChange={([value]) => updatePersona('patience', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 빠른 답변 | 높음: 천천히 설명
-                </p>
-              </div>
-
-              {/* Encouragement */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">격려</label>
-                  <span className="text-sm text-muted-foreground">{persona.encouragement}/10</span>
-                </div>
-                <Slider
-                  value={[persona.encouragement]}
-                  onValueChange={([value]) => updatePersona('encouragement', value)}
-                  min={0}
-                  max={10}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  낮음: 사실만 전달 | 높음: 적극 격려
-                </p>
-              </div>
+                <div className="space-y-3">
+                  {PERSONA_GROUPS.map((group, index) => (
+                    <PersonaParameterGroup
+                      key={group.id}
+                      group={group}
+                      persona={persona}
+                      onUpdate={updatePersona}
+                      defaultExpanded={index === 0} // First group expanded by default
+                    />
+                  ))}
                 </div>
               </section>
 
