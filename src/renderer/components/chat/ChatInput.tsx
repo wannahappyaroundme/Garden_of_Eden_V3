@@ -22,6 +22,7 @@ export interface ChatInputProps {
 
 export interface ChatInputHandle {
   focus: () => void;
+  setValue: (value: string) => void;
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
@@ -40,10 +41,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [message, setMessage] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Expose focus method to parent
+    // Expose focus and setValue methods to parent
     useImperativeHandle(ref, () => ({
       focus: () => {
         textareaRef.current?.focus();
+      },
+      setValue: (value: string) => {
+        setMessage(value);
+        // Focus the textarea after setting value
+        setTimeout(() => textareaRef.current?.focus(), 0);
       },
     }));
 

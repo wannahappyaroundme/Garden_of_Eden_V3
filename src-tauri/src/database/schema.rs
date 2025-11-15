@@ -69,6 +69,25 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // User profile table (onboarding data)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS user_profile (
+            id INTEGER PRIMARY KEY CHECK(id = 1),
+            name TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            age_group TEXT CHECK(age_group IN ('10s', '20s', '30s', '40s', '50s', '60+', NULL)),
+            occupation TEXT CHECK(occupation IN ('student', 'employee', 'freelancer', 'entrepreneur', 'other', NULL)),
+            interests TEXT,
+            tone_preference TEXT CHECK(tone_preference IN ('casual', 'friendly-formal', 'professional', NULL)),
+            proactive_frequency TEXT CHECK(proactive_frequency IN ('15min', '45min', '2hr', 'never', NULL)),
+            selected_persona TEXT CHECK(selected_persona IN ('friend', 'assistant', 'expert', NULL)),
+            onboarding_completed_at INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        )",
+        [],
+    )?;
+
     // Episodic memory table
     conn.execute(
         "CREATE TABLE IF NOT EXISTS episodic_memory (

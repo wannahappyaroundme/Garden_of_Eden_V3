@@ -20,6 +20,11 @@
       "unknown": "❌ Error occurred:\n\n{error}\n\nPlease contact support if this persists."
     }
   },
+  "errors": {
+    "voiceRecordingFailed": "🎤 Unable to start voice recording.\nPlease check microphone permissions.",
+    "voiceTranscriptionFailed": "🎤 Voice transcription failed.\nPlease try again.",
+    "whisperNotConfigured": "🎤 Whisper speech recognition is not configured yet.\n\nSetup instructions:\n1. Install whisper.cpp\n2. Or run Whisper API server\n\nSee documentation for details."
+  },
   "settings": {
     "title": "Settings",
     "persona": {

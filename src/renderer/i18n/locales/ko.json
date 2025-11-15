@@ -20,6 +20,11 @@
       "unknown": "❌ 오류 발생:\n\n{error}\n\n문제가 계속되면 개발자에게 문의하세요."
     }
   },
+  "errors": {
+    "voiceRecordingFailed": "🎤 음성 녹음을 시작할 수 없습니다.\n마이크 권한을 확인해주세요.",
+    "voiceTranscriptionFailed": "🎤 음성 변환에 실패했습니다.\n다시 시도해주세요.",
+    "whisperNotConfigured": "🎤 Whisper 음성 인식이 아직 설정되지 않았습니다.\n\n설정 방법:\n1. whisper.cpp 설치\n2. 또는 Whisper API 서버 실행\n\n자세한 내용은 문서를 참조하세요."
+  },
   "settings": {
     "title": "설정",
     "persona": {

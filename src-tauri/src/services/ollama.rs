@@ -33,7 +33,13 @@ pub async fn generate_response(user_message: &str) -> Result<String, String> {
     // Build system prompt (Korean-friendly AI assistant)
     let system_prompt = "당신은 Garden of Eden이라는 이름의 친절하고 도움이 되는 AI 비서입니다. \
                          사용자의 질문에 명확하고 상세하게 답변하세요. \
-                         한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.";
+                         한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.\n\n\
+                         중요: 답변 시 반드시 마크다운 형식을 사용하세요:\n\
+                         - 중요한 부분은 **볼드**로 강조\n\
+                         - 기울임이 필요한 부분은 *이탤릭*으로 표시\n\
+                         - 목록은 - 또는 1. 을 사용\n\
+                         - 코드는 ```로 감싸기\n\
+                         - 이모지를 적절히 활용하여 친근하게 답변";
 
     let full_prompt = format!("{}\n\nUser: {}\nAssistant:", system_prompt, user_message);
 
@@ -100,7 +106,13 @@ where
     // Build system prompt
     let system_prompt = "당신은 Garden of Eden이라는 이름의 친절하고 도움이 되는 AI 비서입니다. \
                          사용자의 질문에 명확하고 상세하게 답변하세요. \
-                         한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.";
+                         한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.\n\n\
+                         중요: 답변 시 반드시 마크다운 형식을 사용하세요:\n\
+                         - 중요한 부분은 **볼드**로 강조\n\
+                         - 기울임이 필요한 부분은 *이탤릭*으로 표시\n\
+                         - 목록은 - 또는 1. 을 사용\n\
+                         - 코드는 ```로 감싸기\n\
+                         - 이모지를 적절히 활용하여 친근하게 답변";
 
     let full_prompt = format!("{}\n\nUser: {}\nAssistant:", system_prompt, user_message);
 

@@ -46,3 +46,19 @@ pub struct PersonaSettings {
     pub created_at: i64,
     pub updated_at: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserProfile {
+    pub id: i32,
+    pub name: String,
+    pub display_name: String,
+    pub age_group: Option<String>,
+    pub occupation: Option<String>,
+    pub interests: Option<String>,
+    pub tone_preference: Option<String>,
+    pub proactive_frequency: Option<String>,
+    pub selected_persona: Option<String>,
+    pub onboarding_completed_at: i64,
+    pub created_at: i64,
+    pub updated_at: i64,
+}

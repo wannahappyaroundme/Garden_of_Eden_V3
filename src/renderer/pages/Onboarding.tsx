@@ -5,14 +5,17 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   ONBOARDING_QUESTIONS,
   type OnboardingAnswers,
   type OnboardingQuestion,
   type PersonaChoice,
-} from '@shared/types/onboarding.types';
+} from '../../shared/types/onboarding.types';
 import PersonaPreviewModal from '../components/PersonaPreviewModal';
+
+interface OnboardingProps {
+  onComplete: () => void;
+}
 
 interface Message {
   id: string;
@@ -21,8 +24,7 @@ interface Message {
   timestamp: Date;
 }
 
-export default function Onboarding() {
-  const navigate = useNavigate();
+export default function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -160,13 +162,20 @@ export default function Onboarding() {
 
   const completeOnboarding = async (finalAnswers: Partial<OnboardingAnswers>) => {
     try {
-      // TODO: Call IPC to complete onboarding
-      // await window.api.completeOnboarding(finalAnswers as OnboardingAnswers);
+      // Map old onboarding format to new Tauri API format
+      const apiAnswers = {
+        name: finalAnswers.name || '',
+        selected_persona: finalAnswers.personaChoice === 'Adam' ? 'expert' : finalAnswers.personaChoice === 'Eve' ? 'friend' : 'assistant',
+        tone_preference: finalAnswers.tonePreference || 'friendly-formal',
+        occupation: finalAnswers.occupation || 'other',
+        proactive_frequency: finalAnswers.proactiveFrequency || 'never',
+        interests: finalAnswers.interests || '',
+      };
 
-      // TODO: Generate welcome message
-      // const welcomeMsg = await window.api.generateWelcomeMessage(finalAnswers as OnboardingAnswers);
+      // Call Tauri API to save onboarding
+      await window.api.completeOnboarding(apiAnswers);
 
-      // Generate temporary welcome message (will be replaced with IPC call)
+      // Generate welcome message based on answers
       const displayName = finalAnswers.name || '';
       const personaName = finalAnswers.personaChoice === 'Adam' ? '아담' : '이브';
       const tonePreference = finalAnswers.tonePreference || 'friendly-formal';
@@ -188,24 +197,24 @@ export default function Onboarding() {
 
       addAIMessage(welcomeMsg);
 
-      // Navigate to chat after delay
+      // Go to chat after delay
       setTimeout(() => {
-        navigate('/chat');
+        onComplete();
       }, 3000);
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
-      // Fallback: navigate anyway
-      setTimeout(() => navigate('/chat'), 2000);
+      alert('온보딩 저장에 실패했습니다: ' + error);
+      // Fallback: go to chat anyway
+      setTimeout(() => onComplete(), 2000);
     }
   };
 
   const skipOnboarding = async () => {
     try {
-      // TODO: await window.api.skipOnboarding();
-      navigate('/chat');
+      onComplete();
     } catch (error) {
       console.error('Failed to skip onboarding:', error);
-      navigate('/chat');
+      onComplete();
     }
   };
 

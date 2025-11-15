@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { useTranslation } from 'react-i18next';
 import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
 import { ChatInput, ChatInputHandle } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
@@ -24,7 +25,7 @@ import SuggestionsPanel from '../components/SuggestionsPanel';
 interface Message {
   id: string;
   content: string;
-  role: 'user' | 'assistant' | 'error';
+  role: 'user' | 'assistant' | 'error' | 'system';
   timestamp: Date;
   errorRetryContent?: string; // For error messages, stores the original user message
 }
@@ -34,12 +35,14 @@ interface ChatProps {
 }
 
 export function Chat({ onOpenSettings }: ChatProps) {
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [suggestionsPanelCollapsed, setSuggestionsPanelCollapsed] = useState(false);
+  const [showConversationHistory, setShowConversationHistory] = useState(false); // Hidden by default
   const [trackingStatus, setTrackingStatus] = useState({
     isTracking: false,
     lastCaptureTime: 0,
@@ -53,11 +56,29 @@ export function Chat({ onOpenSettings }: ChatProps) {
   // Dynamic Island notifications
   const { notification, showNotification, hideNotification } = useDynamicIsland();
 
-  // Toggle screen tracking (not implemented in Tauri yet)
+  // Toggle screen tracking
   const handleToggleTracking = useCallback(async () => {
-    // Show "Coming Soon" message
-    alert('AI-Led Proactive Mode is coming in v1.1!\n\nThis feature will:\n- Monitor your screen\n- Analyze context\n- Make proactive suggestions\n\nFor now, use User-Led mode where the AI waits for your input.');
-  }, []);
+    try {
+      const result = await invoke<{ is_tracking: boolean; capture_interval: number }>('screen_toggle_tracking', {
+        interval: 10, // 10 seconds
+      });
+
+      setTrackingStatus(prev => ({
+        ...prev,
+        isTracking: result.is_tracking,
+        captureInterval: result.capture_interval,
+      }));
+
+      if (result.is_tracking) {
+        showNotification('started', { interval: result.capture_interval });
+      } else {
+        showNotification('stopped', { interval: result.capture_interval });
+      }
+    } catch (error) {
+      console.error('Failed to toggle screen tracking:', error);
+      alert('화면 추적 토글에 실패했습니다: ' + error);
+    }
+  }, [showNotification]);
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
@@ -95,9 +116,11 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   const loadConversationMessages = useCallback(async (conversationId: string) => {
     try {
+      console.log('Loading messages for conversation:', conversationId);
       const loadedMessages = await invoke<any[]>('get_conversation_messages', {
         conversationId,
       });
+      console.log('Loaded messages:', loadedMessages.length, 'messages');
       // Convert timestamps to Date objects
       const formattedMessages: Message[] = loadedMessages.map((msg: any) => ({
         id: msg.id,
@@ -105,6 +128,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
         role: msg.role,
         timestamp: new Date(msg.timestamp),
       }));
+      console.log('Setting messages:', formattedMessages);
       setMessages(formattedMessages);
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
@@ -120,46 +144,47 @@ export function Chat({ onOpenSettings }: ChatProps) {
     }
   }, [currentConversationId, loadConversationMessages]);
 
-  // Setup screen tracking event listeners
+  // Setup screen tracking status polling
   useEffect(() => {
-    // Check if screen tracking APIs are available (Electron only, not Tauri yet)
-    if (window.api?.screenGetStatus) {
-      // Get initial status
-      window.api.screenGetStatus().then(status => {
-        setTrackingStatus(status);
-      }).catch(console.error);
+    // Get initial status
+    invoke<{ is_tracking: boolean; last_capture_time: number; capture_count: number; capture_interval: number }>('screen_get_status')
+      .then(status => {
+        setTrackingStatus({
+          isTracking: status.is_tracking,
+          lastCaptureTime: status.last_capture_time,
+          captureCount: status.capture_count,
+          captureInterval: status.capture_interval,
+        });
+      })
+      .catch(console.error);
 
-      // Listen for status updates
-      const unsubscribeStatus = window.api.onScreenStatusUpdate?.((status) => {
-        setTrackingStatus(status);
-      });
+    // Poll status every 5 seconds to keep UI updated
+    const intervalId = setInterval(() => {
+      invoke<{ is_tracking: boolean; last_capture_time: number; capture_count: number; capture_interval: number }>('screen_get_status')
+        .then(status => {
+          setTrackingStatus({
+            isTracking: status.is_tracking,
+            lastCaptureTime: status.last_capture_time,
+            captureCount: status.capture_count,
+            captureInterval: status.capture_interval,
+          });
+        })
+        .catch(console.error);
+    }, 5000);
 
-      // Listen for tracking notifications (Dynamic Island)
-      const unsubscribeNotification = window.api.onScreenTrackingNotification?.((data) => {
-        showNotification(data.action, { interval: data.interval });
-      });
-
-      // Listen for idle notifications
-      const unsubscribeIdle = window.api.onScreenIdleNotification?.((data) => {
-        showNotification('idle-warning', { idleDuration: data.idleDurationMinutes });
-      });
-
-      return () => {
-        unsubscribeStatus?.();
-        unsubscribeNotification?.();
-        unsubscribeIdle?.();
-      };
-    }
-    return undefined;
-  }, [showNotification]);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleSelectConversation = useCallback((conversationId: string | null) => {
+    console.log('handleSelectConversation called with:', conversationId);
     if (conversationId === null) {
       // New conversation - clear messages
+      console.log('Starting new conversation - clearing messages');
       setMessages([]);
       setCurrentConversationId(undefined);
     } else {
       // Load existing conversation
+      console.log('Loading existing conversation:', conversationId);
       setCurrentConversationId(conversationId);
     }
   }, []);
@@ -291,27 +316,60 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   const handleVoiceStart = async () => {
     try {
-      const result = await invoke<boolean>('voice_input_start');
-      if (result) {
-        setIsRecording(true);
-      }
+      const audioPath = await invoke<string>('whisper_start_recording');
+      console.log('Recording started:', audioPath);
+      setIsRecording(true);
     } catch (error) {
       console.error('Failed to start voice recording:', error);
+      // Show error notification to user
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'system',
+        content: t('errors.voiceRecordingFailed'),
+        timestamp: new Date().toISOString()
+      }]);
     }
   };
 
   const handleVoiceStop = async () => {
     try {
-      const transcript = await invoke<string>('voice_input_stop');
+      // Stop recording and get the audio file path
+      const audioPath = await invoke<string>('whisper_stop_recording');
       setIsRecording(false);
 
-      // If transcript is available, send it as a message
-      if (transcript && transcript.trim() && transcript !== 'Transcript placeholder') {
-        await handleSendMessage(transcript);
+      console.log('Recording stopped:', audioPath);
+
+      // Transcribe the audio file
+      const transcript = await invoke<string>('whisper_transcribe', {
+        audioPath,
+        language: i18n.language === 'ko' ? 'ko' : 'en'
+      });
+
+      console.log('Transcription result:', transcript);
+
+      // If transcript is available and not a placeholder, insert it into chat input
+      if (transcript && transcript.trim() && !transcript.includes('not yet configured')) {
+        // Insert transcribed text into chat input (user can edit before sending)
+        chatInputRef.current?.setValue(transcript.trim());
+      } else if (transcript.includes('not yet configured')) {
+        // Show setup message to user
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'system',
+          content: t('errors.whisperNotConfigured'),
+          timestamp: new Date().toISOString()
+        }]);
       }
     } catch (error) {
-      console.error('Failed to stop voice recording:', error);
+      console.error('Failed to stop voice recording or transcribe:', error);
       setIsRecording(false);
+      // Show error notification to user
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'system',
+        content: t('errors.voiceTranscriptionFailed'),
+        timestamp: new Date().toISOString()
+      }]);
     }
   };
 
@@ -332,20 +390,52 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Conversation History Sidebar */}
-      <ConversationHistory
-        ref={conversationHistoryRef}
-        currentConversationId={currentConversationId}
-        onSelectConversation={handleSelectConversation}
-      />
+      {/* Conversation History Sidebar - Conditionally rendered with slide animation */}
+      {showConversationHistory && (
+        <div className="animate-slide-in-left">
+          <ConversationHistory
+            ref={conversationHistoryRef}
+            currentConversationId={currentConversationId}
+            onSelectConversation={handleSelectConversation}
+          />
+        </div>
+      )}
 
       {/* Main Chat Area */}
       <main className="flex flex-col flex-1">
         {/* Header */}
         <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between titlebar-drag">
-          <div>
-            <h1 className="text-lg font-semibold">Garden of Eden</h1>
-            <p className="text-xs text-muted-foreground" aria-label="애플리케이션 설명">AI Assistant</p>
+          <div className="flex items-center gap-3">
+            {/* Hamburger Menu Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowConversationHistory(!showConversationHistory)}
+              className="h-8 w-8 p-0 titlebar-no-drag"
+              aria-label={showConversationHistory ? "대화 목록 숨기기" : "대화 목록 보기"}
+              title={showConversationHistory ? "대화 목록 숨기기" : "대화 목록 보기"}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-muted-foreground"
+              >
+                <path
+                  d="M3 12H21M3 6H21M3 18H21"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Button>
+            <div>
+              <h1 className="text-lg font-semibold">Garden of Eden</h1>
+              <p className="text-xs text-muted-foreground" aria-label="애플리케이션 설명">AI Assistant</p>
+            </div>
           </div>
           <div className="flex items-center gap-4 titlebar-no-drag">
             {/* Mode Indicator - Shows user-led vs AI-led mode */}

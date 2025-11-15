@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3%2B-blue.svg)](https://www.typescriptlang.org/)
-[![Electron](https://img.shields.io/badge/Electron-28.0-47848F.svg)](https://www.electronjs.org/)
+[![Tauri](https://img.shields.io/badge/Tauri-2.9-24C8DB.svg)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)](https://reactjs.org/)
 
 > "사람의 외로움을 제거하면서 옆에서 친구처럼 도와주고 위로해주기도하고 나의 생산성을 올려주는 자비스를 만든다"
@@ -71,29 +71,32 @@ Garden of Eden V3 is a **production-quality, privacy-first desktop AI assistant*
 - **Works Offline** - Complete functionality without internet after initial model download
 
 ### 🤖 AI Intelligence
-- **Qwen 2.5 14B Instruct** (~9.0GB Q4_K_M) - 14.8B parameter model, 32K context, 29+ languages, optimized for speed/quality balance
-- **Whisper Large V3** (~3.1GB) - Speech-to-text for Korean and English
-- **LLaVA 7B** (~4.4GB) - Vision model for screen context analysis
-- **BGE-M3 Embeddings** - 1024-dimensional multilingual embeddings for RAG
-- **System TTS** - Native text-to-speech (macOS AVFoundation / Windows SAPI)
-- **One-Click Download** - Beautiful UI with real-time progress, pause/resume, and auto-detection
-- **Fast inference** - Optimized performance on Apple Silicon with Metal acceleration
+- **Qwen 2.5 14B Instruct** (~9.0GB Q4_K_M) - 14.8B parameter model, 32K context, 29+ languages ✅
+- **Whisper Medium** (~1.5GB) - Speech-to-text for Korean and English 🚧 *Coming Soon*
+- **LLaVA 7B** (~4.4GB) - Vision model for screen context analysis 🚧 *Coming Soon*
+- **System TTS** - Native text-to-speech (macOS/Windows) 🚧 *Coming Soon*
+- **One-Click Download** - Beautiful UI with real-time progress ✅
+- **Fast inference** - Optimized performance on Apple Silicon with Metal acceleration ✅
 
 ### 🎭 Persona Learning System
-- **28 Customizable Parameters** - Formality, humor, verbosity, emoji usage, technical depth, and more
-- **6 Preset Personalities** - Default, Professional, Friendly, Teacher, Technical, Creative
-- **Adaptive Learning** - Gradient descent optimization based on thumbs up/down feedback
-- **RAG Memory System** - LanceDB vector database for episodic memory and semantic search
-- **BGE-M3 Embeddings** - 1024-dimensional multilingual embeddings for accurate semantic matching
-- **Context Injection** - Retrieves relevant past conversations to maintain continuity
+- **28 Customizable Parameters** - Formality, humor, verbosity, emoji usage, technical depth, and more ✅
+- **6 Preset Personalities** - Default, Professional, Friendly, Teacher, Technical, Creative ✅
+- **Thumbs Up/Down Feedback** - Rate AI responses to improve quality ✅
+- **Memory System** - SQLite-based conversation history with full-text search ✅
+- **Context-Aware Responses** - Maintains conversation continuity across sessions ✅
+- **Export/Import Presets** - Save and share custom personas 🚧 *Coming Soon*
+- **Adaptive Learning** - Gradient descent optimization 🚧 *Coming Soon*
+- **RAG Vector Memory** - Episodic memory with semantic search 🚧 *Coming Soon*
 
 ### 🖥️ Screen Context Analysis
-AI understands what you're working on through **3 levels of screen awareness**:
+**Screen Capture** - 10-second interval screenshots stored locally ✅
+
+**AI Analysis** (3 levels) 🚧 *Coming Soon*:
 1. **Level 1 (Current)** - Analyzes current window only (fast, low resource)
 2. **Level 2 (Recent)** - Reviews last 10 minutes of work (balanced)
-3. **Level 3 (Full Project)** - Deep understanding of entire project context (comprehensive)
+3. **Level 3 (Full Project)** - Deep understanding of entire project context
 
-**Privacy Controls**: Disable tracking, configure intervals, or blur sensitive areas
+**Privacy Controls** - Disable tracking, configure intervals ✅
 
 ### 🛠️ Deep System Integration
 - **File System** - Read/write with encoding options, glob pattern search, 10MB safety limit
@@ -130,36 +133,36 @@ AI understands what you're working on through **3 levels of screen awareness**:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                    ELECTRON APPLICATION                     │
+│                    TAURI APPLICATION                        │
 ├────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌──────────────────────────────────────────────────────┐ │
-│  │  MAIN PROCESS (Node.js Backend - 42 files)          │ │
+│  │  RUST BACKEND (Tauri Core)                          │ │
 │  │                                                       │ │
 │  │  ┌─────────────┐  ┌──────────────┐  ┌────────────┐ │ │
 │  │  │ AI Services │  │ Integrations │  │  Learning  │ │ │
 │  │  │             │  │              │  │            │ │ │
-│  │  │ • Llama 8B  │  │ • File Sys   │  │ • Persona  │ │ │
-│  │  │ • Whisper   │  │ • Git Ops    │  │ • RAG      │ │ │
-│  │  │ • LLaVA     │  │ • Screen     │  │ • Learner  │ │ │
-│  │  │ • TTS       │  │ • Calendar   │  │ • Memory   │ │ │
+│  │  │ • Qwen 14B  │  │ • File Sys   │  │ • Persona  │ │ │
+│  │  │ • Whisper   │  │ • Git Ops    │  │ • Screen   │ │ │
+│  │  │ • LLaVA     │  │ • Screen     │  │ • Memory   │ │ │
+│  │  │ • TTS       │  │ • Calendar   │  │            │ │ │
 │  │  └─────────────┘  └──────────────┘  └────────────┘ │ │
 │  │                                                       │ │
 │  │  ┌──────────────────────────────────────────────┐   │ │
-│  │  │ SQLite Database (AES-256 Encrypted)          │   │ │
+│  │  │ SQLite Database (Encrypted)                  │   │ │
 │  │  │ • Conversations • Messages • Persona         │   │ │
-│  │  │ • Memory • Learning Data • Settings          │   │ │
+│  │  │ • Screen Context • Settings                  │   │ │
 │  │  └──────────────────────────────────────────────┘   │ │
 │  └──────────────────────────────────────────────────────┘ │
 │                             ↕                             │
 │           ┌─────────────────────────────────┐             │
-│           │   PRELOAD (IPC Bridge - Secure) │             │
-│           │   • contextBridge               │             │
-│           │   • 100+ API Methods            │             │
+│           │   TAURI IPC (Type-Safe)         │             │
+│           │   • invoke() commands           │             │
+│           │   • 50+ Rust Commands           │             │
 │           └─────────────────────────────────┘             │
 │                             ↕                             │
 │  ┌──────────────────────────────────────────────────────┐ │
-│  │  RENDERER PROCESS (React UI - Sandboxed, 35 files)  │ │
+│  │  REACT FRONTEND (WebView)                           │ │
 │  │                                                       │ │
 │  │  ┌──────────┐  ┌──────────┐  ┌────────────────────┐ │ │
 │  │  │   Chat   │  │ Settings │  │  Components        │ │ │
@@ -183,7 +186,6 @@ AI understands what you're working on through **3 levels of screen awareness**:
        │   • qwen2.5:14b (9.0GB Q4_K_M)          │
        │   • whisper-large-v3 (3.1GB)            │
        │   • llava-7b (4.4GB)                    │
-       │   • bge-m3 embeddings                   │
        └─────────────────────────────────────────┘
 ```
 
@@ -265,25 +267,25 @@ When you launch Garden of Eden V3 for the first time:
 <td valign="top" width="50%">
 
 ### Backend & AI
-- **[Rust + Tauri](https://tauri.app/)** - Native backend
-- **[Ollama](https://ollama.ai/)** - LLM runtime
-- **[better-sqlite3 11.7](https://github.com/WiseLibs/better-sqlite3)** - Local database
-- **[ChromaDB 1.7](https://www.trychroma.com/)** - Vector database
-- **[@xenova/transformers 2.17](https://huggingface.co/docs/transformers.js)** - Embeddings
-- **[simple-git 3.30](https://github.com/steveukx/git-js)** - Git operations
-- **[winston 3.18](https://github.com/winstonjs/winston)** - Logging
+- **[Tauri 2.9](https://tauri.app/)** - Desktop application framework (Rust + WebView)
+- **[Rust](https://www.rust-lang.org/)** - Native backend language
+- **[Ollama](https://ollama.ai/)** - LLM runtime for local AI models
+- **[rusqlite 0.32](https://github.com/rusqlite/rusqlite)** - SQLite database with bundled binaries
+- **[tokio](https://tokio.rs/)** - Async runtime for Rust
+- **[screenshots 0.8](https://crates.io/crates/screenshots)** - Screen capture library
+- **[base64 0.22](https://crates.io/crates/base64)** - Base64 encoding for images
 
 </td>
 </tr>
 </table>
 
 ### AI Models (100% Local via Ollama)
-- **Qwen 2.5 14B Instruct** (9.0GB Q4_K_M) - Alibaba's flagship conversational model with 32K context
-- **Whisper Large V3** (3.1GB) - OpenAI's speech recognition (supports 99 languages)
-- **LLaVA 7B** (4.4GB) - Visual language model for screen understanding
-- **BGE-M3** - 1024-dimensional multilingual embeddings for RAG memory
+- **Qwen 2.5 14B Instruct** (9.0GB Q4_K_M) ✅ - Conversational AI with 32K context
+- **Whisper Medium** (1.5GB) 🚧 *Coming Soon* - Speech recognition (Korean + English)
+- **LLaVA 7B** (4.4GB) 🚧 *Coming Soon* - Visual language model for screen analysis
 
-**Total Storage**: ~16.5GB | **RAM Usage**: 10-14GB during operation
+**Current Storage**: ~9GB (Qwen only) | **RAM Usage**: ~12GB during operation
+**Full Stack**: ~14.5GB after all models | **RAM Usage**: 14-16GB with all features
 
 ---
 
@@ -338,15 +340,30 @@ When you launch Garden of Eden V3 for the first time:
 </details>
 
 <details>
-<summary><b>Phase 2: AI Integration</b> ✅ COMPLETE (100%)</summary>
+<summary><b>Phase 2: AI Integration</b> 🔄 IN PROGRESS (70% - Backend Complete, UI In Progress)</summary>
 
+**Backend Infrastructure** ✅
 - [x] Qwen 2.5 14B integration via Ollama
 - [x] GPU acceleration (Metal for macOS, CUDA for Windows)
 - [x] Streaming token generation to UI
-- [x] Whisper STT with auto-download (@xenova/transformers)
-- [x] LLaVA vision model with auto-download
-- [x] System TTS (macOS AVFoundation / Windows SAPI)
-- [x] AI Manager service for lifecycle management
+- [x] **Whisper STT Service** - Audio recording with cpal, WAV file handling (224 lines)
+- [x] **System TTS Service** - Native text-to-speech with voice selection (178 lines)
+- [x] **LLaVA Vision Service** - Placeholder for screen analysis (134 lines)
+- [x] **12 Audio IPC Commands** - whisper_*, tts_* commands registered
+- [x] **3 New Dependencies** - cpal 0.15, hound 3.5, tts 0.26
+
+**Frontend Integration** 🚧
+- [ ] Voice input button in Chat UI (In Progress)
+- [ ] Recording status indicator
+- [ ] TTS playback controls
+- [ ] Audio waveform visualization
+
+**Model Integration** 🚧 *Coming Soon*
+- [ ] Whisper Medium download & API integration
+- [ ] LLaVA 7B download & inference
+- [ ] AI Manager service for lifecycle management
+
+**🎯 Phase 2 Backend: 100% Complete! Frontend: Next Step**
 </details>
 
 <details>
@@ -377,16 +394,17 @@ When you launch Garden of Eden V3 for the first time:
 </details>
 
 <details>
-<summary><b>Phase 5: Learning System</b> ✅ COMPLETE (100%)</summary>
+<summary><b>Phase 5: Learning System</b> 🔄 IN PROGRESS (50%)</summary>
 
 - [x] Persona system with 28 parameters
 - [x] 6 preset personalities (Default, Professional, Friendly, Teacher, Technical, Creative)
-- [x] RAG episodic memory (ChromaDB integration)
-- [x] Vector embeddings (all-MiniLM-L6-v2)
-- [x] Semantic search and context injection
-- [x] Persona learner with gradient descent optimization
 - [x] Satisfaction feedback loop (thumbs up/down)
 - [x] Dynamic system prompt generation
+- [x] Conversation history in SQLite
+- [ ] Persona export/import functionality (planned)
+- [ ] RAG episodic memory with vector database (planned)
+- [ ] Vector embeddings for semantic search (planned)
+- [ ] Persona learner with gradient descent optimization (not implemented)
 </details>
 
 <details>
@@ -416,7 +434,7 @@ When you launch Garden of Eden V3 for the first time:
 </details>
 
 <details open>
-<summary><b>Phase 8: Launch</b> 🔄 IN PROGRESS (85%)</summary>
+<summary><b>Phase 8: Launch</b> 🔄 IN PROGRESS (72%)</summary>
 
 - [x] Comprehensive README.md
 - [x] CHANGELOG.md (8 versions documented)
@@ -429,7 +447,7 @@ When you launch Garden of Eden V3 for the first time:
 - [ ] Launch announcement (Reddit, Hacker News, ProductHunt)
 </details>
 
-**Overall Completion**: 85-90% | **Current Version**: 1.0.0-beta
+**Overall Completion**: 72% | **Current Version**: 1.0.0-beta
 
 ---
 
@@ -701,8 +719,8 @@ It helps others discover the project and motivates continued development.
 <div align="center">
 
 **Current Version**: 1.0.0-beta
-**Last Updated**: 2025-01-13
-**Status**: 🚧 Phase 8 - Launch Preparation (85% Complete)
+**Last Updated**: 2025-01-15
+**Status**: 🚧 Phase 8 - Launch Preparation (72% Complete)
 
 ---
 

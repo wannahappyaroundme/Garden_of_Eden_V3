@@ -189,6 +189,17 @@ export interface WindowAPI {
   memoryDeleteEpisode: (args: { episodeId: string }) => Promise<{ success: boolean }>;
   memoryClearAll: (args?: { conversationId?: string }) => Promise<{ success: boolean; deletedCount: number }>;
 
+  // Onboarding operations
+  checkOnboardingStatus: () => Promise<{ completed: boolean; profile: any | null }>;
+  completeOnboarding: (answers: {
+    name: string;
+    selected_persona: string;
+    tone_preference: string;
+    occupation: string;
+    proactive_frequency: string;
+    interests: string;
+  }) => Promise<any>;
+
   // Settings operations
   getSettings: () => Promise<unknown>;
   updateSettings: (settings: any) => Promise<unknown>;

@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { cn } from '../../lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -29,6 +30,7 @@ export function ChatBubble({
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
   const [currentSatisfaction, setCurrentSatisfaction] = useState<'positive' | 'negative' | null>(satisfaction || null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Format timestamp to HH:MM
   const timeString = new Intl.DateTimeFormat('ko-KR', {
@@ -54,10 +56,32 @@ export function ChatBubble({
     onFeedback(messageId, feedbackType);
   };
 
+  const handleSpeak = async () => {
+    if (isSpeaking) {
+      // Stop speaking
+      try {
+        await invoke('tts_stop');
+        setIsSpeaking(false);
+      } catch (error) {
+        console.error('Failed to stop TTS:', error);
+      }
+    } else {
+      // Start speaking
+      try {
+        setIsSpeaking(true);
+        await invoke('tts_speak', { text: message });
+        setIsSpeaking(false);
+      } catch (error) {
+        console.error('Failed to speak message:', error);
+        setIsSpeaking(false);
+      }
+    }
+  };
+
   return (
     <div
       className={cn(
-        'flex w-full gap-2 mb-3',
+        'flex w-full gap-2.5 mb-4',
         isUser ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'
       )}
       role="article"
@@ -66,7 +90,7 @@ export function ChatBubble({
       {/* Avatar for AI */}
       {!isUser && (
         <div
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold"
+          className="flex-shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold shadow-sm border border-primary/10"
           aria-hidden="true"
         >
           E
@@ -74,14 +98,14 @@ export function ChatBubble({
       )}
 
       {/* Message content */}
-      <div className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
+      <div className={cn('flex flex-col gap-1.5', isUser ? 'items-end' : 'items-start')}>
         <div className="relative group">
           <div
             className={cn(
-              'max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words',
+              'max-w-[70%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed break-words transition-all duration-200',
               isUser
-                ? 'bg-[hsl(var(--chat-user-bg))] text-gray-900 dark:text-white rounded-tr-sm'
-                : 'bg-[hsl(var(--chat-ai-bg))] text-foreground rounded-tl-sm',
+                ? 'bg-[hsl(var(--chat-user-bg))] text-gray-900 dark:text-white rounded-tr-sm shadow-md hover:shadow-lg'
+                : 'bg-[hsl(var(--chat-ai-bg))] text-foreground rounded-tl-sm shadow-sm hover:shadow-md border border-border/50',
               isStreaming && 'animate-pulse'
             )}
           >
@@ -94,15 +118,40 @@ export function ChatBubble({
 
           {/* Action buttons for AI messages - Always visible for better discoverability */}
           {!isUser && message && !isStreaming && (
-            <div className="absolute -right-24 top-2 flex gap-1 transition-opacity">
+            <div className="absolute -right-36 top-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {/* TTS Speak Button */}
+              <button
+                onClick={handleSpeak}
+                className={cn(
+                  'p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95 text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm',
+                  isSpeaking && 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
+                )}
+                title={isSpeaking ? '말하기 중지' : '메시지 읽기'}
+                aria-label={isSpeaking ? '말하기 중지' : '메시지 읽기'}
+              >
+                {isSpeaking ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                )}
+              </button>
+
               {/* Feedback buttons */}
               {messageId && onFeedback && (
                 <>
                   <button
                     onClick={() => handleFeedback('positive')}
                     className={cn(
-                      'p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all',
-                      currentSatisfaction === 'positive' ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-muted-foreground hover:text-foreground'
+                      'p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95',
+                      currentSatisfaction === 'positive' ? 'text-green-600 bg-green-100 dark:bg-green-900/30 shadow-sm' : 'text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm'
                     )}
                     title="좋아요"
                     aria-label="좋아요"
@@ -114,8 +163,8 @@ export function ChatBubble({
                   <button
                     onClick={() => handleFeedback('negative')}
                     className={cn(
-                      'p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all',
-                      currentSatisfaction === 'negative' ? 'text-red-600 bg-red-100 dark:bg-red-900/30' : 'text-muted-foreground hover:text-foreground'
+                      'p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95',
+                      currentSatisfaction === 'negative' ? 'text-red-600 bg-red-100 dark:bg-red-900/30 shadow-sm' : 'text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm'
                     )}
                     title="별로에요"
                     aria-label="별로에요"
@@ -130,7 +179,7 @@ export function ChatBubble({
               {/* Copy button */}
               <button
                 onClick={handleCopy}
-                className="p-1.5 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-colors text-muted-foreground hover:text-foreground"
+                className="p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95 text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm"
                 title={copied ? 'Copied!' : 'Copy message'}
                 aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
               >
@@ -150,13 +199,13 @@ export function ChatBubble({
         </div>
 
         {/* Timestamp */}
-        <span className="text-xs text-[hsl(var(--chat-timestamp))] px-1" aria-label={`전송 시간: ${timeString}`}>
+        <span className="text-xs text-[hsl(var(--chat-timestamp))] px-1.5 font-medium" aria-label={`전송 시간: ${timeString}`}>
           {timeString}
         </span>
       </div>
 
       {/* Avatar placeholder for user (to maintain alignment) */}
-      {isUser && <div className="flex-shrink-0 w-10" aria-hidden="true" />}
+      {isUser && <div className="flex-shrink-0 w-11" aria-hidden="true" />}
     </div>
   );
 }
@@ -174,8 +223,8 @@ export function ChatDateDivider({ date }: { date: Date }) {
   }).format(date);
 
   return (
-    <div className="flex items-center justify-center my-4" role="separator" aria-label={`날짜: ${dateString}`}>
-      <div className="px-4 py-1.5 bg-muted/50 rounded-full text-xs text-muted-foreground">
+    <div className="flex items-center justify-center my-6 animate-fade-in" role="separator" aria-label={`날짜: ${dateString}`}>
+      <div className="px-5 py-2 bg-muted/60 backdrop-blur-sm rounded-full text-xs text-muted-foreground font-medium shadow-sm border border-border/30">
         {dateString}
       </div>
     </div>

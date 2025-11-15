@@ -29,10 +29,7 @@ reqwest = { version = "0.12", features = ["json", "stream"] }
 futures-util = "0.3"
 screenshots = "0.8"
 base64 = "0.22"
-# Audio/Speech dependencies
-cpal = "0.15"           # Cross-platform audio I/O
-hound = "3.5"           # WAV file handling
-tts = "0.26"            # Text-to-speech
+image = "0.25"
 
 [features]
 # By default, Tauri runs in production mode when `tauri build` is run
