@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
-import Onboarding from './pages/Onboarding';
+import SmartOnboarding from './pages/SmartOnboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
 import './i18n/config'; // Initialize i18n
@@ -84,7 +84,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      {currentPage === 'onboarding' && <Onboarding onComplete={handleOnboardingComplete} />}
+      {currentPage === 'onboarding' && <SmartOnboarding onComplete={handleOnboardingComplete} />}
       {currentPage === 'chat' && <Chat onOpenSettings={() => setCurrentPage('settings')} />}
       {currentPage === 'settings' && (
         <Settings onClose={() => setCurrentPage('chat')} onThemeChange={handleThemeChange} />
