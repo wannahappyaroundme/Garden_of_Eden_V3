@@ -20,3 +20,6 @@ pub mod proactive_manager;
 
 // Phase 5: Learning System
 pub mod learning;
+
+// Phase 6: Webhooks & External Integrations
+pub mod webhook;

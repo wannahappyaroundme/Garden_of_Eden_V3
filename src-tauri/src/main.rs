@@ -136,6 +136,13 @@ fn main() {
             commands::learning::learning_generate_system_prompt,
             commands::learning::learning_save_persona,
             commands::learning::learning_load_persona,
+            commands::webhook::register_webhook,
+            commands::webhook::list_webhooks,
+            commands::webhook::get_webhook,
+            commands::webhook::delete_webhook,
+            commands::webhook::toggle_webhook,
+            commands::webhook::trigger_webhook,
+            commands::webhook::test_webhook,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

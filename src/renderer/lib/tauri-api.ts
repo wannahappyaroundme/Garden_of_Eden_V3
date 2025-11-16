@@ -164,6 +164,38 @@ export interface ModelConfig {
   response_diversity: number;
 }
 
+// ==================== WEBHOOK TYPES ====================
+
+export interface WebhookRecord {
+  name: string;
+  preset: 'slack' | 'discord' | 'notion' | 'custom' | null;
+  url: string;
+  method: string;
+  headers: string; // JSON string
+  enabled: boolean;
+  timeout: number;
+  retries: number;
+  created_at: number;
+  last_used_at: number | null;
+}
+
+export interface CreateWebhookArgs {
+  name: string;
+  preset?: 'slack' | 'discord' | 'notion' | 'custom';
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  enabled?: boolean;
+  timeout?: number;
+  retries?: number;
+}
+
+export interface TriggerWebhookArgs {
+  name: string;
+  event: string;
+  data: Record<string, any>;
+}
+
 /**
  * Tauri API
  * Drop-in replacement for Electron IPC
@@ -420,6 +452,81 @@ export const api = {
    */
   getModelDescription: (modelName: string): string => {
     return invoke<string>('get_model_description', { modelName }) as unknown as string;
+  },
+
+  // ==================== WEBHOOK API ====================
+
+  /**
+   * Register or update a webhook
+   */
+  registerWebhook: async (args: CreateWebhookArgs): Promise<void> => {
+    const {
+      name,
+      preset,
+      url,
+      method = 'POST',
+      headers = {},
+      enabled = true,
+      timeout = 5000,
+      retries = 3,
+    } = args;
+
+    return await invoke<void>('register_webhook', {
+      name,
+      preset: preset || null,
+      url,
+      method,
+      headers: JSON.stringify(headers),
+      enabled,
+      timeout,
+      retries,
+    });
+  },
+
+  /**
+   * List all webhooks
+   */
+  listWebhooks: async (): Promise<WebhookRecord[]> => {
+    return await invoke<WebhookRecord[]>('list_webhooks');
+  },
+
+  /**
+   * Get a specific webhook by name
+   */
+  getWebhook: async (name: string): Promise<WebhookRecord> => {
+    return await invoke<WebhookRecord>('get_webhook', { name });
+  },
+
+  /**
+   * Delete a webhook
+   */
+  deleteWebhook: async (name: string): Promise<void> => {
+    return await invoke<void>('delete_webhook', { name });
+  },
+
+  /**
+   * Toggle a webhook enabled/disabled
+   */
+  toggleWebhook: async (name: string, enabled: boolean): Promise<void> => {
+    return await invoke<void>('toggle_webhook', { name, enabled });
+  },
+
+  /**
+   * Trigger a webhook manually
+   */
+  triggerWebhook: async (args: TriggerWebhookArgs): Promise<void> => {
+    return await invoke<void>('trigger_webhook', {
+      name: args.name,
+      event: args.event,
+      data: args.data,
+    });
+  },
+
+  /**
+   * Test a webhook connection
+   */
+  testWebhook: async (name: string): Promise<string> => {
+    return await invoke<string>('test_webhook', { name });
   },
 
   // Platform info (from Tauri)

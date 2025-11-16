@@ -146,6 +146,23 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Webhooks table (external integrations)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS webhooks (
+            name TEXT PRIMARY KEY,
+            preset TEXT CHECK(preset IN ('slack', 'discord', 'notion', 'custom')),
+            url TEXT NOT NULL,
+            method TEXT NOT NULL DEFAULT 'POST',
+            headers TEXT,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            timeout INTEGER NOT NULL DEFAULT 5000,
+            retries INTEGER NOT NULL DEFAULT 3,
+            created_at INTEGER NOT NULL,
+            last_used_at INTEGER
+        )",
+        [],
+    )?;
+
     // Onboarding state table
     conn.execute(
         "CREATE TABLE IF NOT EXISTS onboarding_state (
@@ -238,6 +255,18 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_screen_activities_timestamp
          ON screen_activities(timestamp DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_webhooks_enabled
+         ON webhooks(enabled)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_webhooks_last_used
+         ON webhooks(last_used_at DESC)",
         [],
     )?;
 
