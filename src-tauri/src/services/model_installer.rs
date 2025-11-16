@@ -245,20 +245,55 @@ impl ModelInstallerService {
 
     /// Parse progress percentage from ollama output
     fn parse_progress(line: &str) -> Option<f32> {
-        // Look for percentage in the line (e.g., "45%", "100%")
-        if let Some(percent_idx) = line.find('%') {
+        // Clean ANSI escape codes from the line
+        let clean_line = Self::strip_ansi_codes(line);
+
+        // Look for percentage in the line (e.g., "45%", "100%", "51%")
+        if let Some(percent_idx) = clean_line.find('%') {
             // Find the number before %
-            let before_percent = &line[..percent_idx];
-            let words: Vec<&str> = before_percent.split_whitespace().collect();
+            let before_percent = &clean_line[..percent_idx];
+
+            // Split by whitespace and colons to handle formats like:
+            // "pulling manifest... 45%"
+            // "pulling 170370233dd5: 51%"
+            let words: Vec<&str> = before_percent.split(|c: char| c.is_whitespace() || c == ':').collect();
 
             if let Some(last_word) = words.last() {
-                if let Ok(progress) = last_word.parse::<f32>() {
+                // Try to parse as float, handling both integer and decimal percentages
+                if let Ok(progress) = last_word.trim().parse::<f32>() {
+                    info!("Parsed progress: {}%", progress);
                     return Some(progress.clamp(0.0, 100.0));
                 }
             }
         }
 
         None
+    }
+
+    /// Strip ANSI escape codes from a string
+    fn strip_ansi_codes(s: &str) -> String {
+        let mut result = String::new();
+        let mut chars = s.chars().peekable();
+
+        while let Some(ch) = chars.next() {
+            if ch == '\x1b' || ch == '\x9b' {
+                // Skip escape sequence
+                if chars.peek() == Some(&'[') {
+                    chars.next(); // consume '['
+                    // Skip until we hit a letter (the command)
+                    while let Some(&next_ch) = chars.peek() {
+                        chars.next();
+                        if next_ch.is_ascii_alphabetic() || next_ch == 'm' || next_ch == 'K' || next_ch == 'G' || next_ch == 'A' || next_ch == 'H' || next_ch == 'J' {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                result.push(ch);
+            }
+        }
+
+        result
     }
 
     /// Get current download state
@@ -335,10 +370,36 @@ mod tests {
 
     #[test]
     fn test_parse_progress() {
+        // Old format
         assert_eq!(ModelInstallerService::parse_progress("pulling manifest... 45%"), Some(45.0));
         assert_eq!(ModelInstallerService::parse_progress("downloading 100%"), Some(100.0));
-        assert_eq!(ModelInstallerService::parse_progress("no progress here"), None);
         assert_eq!(ModelInstallerService::parse_progress("pulling 0%"), Some(0.0));
+
+        // New Ollama format with layer IDs
+        assert_eq!(ModelInstallerService::parse_progress("pulling 170370233dd5:  51%"), Some(51.0));
+        assert_eq!(ModelInstallerService::parse_progress("pulling abc123def456: 75%"), Some(75.0));
+
+        // With ANSI codes (simulated)
+        assert_eq!(ModelInstallerService::parse_progress("\x1b[1Gpulling 170370233dd5:  51% \x1b[K"), Some(51.0));
+
+        // No progress
+        assert_eq!(ModelInstallerService::parse_progress("no progress here"), None);
+    }
+
+    #[test]
+    fn test_strip_ansi_codes() {
+        assert_eq!(
+            ModelInstallerService::strip_ansi_codes("hello\x1b[1mworld\x1b[0m"),
+            "helloworld"
+        );
+        assert_eq!(
+            ModelInstallerService::strip_ansi_codes("\x1b[1Gpulling: 51%\x1b[K"),
+            "pulling: 51%"
+        );
+        assert_eq!(
+            ModelInstallerService::strip_ansi_codes("no ansi codes"),
+            "no ansi codes"
+        );
     }
 
     #[tokio::test]
