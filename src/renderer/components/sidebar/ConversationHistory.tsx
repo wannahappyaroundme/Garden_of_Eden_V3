@@ -34,15 +34,15 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
   const loadConversations = async () => {
     try {
       setIsLoading(true);
-      const data: any = await window.api.conversationGetAll({ limit: 50 });
+      const data: any = await window.api.getConversations();
       // Convert timestamps to match ConversationSummary interface
       const formattedData = data.map((conv: any) => ({
         id: conv.id,
         title: conv.title,
         mode: conv.mode,
-        createdAt: typeof conv.createdAt === 'object' ? conv.createdAt.getTime() : conv.createdAt,
-        updatedAt: typeof conv.updatedAt === 'object' ? conv.updatedAt.getTime() : conv.updatedAt,
-        messageCount: conv.messageCount,
+        createdAt: typeof conv.created_at === 'number' ? conv.created_at : (typeof conv.createdAt === 'object' ? conv.createdAt.getTime() : conv.createdAt),
+        updatedAt: typeof conv.updated_at === 'number' ? conv.updated_at : (typeof conv.updatedAt === 'object' ? conv.updatedAt.getTime() : conv.updatedAt),
+        messageCount: typeof conv.message_count === 'number' ? conv.message_count : conv.messageCount,
       }));
       setConversations(formattedData);
     } catch (error) {
@@ -69,7 +69,7 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
 
   const handleDeleteConversation = async (id: string) => {
     try {
-      await window.api.conversationDelete({ id });
+      await window.api.deleteConversation(id);
       // Remove from local state
       setConversations((prev) => prev.filter((c) => c.id !== id));
       // If deleted conversation was selected, create new conversation
@@ -84,7 +84,7 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
 
   const handleRenameConversation = async (id: string, newTitle: string) => {
     try {
-      await window.api.conversationUpdate({ id, updates: { title: newTitle } });
+      await window.api.updateConversationTitle(id, newTitle);
       // Update local state
       setConversations((prev) =>
         prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c))

@@ -98,11 +98,11 @@ export function ChatBubble({
       )}
 
       {/* Message content */}
-      <div className={cn('flex flex-col gap-1.5', isUser ? 'items-end' : 'items-start')}>
-        <div className="relative group">
+      <div className={cn('flex flex-col gap-1.5 w-full', isUser ? 'items-end' : 'items-start')}>
+        <div className={cn('w-full max-w-[70%]', !isUser && 'group')}>
           <div
             className={cn(
-              'max-w-[70%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed break-words transition-all duration-200',
+              'px-4 py-3 rounded-2xl text-[13px] leading-relaxed break-words transition-all duration-200',
               isUser
                 ? 'bg-[hsl(var(--chat-user-bg))] text-gray-900 dark:text-white rounded-tr-sm shadow-md hover:shadow-lg'
                 : 'bg-[hsl(var(--chat-ai-bg))] text-foreground rounded-tl-sm shadow-sm hover:shadow-md border border-border/50',
@@ -116,37 +116,59 @@ export function ChatBubble({
             )}
           </div>
 
-          {/* Action buttons for AI messages - Always visible for better discoverability */}
+          {/* Action buttons for AI messages - Full width below bubble */}
           {!isUser && message && !isStreaming && (
-            <div className="absolute -right-36 top-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {/* TTS Speak Button */}
-              <button
-                onClick={handleSpeak}
-                className={cn(
-                  'p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95 text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm',
-                  isSpeaking && 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
-                )}
-                title={isSpeaking ? '말하기 중지' : '메시지 읽기'}
-                aria-label={isSpeaking ? '말하기 중지' : '메시지 읽기'}
-              >
-                {isSpeaking ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                    <rect x="6" y="4" width="4" height="16" rx="1" />
-                    <rect x="14" y="4" width="4" height="16" rx="1" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                  </svg>
-                )}
-              </button>
+            <div className="w-full flex justify-between items-center mt-2 px-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {/* Left side: TTS + Copy */}
+              <div className="flex gap-1.5">
+                {/* TTS Speak Button */}
+                <button
+                  onClick={handleSpeak}
+                  className={cn(
+                    'p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95 text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm',
+                    isSpeaking && 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
+                  )}
+                  title={isSpeaking ? '말하기 중지' : '메시지 읽기'}
+                  aria-label={isSpeaking ? '말하기 중지' : '메시지 읽기'}
+                >
+                  {isSpeaking ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  )}
+                </button>
 
-              {/* Feedback buttons */}
+                {/* Copy button */}
+                <button
+                  onClick={handleCopy}
+                  className="p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95 text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm"
+                  title={copied ? 'Copied!' : 'Copy message'}
+                  aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
+                >
+                  {copied ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              {/* Right side: Feedback buttons */}
               {messageId && onFeedback && (
-                <>
+                <div className="flex gap-1.5">
                   <button
                     onClick={() => handleFeedback('positive')}
                     className={cn(
@@ -173,27 +195,8 @@ export function ChatBubble({
                       <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
                     </svg>
                   </button>
-                </>
+                </div>
               )}
-
-              {/* Copy button */}
-              <button
-                onClick={handleCopy}
-                className="p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95 text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm"
-                title={copied ? 'Copied!' : 'Copy message'}
-                aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
-              >
-                {copied ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                  </svg>
-                )}
-              </button>
             </div>
           )}
         </div>
