@@ -295,6 +295,13 @@ export const api = {
   },
 
   /**
+   * Install Ollama (auto-install via Homebrew on macOS or installer on Windows)
+   */
+  installOllama: async (): Promise<void> => {
+    return await invoke<void>('install_ollama');
+  },
+
+  /**
    * Check if a specific model exists locally
    */
   checkModelExists: async (modelName: string): Promise<boolean> => {

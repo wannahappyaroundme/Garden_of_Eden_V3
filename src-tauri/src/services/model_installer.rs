@@ -107,6 +107,119 @@ impl ModelInstallerService {
         }
     }
 
+    /// Install Ollama (platform-specific)
+    pub async fn install_ollama(&self) -> Result<()> {
+        info!("Starting Ollama installation...");
+
+        #[cfg(target_os = "macos")]
+        {
+            self.install_ollama_macos().await
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            self.install_ollama_windows().await
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        {
+            Err(anyhow!("Ollama auto-install is only supported on macOS and Windows. Please install manually from https://ollama.ai"))
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    async fn install_ollama_macos(&self) -> Result<()> {
+        info!("Installing Ollama via Homebrew on macOS...");
+
+        // Check if Homebrew is installed
+        let brew_check = TokioCommand::new("which")
+            .arg("brew")
+            .output()
+            .await;
+
+        if brew_check.is_err() || !brew_check.unwrap().status.success() {
+            return Err(anyhow!(
+                "Homebrew is not installed. Please install Homebrew first from https://brew.sh, then try again."
+            ));
+        }
+
+        // Install Ollama via Homebrew
+        info!("Running: brew install ollama");
+        let mut child = TokioCommand::new("brew")
+            .args(&["install", "ollama"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .context("Failed to start brew install")?;
+
+        let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to capture stdout"))?;
+        let mut reader = BufReader::new(stdout).lines();
+
+        // Stream output for user feedback
+        while let Some(line) = reader.next_line().await? {
+            info!("Brew: {}", line);
+        }
+
+        let status = child.wait().await?;
+
+        if !status.success() {
+            return Err(anyhow!("Homebrew installation failed. Please install Ollama manually from https://ollama.ai"));
+        }
+
+        info!("Ollama installed successfully via Homebrew!");
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn install_ollama_windows(&self) -> Result<()> {
+        info!("Installing Ollama on Windows...");
+
+        // Download Ollama installer
+        let installer_url = "https://ollama.ai/download/OllamaSetup.exe";
+        let installer_path = std::env::temp_dir().join("OllamaSetup.exe");
+
+        info!("Downloading Ollama installer from {}", installer_url);
+
+        // Download the installer using curl (available on Windows 10+)
+        let download = TokioCommand::new("curl")
+            .args(&[
+                "-L",
+                "-o",
+                installer_path.to_str().unwrap(),
+                installer_url,
+            ])
+            .output()
+            .await
+            .context("Failed to download Ollama installer")?;
+
+        if !download.status.success() {
+            return Err(anyhow!(
+                "Failed to download Ollama installer. Please download manually from https://ollama.ai"
+            ));
+        }
+
+        info!("Running Ollama installer...");
+
+        // Run the installer (silent mode)
+        let install = TokioCommand::new(&installer_path)
+            .arg("/S") // Silent install flag for NSIS installer
+            .output()
+            .await
+            .context("Failed to run Ollama installer")?;
+
+        if !install.status.success() {
+            return Err(anyhow!(
+                "Ollama installation failed. Please install manually from https://ollama.ai"
+            ));
+        }
+
+        // Clean up installer
+        let _ = std::fs::remove_file(&installer_path);
+
+        info!("Ollama installed successfully on Windows!");
+        Ok(())
+    }
+
     /// Check if a specific model exists locally
     pub async fn check_model_exists(&self, model_name: &str) -> Result<bool> {
         info!("Checking if model exists: {}", model_name);
@@ -276,7 +389,7 @@ impl ModelInstallerService {
         let mut chars = s.chars().peekable();
 
         while let Some(ch) = chars.next() {
-            if ch == '\x1b' || ch == '\x9b' {
+            if ch == '\x1b' || ch == '\u{009b}' {
                 // Skip escape sequence
                 if chars.peek() == Some(&'[') {
                     chars.next(); // consume '['

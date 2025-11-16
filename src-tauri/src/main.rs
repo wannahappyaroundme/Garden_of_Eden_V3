@@ -95,6 +95,7 @@ fn main() {
             commands::onboarding::get_model_recommendation,
             commands::onboarding::get_required_models,
             commands::onboarding::check_ollama_installed,
+            commands::onboarding::install_ollama,
             commands::onboarding::check_model_exists,
             commands::onboarding::start_model_download,
             commands::onboarding::get_download_progress,

@@ -16,9 +16,10 @@ type ModelType = 'llm' | 'llava' | 'whisper';
 
 export default function ModelDownloader({ requiredModels, onComplete, onBack }: ModelDownloaderProps) {
   const [downloadState, setDownloadState] = useState<ModelDownloadState | null>(null);
-  const [currentPhase, setCurrentPhase] = useState<'checking' | 'downloading' | 'completed' | 'error'>('checking');
+  const [currentPhase, setCurrentPhase] = useState<'checking' | 'installing_ollama' | 'downloading' | 'completed' | 'error'>('checking');
   const [error, setError] = useState<string | null>(null);
   const [ollamaInstalled, setOllamaInstalled] = useState(false);
+  const [isInstallingOllama, setIsInstallingOllama] = useState(false);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -38,7 +39,6 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
       setOllamaInstalled(installed);
 
       if (!installed) {
-        setError('Ollama가 설치되어 있지 않습니다. https://ollama.ai 에서 설치해주세요.');
         setCurrentPhase('error');
         return;
       }
@@ -64,6 +64,28 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
       console.error('Failed to check Ollama/models:', err);
       setError(err instanceof Error ? err.message : String(err));
       setCurrentPhase('error');
+    }
+  };
+
+  const handleInstallOllama = async () => {
+    setIsInstallingOllama(true);
+    setCurrentPhase('installing_ollama');
+    setError(null);
+
+    try {
+      await window.api.installOllama();
+      setOllamaInstalled(true);
+
+      // After installation, restart the check process
+      setTimeout(() => {
+        setIsInstallingOllama(false);
+        checkOllamaAndModels();
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to install Ollama:', err);
+      setError(err instanceof Error ? err.message : String(err));
+      setCurrentPhase('error');
+      setIsInstallingOllama(false);
     }
   };
 
@@ -194,24 +216,63 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
           </div>
 
           {!ollamaInstalled && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-900 dark:text-blue-200 mb-3">
-                Ollama를 먼저 설치해주세요:
-              </p>
-              <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-2 list-decimal list-inside">
-                <li>
-                  <a
-                    href="https://ollama.ai"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-blue-600 dark:hover:text-blue-400"
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                    Ollama가 설치되어 있지 않습니다
+                  </h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                    Eden은 Ollama를 사용하여 AI 모델을 관리합니다. 아래 버튼을 클릭하여 자동으로 설치하거나, 수동으로 설치할 수 있습니다.
+                  </p>
+
+                  {/* Auto-install button */}
+                  <button
+                    onClick={handleInstallOllama}
+                    disabled={isInstallingOllama}
+                    className="w-full mb-3 py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
-                    https://ollama.ai
-                  </a>
-                  에서 Ollama 다운로드
-                </li>
-                <li>설치 완료 후 이 화면으로 돌아와서 "다시 시도" 클릭</li>
-              </ol>
+                    {isInstallingOllama ? (
+                      <>
+                        <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                        자동 설치 중...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Ollama 자동 설치 (권장)
+                      </>
+                    )}
+                  </button>
+
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <p className="mb-2">또는 수동으로 설치:</p>
+                    <ol className="space-y-1 list-decimal list-inside ml-2">
+                      <li>
+                        <a
+                          href="https://ollama.ai"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-blue-600 dark:hover:text-blue-400"
+                        >
+                          https://ollama.ai
+                        </a>
+                        에서 다운로드
+                      </li>
+                      <li>설치 완료 후 "다시 시도" 버튼 클릭</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -233,6 +294,32 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
               다시 시도
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentPhase === 'installing_ollama') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
+        <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+          <div className="flex justify-center mb-6">
+            <div className="relative w-20 h-20">
+              <div className="absolute inset-0 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          </div>
+          <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+            Ollama 설치 중...
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-2">
+            {navigator.platform.includes('Mac')
+              ? 'Homebrew를 통해 Ollama를 자동으로 설치하고 있습니다.'
+              : 'Ollama를 자동으로 설치하고 있습니다.'}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            이 작업은 몇 분 정도 소요될 수 있습니다. 잠시만 기다려주세요.
+          </p>
         </div>
       </div>
     );

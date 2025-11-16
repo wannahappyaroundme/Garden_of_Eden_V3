@@ -350,6 +350,17 @@ pub async fn check_ollama_installed(state: State<'_, AppState>) -> Result<bool, 
     Ok(is_installed)
 }
 
+/// Install Ollama (auto-install via Homebrew on macOS or installer on Windows)
+#[tauri::command]
+pub async fn install_ollama(state: State<'_, AppState>) -> Result<(), String> {
+    log::info!("Installing Ollama...");
+
+    state.model_installer.install_ollama().await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 /// Check if a specific model exists
 #[tauri::command]
 pub async fn check_model_exists(
