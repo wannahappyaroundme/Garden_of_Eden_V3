@@ -70,6 +70,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0.0"
+
       - name: Build Tauri application
         env:
           # Code signing (optional - remove if not using)
@@ -82,7 +85,9 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npm run tauri build -- --target ${{ matrix.platform.rust_target }}
+        run: |
+          npm run build:renderer
+          cargo tauri build --target ${{ matrix.platform.rust_target }}
 
       - name: Upload artifacts (macOS)
         if: matrix.platform.os == 'macos-latest'
