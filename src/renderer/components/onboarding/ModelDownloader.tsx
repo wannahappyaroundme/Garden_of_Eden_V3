@@ -34,34 +34,53 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
 
   const checkOllamaAndModels = async () => {
     try {
+      console.log('[ModelDownloader] Checking Ollama and models...');
+
       // Check if Ollama is installed
       const installed = await window.api.checkOllamaInstalled();
+      console.log('[ModelDownloader] Ollama installed:', installed);
       setOllamaInstalled(installed);
 
       if (!installed) {
+        console.log('[ModelDownloader] Ollama not installed, showing error');
         setCurrentPhase('error');
+        setError('Ollama가 설치되어 있지 않습니다.');
         return;
       }
 
       // Check which models already exist
+      console.log('[ModelDownloader] Checking model existence:', {
+        llm: requiredModels.llm,
+        llava: requiredModels.llava,
+        whisper: requiredModels.whisper
+      });
+
       const llmExists = await window.api.checkModelExists(requiredModels.llm);
       const llavaExists = await window.api.checkModelExists(requiredModels.llava);
       const whisperExists = requiredModels.whisper
         ? await window.api.checkModelExists(requiredModels.whisper)
         : true; // Skip if voice not enabled
 
+      console.log('[ModelDownloader] Model existence check results:', {
+        llmExists,
+        llavaExists,
+        whisperExists
+      });
+
       if (llmExists && llavaExists && whisperExists) {
         // All required models already exist
+        console.log('[ModelDownloader] All models exist, completing...');
         setCurrentPhase('completed');
         setTimeout(() => onComplete(), 1500);
         return;
       }
 
       // Start downloads for missing models
+      console.log('[ModelDownloader] Starting downloads for missing models...');
       setCurrentPhase('downloading');
       startDownloads(llmExists, llavaExists, whisperExists);
     } catch (err) {
-      console.error('Failed to check Ollama/models:', err);
+      console.error('[ModelDownloader] Error in checkOllamaAndModels:', err);
       setError(err instanceof Error ? err.message : String(err));
       setCurrentPhase('error');
     }
@@ -91,21 +110,40 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
 
   const startDownloads = async (llmExists: boolean, llavaExists: boolean, whisperExists: boolean) => {
     try {
+      console.log('[ModelDownloader] startDownloads called with:', { llmExists, llavaExists, whisperExists });
+
       // Start downloads (they run in background)
       if (!llmExists) {
+        console.log('[ModelDownloader] Starting LLM download:', requiredModels.llm);
         await window.api.startModelDownload(requiredModels.llm, 'llm');
+        console.log('[ModelDownloader] LLM download started');
+      } else {
+        console.log('[ModelDownloader] LLM already exists, skipping download');
       }
+
       if (!llavaExists) {
+        console.log('[ModelDownloader] Starting LLaVA download:', requiredModels.llava);
         await window.api.startModelDownload(requiredModels.llava, 'llava');
+        console.log('[ModelDownloader] LLaVA download started');
+      } else {
+        console.log('[ModelDownloader] LLaVA already exists, skipping download');
       }
+
       if (!whisperExists && requiredModels.whisper) {
+        console.log('[ModelDownloader] Starting Whisper download:', requiredModels.whisper);
         await window.api.startModelDownload(requiredModels.whisper, 'whisper');
+        console.log('[ModelDownloader] Whisper download started');
+      } else {
+        console.log('[ModelDownloader] Whisper already exists or not required, skipping download');
       }
+
+      console.log('[ModelDownloader] All downloads initiated, starting progress polling...');
 
       // Start polling for progress
       pollInterval.current = setInterval(async () => {
         try {
           const state = await window.api.getDownloadProgress();
+          console.log('[ModelDownloader] Download state:', state);
           setDownloadState(state);
 
           // Check if all completed
@@ -114,7 +152,15 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
             (llavaExists || isCompleted(state.llava_model)) &&
             (whisperExists || !requiredModels.whisper || isCompleted(state.whisper_model));
 
+          console.log('[ModelDownloader] Completion check:', {
+            llmStatus: llmExists ? 'exists' : state.llm_model.status,
+            llavaStatus: llavaExists ? 'exists' : state.llava_model.status,
+            whisperStatus: whisperExists ? 'exists' : state.whisper_model.status,
+            allCompleted
+          });
+
           if (allCompleted) {
+            console.log('[ModelDownloader] All downloads completed!');
             if (pollInterval.current) {
               clearInterval(pollInterval.current);
               pollInterval.current = null;
@@ -130,6 +176,11 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
             (requiredModels.whisper && isFailed(state.whisper_model));
 
           if (hasError) {
+            console.error('[ModelDownloader] Download error detected:', {
+              llm: state.llm_model.status,
+              llava: state.llava_model.status,
+              whisper: state.whisper_model.status
+            });
             if (pollInterval.current) {
               clearInterval(pollInterval.current);
               pollInterval.current = null;
@@ -138,11 +189,11 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
             setCurrentPhase('error');
           }
         } catch (err) {
-          console.error('Failed to poll download progress:', err);
+          console.error('[ModelDownloader] Error polling download progress:', err);
         }
       }, 1000);
     } catch (err) {
-      console.error('Failed to start downloads:', err);
+      console.error('[ModelDownloader] Error in startDownloads:', err);
       setError(err instanceof Error ? err.message : String(err));
       setCurrentPhase('error');
     }

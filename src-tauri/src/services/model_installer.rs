@@ -167,6 +167,30 @@ impl ModelInstallerService {
         }
 
         info!("Ollama installed successfully via Homebrew!");
+
+        // Start Ollama service
+        info!("Starting Ollama service...");
+        let start_result = TokioCommand::new("brew")
+            .args(&["services", "start", "ollama"])
+            .output()
+            .await;
+
+        if let Err(e) = start_result {
+            warn!("Failed to start Ollama service via brew services: {}. Will try direct start.", e);
+
+            // Try starting Ollama directly in background
+            let _ = TokioCommand::new("ollama")
+                .arg("serve")
+                .spawn();
+
+            // Give it a moment to start
+            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+        } else {
+            // Give brew services time to start
+            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+        }
+
+        info!("Ollama service started!");
         Ok(())
     }
 
