@@ -1,6 +1,6 @@
 {
   "name": "garden-of-eden-v3",
-  "version": "1.0.0",
+  "version": "3.0.4",
   "description": "100% Local AI Assistant - Privacy-first desktop companion inspired by JARVIS",
   "main": "dist/main/main/index.js",
   "author": "Garden of Eden Team",

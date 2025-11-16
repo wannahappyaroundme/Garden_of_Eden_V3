@@ -76,9 +76,7 @@ jobs:
       - name: Build Tauri application
         env:
           # Disable code signing for unsigned builds
-          APPLE_CERTIFICATE: ""
-          APPLE_CERTIFICATE_PASSWORD: ""
-          APPLE_SIGNING_IDENTITY: ""
+          APPLE_CODESIGN_IDENTITY: "-"
         run: |
           npm run build:renderer
           cargo tauri build --target ${{ matrix.platform.rust_target }}
