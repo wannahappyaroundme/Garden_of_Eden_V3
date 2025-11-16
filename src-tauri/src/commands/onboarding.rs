@@ -329,10 +329,11 @@ pub async fn get_model_recommendation(specs: SystemSpecs) -> Result<ModelRecomme
 
 /// Get required models list
 #[tauri::command]
-pub async fn get_required_models(llm_model: String) -> Result<RequiredModels, String> {
-    log::info!("Getting required models for LLM: {}", llm_model);
+pub async fn get_required_models(llm_model: String, voice_enabled: Option<bool>) -> Result<RequiredModels, String> {
+    let voice = voice_enabled.unwrap_or(true); // Default to true for backward compatibility
+    log::info!("Getting required models for LLM: {} (voice enabled: {})", llm_model, voice);
 
-    let models = ModelRecommenderService::get_required_models(&llm_model)
+    let models = ModelRecommenderService::get_required_models(&llm_model, voice)
         .map_err(|e| e.to_string())?;
 
     Ok(models)

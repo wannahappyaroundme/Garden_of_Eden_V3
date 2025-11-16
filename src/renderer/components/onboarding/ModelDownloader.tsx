@@ -46,10 +46,12 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
       // Check which models already exist
       const llmExists = await window.api.checkModelExists(requiredModels.llm);
       const llavaExists = await window.api.checkModelExists(requiredModels.llava);
-      const whisperExists = await window.api.checkModelExists(requiredModels.whisper);
+      const whisperExists = requiredModels.whisper
+        ? await window.api.checkModelExists(requiredModels.whisper)
+        : true; // Skip if voice not enabled
 
       if (llmExists && llavaExists && whisperExists) {
-        // All models already exist
+        // All required models already exist
         setCurrentPhase('completed');
         setTimeout(() => onComplete(), 1500);
         return;
@@ -74,7 +76,7 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
       if (!llavaExists) {
         await window.api.startModelDownload(requiredModels.llava, 'llava');
       }
-      if (!whisperExists) {
+      if (!whisperExists && requiredModels.whisper) {
         await window.api.startModelDownload(requiredModels.whisper, 'whisper');
       }
 
@@ -88,7 +90,7 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
           const allCompleted =
             (llmExists || isCompleted(state.llm_model)) &&
             (llavaExists || isCompleted(state.llava_model)) &&
-            (whisperExists || isCompleted(state.whisper_model));
+            (whisperExists || !requiredModels.whisper || isCompleted(state.whisper_model));
 
           if (allCompleted) {
             if (pollInterval.current) {
@@ -99,11 +101,11 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
             setTimeout(() => onComplete(), 2000);
           }
 
-          // Check for errors
+          // Check for errors (only check Whisper if voice enabled)
           const hasError =
             isFailed(state.llm_model) ||
             isFailed(state.llava_model) ||
-            isFailed(state.whisper_model);
+            (requiredModels.whisper && isFailed(state.whisper_model));
 
           if (hasError) {
             if (pollInterval.current) {
@@ -288,12 +290,14 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
               progress={downloadState.llava_model}
               icon="👁️"
             />
-            <ModelDownloadItem
-              name="음성 인식 (Whisper)"
-              model={requiredModels.whisper}
-              progress={downloadState.whisper_model}
-              icon="🎤"
-            />
+            {requiredModels.whisper && (
+              <ModelDownloadItem
+                name="음성 인식 (Whisper)"
+                model={requiredModels.whisper}
+                progress={downloadState.whisper_model}
+                icon="🎤"
+              />
+            )}
           </div>
         )}
 

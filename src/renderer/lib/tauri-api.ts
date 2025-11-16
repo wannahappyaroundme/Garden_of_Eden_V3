@@ -103,9 +103,10 @@ export interface ModelRecommendation {
 export interface RequiredModels {
   llm: string;
   llava: string;
-  whisper: string;
+  whisper?: string; // Optional - only if voice features enabled
   total_size_gb: number;
   total_ram_usage_gb: number;
+  voice_enabled: boolean;
 }
 
 export interface ModelOption {
@@ -282,8 +283,8 @@ export const api = {
   /**
    * Get required models for a specific LLM
    */
-  getRequiredModels: async (llmModel: string): Promise<RequiredModels> => {
-    return await invoke<RequiredModels>('get_required_models', { llmModel });
+  getRequiredModels: async (llmModel: string, voiceEnabled?: boolean): Promise<RequiredModels> => {
+    return await invoke<RequiredModels>('get_required_models', { llmModel, voiceEnabled });
   },
 
   /**

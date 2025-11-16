@@ -24,10 +24,27 @@ export default function ModelRecommendation({
   const [requiredModels, setRequiredModels] = useState<RequiredModels | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(false); // Voice features OFF by default
 
   useEffect(() => {
     loadModels();
   }, []);
+
+  // Update required models when voice enabled changes
+  useEffect(() => {
+    if (selectedModel) {
+      updateRequiredModels(selectedModel);
+    }
+  }, [voiceEnabled]);
+
+  const updateRequiredModels = async (modelName: string) => {
+    try {
+      const models = await window.api.getRequiredModels(modelName, voiceEnabled);
+      setRequiredModels(models);
+    } catch (err) {
+      console.error('Failed to get required models:', err);
+    }
+  };
 
   const loadModels = async () => {
     setIsLoading(true);
@@ -42,8 +59,7 @@ export default function ModelRecommendation({
       const recommended = availableModels.find((m) => m.is_recommended);
       if (recommended) {
         setSelectedModel(recommended.model);
-        const models = await window.api.getRequiredModels(recommended.model);
-        setRequiredModels(models);
+        await updateRequiredModels(recommended.model);
       }
 
       setIsLoading(false);
@@ -56,13 +72,7 @@ export default function ModelRecommendation({
 
   const handleModelSelect = async (modelName: string) => {
     setSelectedModel(modelName);
-
-    try {
-      const models = await window.api.getRequiredModels(modelName);
-      setRequiredModels(models);
-    } catch (err) {
-      console.error('Failed to get required models:', err);
-    }
+    await updateRequiredModels(modelName);
   };
 
   const handleAccept = () => {
@@ -196,6 +206,39 @@ export default function ModelRecommendation({
           ))}
         </div>
 
+        {/* Voice Features Toggle */}
+        <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 mt-1">
+              <button
+                onClick={() => setVoiceEnabled(!voiceEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  voiceEnabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    voiceEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+                음성 기능 사용 {voiceEnabled ? '✓' : ''}
+              </h4>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                음성 인식 (Whisper, +3.1GB)을 다운로드하여 음성으로 대화할 수 있습니다.
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {voiceEnabled
+                  ? '음성 기능이 활성화됩니다. 나중에 설정에서 변경할 수 있습니다.'
+                  : '텍스트로만 대화합니다. 필요시 설정에서 음성 모델을 다운로드할 수 있습니다.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Required Models Summary */}
         {requiredModels && (
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">
@@ -215,12 +258,14 @@ export default function ModelRecommendation({
                   {requiredModels.llava}
                 </code>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700 dark:text-gray-300">🎤 음성 인식 (Whisper)</span>
-                <code className="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">
-                  {requiredModels.whisper}
-                </code>
-              </div>
+              {requiredModels.whisper && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 dark:text-gray-300">🎤 음성 인식 (Whisper)</span>
+                  <code className="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">
+                    {requiredModels.whisper}
+                  </code>
+                </div>
+              )}
               <div className="mt-4 pt-4 border-t border-gray-300 dark:border-gray-600 flex justify-between font-semibold">
                 <span className="text-gray-700 dark:text-gray-300">총 용량:</span>
                 <span className="text-gray-900 dark:text-white">
