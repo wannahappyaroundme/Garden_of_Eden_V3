@@ -24,3 +24,4 @@ pub mod learning;
 // Phase 6: Webhooks & External Integrations
 pub mod webhook;
 pub mod webhook_triggers;
+pub mod calendar;

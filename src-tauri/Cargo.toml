@@ -51,6 +51,11 @@ notify = "6.1"          # File system watching
 regex = "1.10"          # Pattern matching for trigger detection
 uuid = { version = "1.18.1", features = ["v4"] }
 
+# Calendar Integration dependencies (Phase 6)
+oauth2 = "4.4"          # OAuth 2.0 client
+url = "2.5"             # URL parsing
+open = "5.0"            # Open browser for OAuth
+
 # Active window detection (Phase 2)
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"          # macOS NSWorkspace API

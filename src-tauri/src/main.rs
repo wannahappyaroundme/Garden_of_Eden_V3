@@ -13,6 +13,7 @@ use services::llava::LlavaService;
 use services::model_installer::ModelInstallerService;
 use services::learning::LearningService;
 use services::webhook_triggers::WebhookTriggerManager;
+use commands::calendar::CalendarServiceWrapper;
 use std::sync::{Arc, Mutex};
 
 /// Application state shared across Tauri commands
@@ -25,6 +26,7 @@ pub struct AppState {
     model_installer: Arc<ModelInstallerService>,
     learning_service: LearningService,
     webhook_trigger_manager: Arc<WebhookTriggerManager>,
+    calendar_service: CalendarServiceWrapper,
 }
 
 fn main() {
@@ -65,6 +67,9 @@ fn main() {
     // Initialize Webhook Trigger Manager
     let webhook_trigger_manager = Arc::new(WebhookTriggerManager::new(Arc::clone(&db_arc)));
 
+    // Initialize Calendar Service Wrapper
+    let calendar_service = CalendarServiceWrapper::new();
+
     let app_state = AppState {
         db: Mutex::new(
             Database::new().expect("Failed to initialize database for app state")
@@ -76,6 +81,7 @@ fn main() {
         model_installer,
         learning_service,
         webhook_trigger_manager,
+        calendar_service,
     };
 
     tauri::Builder::default()
@@ -149,6 +155,21 @@ fn main() {
             commands::webhook::toggle_webhook,
             commands::webhook::trigger_webhook,
             commands::webhook::test_webhook,
+            commands::calendar::calendar_initialize,
+            commands::calendar::calendar_start_oauth,
+            commands::calendar::calendar_complete_oauth,
+            commands::calendar::calendar_is_authenticated,
+            commands::calendar::calendar_sign_out,
+            commands::calendar::calendar_list,
+            commands::calendar::calendar_get_primary_id,
+            commands::calendar::calendar_list_events,
+            commands::calendar::calendar_get_upcoming,
+            commands::calendar::calendar_create_event,
+            commands::calendar::calendar_update_event,
+            commands::calendar::calendar_delete_event,
+            commands::calendar::calendar_search_events,
+            commands::calendar::calendar_quick_add,
+            commands::calendar::calendar_load_saved_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

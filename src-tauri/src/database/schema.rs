@@ -205,6 +205,18 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // OAuth tokens table (for Calendar, Email, etc.)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS oauth_tokens (
+            service TEXT PRIMARY KEY,
+            token_json TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 
@@ -267,6 +279,12 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_webhooks_last_used
          ON webhooks(last_used_at DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_oauth_tokens_expires_at
+         ON oauth_tokens(expires_at DESC)",
         [],
     )?;
 

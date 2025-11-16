@@ -7,3 +7,4 @@ pub mod settings;
 pub mod system;
 pub mod learning;
 pub mod webhook;
+pub mod calendar;
