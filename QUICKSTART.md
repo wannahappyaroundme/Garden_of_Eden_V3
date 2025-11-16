@@ -25,6 +25,7 @@ Get Garden of Eden V3 running in 5 minutes.
 ## Prerequisites
 
 ### Required
+
 - **Node.js**: v20+ (v20.11.0 recommended)
 - **npm**: v10+
 - **Rust**: v1.70+ (for Tauri backend)
@@ -35,6 +36,7 @@ Get Garden of Eden V3 running in 5 minutes.
 - **Storage**: 10GB free space (4.7GB for AI model qwen2.5:7b, 5GB for app)
 
 ### Optional
+
 - **Git**: For version control and development
 - **VSCode**: Recommended IDE with TypeScript support
 
@@ -56,12 +58,14 @@ See [Installing Production Builds](#-installing-production-builds) for detailed 
 ### Option 2: Build from Source (For Developers)
 
 #### 1. Clone Repository
+
 ```bash
 git clone https://github.com/wannahappyaroundme/Garden_of_Eden_V3.git
 cd Garden_of_Eden_V3
 ```
 
 #### 2. Install Dependencies
+
 ```bash
 # Install Node.js dependencies
 npm install
@@ -108,6 +112,7 @@ npm run dev
 ```
 
 This will:
+
 1. Start Vite dev server (React frontend) on `http://localhost:5173`
 2. Compile and run Tauri backend (Rust)
 3. Open app window automatically
@@ -131,6 +136,7 @@ On first launch, the app will:
 5. **Display chat interface** with welcome message
 
 **Expected First Launch Time**:
+
 - **With models pre-downloaded**: ~6-8 seconds (Tauri is fast!)
 - **Without models**: ~10-15 minutes (downloads 4.7GB qwen2.5:7b)
 
@@ -139,28 +145,34 @@ On first launch, the app will:
 ## Your First Conversation
 
 ### 1. Send a Message
+
 Type anything in the input box at the bottom and press Enter:
+
 ```
 Hello! What can you help me with?
 ```
 
 Or try a more specific question:
+
 ```
 Explain how async/await works in JavaScript
 ```
 
 ### 2. Watch the Magic ✨
+
 - **Conversation auto-created** with title generated from your message
 - **AI response streams** in real-time (token by token)
 - **Message saved** to SQLite database
 - **Conversation appears** in left sidebar
 
 **Response Time** (qwen2.5:7b):
+
 - Apple Silicon (M1-M3): 3-4 seconds for complete response (~40-50 tokens/sec)
 - Intel/AMD (12GB+ RAM): 4-6 seconds for complete response (~30-40 tokens/sec)
 - Target: 3-4 seconds for modern hardware (25% faster than previous phi3:mini)
 
 ### 3. Switch Personas (Optional)
+
 Click the ⚙️ **Settings** icon (top-right) → **Persona** tab → Try different presets:
 
 - **Default**: Balanced, friendly, helpful (all parameters at 50%)
@@ -176,21 +188,22 @@ Or **customize** any of the 28 parameters with sliders!
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+K` / `Ctrl+K` | Focus chat input |
-| `Cmd+N` / `Ctrl+N` | Start new conversation |
-| `Cmd+,` / `Ctrl+,` | Open settings |
+| Shortcut                       | Action                 |
+| ------------------------------ | ---------------------- |
+| `Cmd+K` / `Ctrl+K`             | Focus chat input       |
+| `Cmd+N` / `Ctrl+N`             | Start new conversation |
+| `Cmd+,` / `Ctrl+,`             | Open settings          |
 | `Cmd+Shift+S` / `Ctrl+Shift+S` | Toggle screen tracking |
-| `Enter` | Send message |
-| `Shift+Enter` | New line in message |
-| `Esc` | Unfocus input |
+| `Enter`                        | Send message           |
+| `Shift+Enter`                  | New line in message    |
+| `Esc`                          | Unfocus input          |
 
 ---
 
 ## Features to Try
 
 ### 1. Ask Code Questions
+
 ```
 Can you explain how JavaScript promises work with examples?
 ```
@@ -198,6 +211,7 @@ Can you explain how JavaScript promises work with examples?
 Response will include **syntax-highlighted code blocks** with proper language detection!
 
 ### 2. Multi-Turn Conversations
+
 ```
 User: What is React?
 AI: [explains React fundamentals]
@@ -208,35 +222,43 @@ AI: [explains hooks, remembering previous context about React]
 The AI maintains **conversation context** across multiple turns.
 
 ### 3. File Operations
+
 ```
 Read my package.json file and tell me what dependencies we have
 ```
 
 The AI can:
+
 - Read files: `Read the README.md file`
 - Search files: `Find all .ts files in src/main`
 - Analyze code: `Analyze this TypeScript file and suggest improvements`
 
 ### 4. Git Integration
+
 ```
 Check the git status and tell me what files have changed
 ```
 
 The AI can:
+
 - Git status: `What's the current git status?`
 - Git diff: `Show me the diff for the last commit`
 - Git history: `Show me recent commits`
 
 ### 5. Voice Input (Coming Soon)
+
 Click the 🎤 microphone button to speak your question (Korean or English). Whisper STT will transcribe in real-time.
 
 ### 6. Screen Context Analysis (Coming Soon)
+
 Enable in Settings → Screen Tracking → Choose context level:
+
 - **Level 1**: Current window only (fast)
 - **Level 2**: Recent work (last 10 minutes)
 - **Level 3**: Full project context
 
 ### 7. Conversation History
+
 - All conversations **auto-saved** to SQLite
 - Click any conversation in sidebar to resume
 - Search conversations with search bar
@@ -257,6 +279,7 @@ npm run type-check
 ```
 
 This runs TypeScript compiler on:
+
 - Frontend (React/TypeScript in `src/`)
 - Tauri expects clean types
 
@@ -277,6 +300,7 @@ npm run lint:fix
 ```
 
 ESLint rules configured:
+
 - TypeScript strict mode
 - React best practices
 - React Hooks rules
@@ -309,13 +333,13 @@ npm run test:coverage
 
 **Test Coverage**:
 
-| Service | Test Lines | Status |
-|---------|-----------|--------|
-| Ollama (qwen2.5:7b) | ~300 | ✅ Basic tests |
-| Whisper | ~200 | ✅ Voice input |
-| File System | ~150 | ✅ Complete |
-| Git | ~200 | ✅ Complete |
-| Screen Capture | ~150 | ✅ Complete |
+| Service             | Test Lines | Status         |
+| ------------------- | ---------- | -------------- |
+| Ollama (qwen2.5:7b) | ~300       | ✅ Basic tests |
+| Whisper             | ~200       | ✅ Voice input |
+| File System         | ~150       | ✅ Complete    |
+| Git                 | ~200       | ✅ Complete    |
+| Screen Capture      | ~150       | ✅ Complete    |
 
 **Total**: ~1,000 lines of test code (expanding)
 
@@ -356,11 +380,13 @@ npm run build:mac
 ```
 
 This will:
+
 1. Build React frontend with Vite → `dist/`
 2. Compile Rust backend → `src-tauri/target/release/`
 3. Package as DMG → `src-tauri/target/release/bundle/dmg/`
 
 **Output**:
+
 - `Garden of Eden V3_1.0.0_aarch64.dmg` (~7.1MB) - Apple Silicon installer
 - `Garden of Eden V3.app` - Application bundle
 
@@ -376,6 +402,7 @@ npm run build:win
 ```
 
 **Output** (in `src-tauri/target/release/bundle/msi/`):
+
 - `Garden of Eden V3_1.0.0_x64-setup.msi` (~15MB) - Installer
 - App files in `src-tauri/target/release/`
 
@@ -386,6 +413,7 @@ npm run build:win
 ### What Gets Bundled
 
 **Included in Tauri Build**:
+
 - ✅ Compiled Rust backend (native binary)
 - ✅ React frontend (HTML + CSS + JS)
 - ✅ Tauri runtime (lightweight, ~2-3MB)
@@ -393,10 +421,12 @@ npm run build:win
 - ✅ SQLite database schema
 
 **NOT Included** (downloaded on first run):
+
 - ❌ AI models (4.7GB qwen2.5:7b) - Downloaded via Ollama
 - ❌ Ollama runtime - Auto-installed if not present
 
 **Why Models Aren't Bundled**:
+
 - qwen2.5:7b: 4.7GB (recommended for 12-19GB RAM)
 - qwen2.5:3b: 2.0GB (alternative for 8-11GB RAM)
 - Whisper Large V3: 3.1GB (optional)
@@ -408,12 +438,12 @@ Instead, models **auto-download** on first launch with progress tracking.
 
 ### Build Output Sizes
 
-| File | Size | Platform | Notes |
-|------|------|----------|-------|
-| macOS DMG | ~7.1MB | arm64 | Apple Silicon optimized |
-| macOS DMG | ~8MB | x64 | Intel processors |
-| Windows MSI | ~15MB | x64 | Installer |
-| Windows EXE | ~12MB | x64 | Portable |
+| File        | Size   | Platform | Notes                   |
+| ----------- | ------ | -------- | ----------------------- |
+| macOS DMG   | ~7.1MB | arm64    | Apple Silicon optimized |
+| macOS DMG   | ~8MB   | x64      | Intel processors        |
+| Windows MSI | ~15MB  | x64      | Installer               |
+| Windows EXE | ~12MB  | x64      | Portable                |
 
 **Plus AI models** (downloaded separately): ~4.7GB (qwen2.5:7b, recommended)
 
@@ -422,6 +452,7 @@ Instead, models **auto-download** on first launch with progress tracking.
 ### Troubleshooting Build Errors
 
 **Error**: `Rust compiler not found`
+
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -429,12 +460,14 @@ source $HOME/.cargo/env
 ```
 
 **Error**: `Tauri CLI not found`
+
 ```bash
 # Install Tauri CLI
 cargo install tauri-cli
 ```
 
 **Error**: `Type errors in compiled code`
+
 ```bash
 # Run type-check first
 npm run type-check
@@ -442,6 +475,7 @@ npm run type-check
 ```
 
 **Error**: `Code signing failed` (macOS)
+
 ```bash
 # Disable code signing for development builds
 export CSC_IDENTITY_AUTO_DISCOVERY=false
@@ -449,6 +483,7 @@ npm run build:mac
 ```
 
 **Error**: `Frontend build failed`
+
 ```bash
 # Clear cache and rebuild
 rm -rf dist node_modules/.vite
@@ -462,10 +497,12 @@ npm run build:renderer
 ### macOS Installation (Apple Silicon)
 
 #### Download
+
 1. Go to [GitHub Releases](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 2. Download `Garden of Eden V3_1.0.0_aarch64.dmg` (~7.1MB)
 
 #### Install
+
 1. **Open the DMG file** by double-clicking
 2. **Drag the app icon** to the Applications folder
 3. **Eject the DMG** (right-click → Eject)
@@ -475,6 +512,7 @@ npm run build:renderer
 Since the app is **not code-signed** (requires $99/year Apple Developer account), macOS Gatekeeper will block it:
 
 **Option 1: Right-Click Method** (Recommended)
+
 1. Navigate to **Applications** folder
 2. **Right-click** (or Ctrl+Click) on "Garden of Eden V3"
 3. Click **"Open"** from context menu
@@ -483,6 +521,7 @@ Since the app is **not code-signed** (requires $99/year Apple Developer account)
 This permanently allows the app.
 
 **Option 2: System Settings Method**
+
 1. Try to open the app (will show "cannot be opened" error)
 2. Go to **System Settings** → **Privacy & Security**
 3. Scroll down to see **"Garden of Eden V3 was blocked"**
@@ -490,12 +529,14 @@ This permanently allows the app.
 5. Click **"Open"** in confirmation dialog
 
 **Option 3: Remove Quarantine** (Advanced)
+
 ```bash
 # Remove quarantine attribute
 xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
 ```
 
 #### First Run Experience
+
 1. App opens with **Welcome screen**
 2. **4-step onboarding wizard**:
    - Step 1: System Check (auto-detects CPU, RAM, GPU, Disk)
@@ -508,6 +549,7 @@ xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
 4. **Start chatting** after download completes!
 
 **Storage Location**:
+
 - App: `/Applications/Garden of Eden V3.app`
 - User data: `~/Library/Application Support/garden-of-eden-v3/`
   - Database: `data.db` (encrypted SQLite)
@@ -519,6 +561,7 @@ xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
 ### Windows Installation (64-bit)
 
 #### Download
+
 1. Go to [GitHub Releases](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 2. Download MSI installer:
    - **MSI Installer**: `Garden of Eden V3_1.0.0_x64-setup.msi` (~15MB)
@@ -543,6 +586,7 @@ xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
    - Start Menu → "Garden of Eden V3"
 
 **Uninstall**:
+
 - Settings → Apps → Uninstall "Garden of Eden V3", or
 - Control Panel → Programs → Uninstall
 
@@ -553,21 +597,25 @@ xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
 Since the app is **not code-signed** (requires ~$100-400/year certificate), Windows may show warnings:
 
 **Windows Defender SmartScreen**:
+
 1. You'll see: "Windows protected your PC"
 2. Click **"More info"**
 3. Click **"Run anyway"**
 
 **Third-Party Antivirus** (Norton, McAfee, Avast, etc.):
+
 1. May quarantine the .msi or .exe file
 2. Add exception for `Garden of Eden V3*`
 3. Restore from quarantine if needed
 
 **Why This Happens**:
+
 - App is not code-signed (requires expensive certificate)
 - Tauri apps are relatively new and may trigger false positives
 - First few downloads may be flagged more
 
 **Safety Assurance**:
+
 - ✅ Open-source code (audit on GitHub)
 - ✅ Built with official Tauri framework (Rust-based, secure)
 - ✅ No malware, no telemetry
@@ -578,12 +626,14 @@ Since the app is **not code-signed** (requires ~$100-400/year certificate), Wind
 #### First Run Experience (Windows)
 
 Same as macOS:
+
 1. Welcome screen → Onboarding wizard (7 steps)
 2. Model download (12GB, ~20-30 minutes)
 3. Persona setup
 4. Start chatting!
 
 **Storage Location**:
+
 - App: `C:\Program Files\Garden of Eden V3\` (installer) or `<folder>\` (portable)
 - User data: `C:\Users\<YourName>\.garden-of-eden-v3\`
   - Database: `.garden-of-eden-v3\database\eden.db`
@@ -614,6 +664,7 @@ sudo apt-get install -f  # Fix dependencies
 ```
 
 **Launch**:
+
 - Application menu → "Garden of Eden V3"
 - Or: `garden-of-eden-v3` command
 
@@ -632,14 +683,17 @@ This section is for **project maintainers** who want to build and distribute rel
    - macOS (for macOS builds) or Windows/Linux (for Windows/Linux builds)
 
 2. **Dependencies Installed**:
+
    ```bash
    npm install
    ```
 
 3. **Icons Generated**:
+
    ```bash
    npm run generate:icons
    ```
+
    This creates placeholder icons in `resources/icons/` if they don't exist.
 
 4. **Clean Git Tree** (recommended):
@@ -668,6 +722,7 @@ Before building a release:
 #### Build Commands
 
 **macOS** (must build on macOS):
+
 ```bash
 # 1. Type check
 npm run type-check
@@ -683,6 +738,7 @@ open release/Garden-of-Eden-V3-*-arm64.dmg
 ```
 
 **Windows** (can build on any platform):
+
 ```bash
 # 1. Type check
 npm run type-check
@@ -698,6 +754,7 @@ ls -la release/*.exe
 ```
 
 **Linux**:
+
 ```bash
 npm run type-check
 npm test
@@ -711,16 +768,19 @@ npm run build:linux
 Each platform produces multiple files:
 
 **macOS** (`release/` directory):
+
 - `Garden-of-Eden-V3-{version}-arm64.dmg` - Installer for drag-and-drop
 - `Garden-of-Eden-V3-{version}-arm64-mac.zip` - ZIP archive for direct extraction
 - `latest-mac.yml` - Auto-updater metadata
 
 **Windows** (`release/` directory):
+
 - `Garden-of-Eden-V3-Setup-{version}.exe` - NSIS installer (user-friendly)
 - `Garden-of-Eden-V3-{version}.exe` - Portable executable (no install)
 - `latest.yml` - Auto-updater metadata
 
 **Linux** (`release/` directory):
+
 - `Garden-of-Eden-V3-{version}.AppImage` - Universal Linux binary
 - `Garden-of-Eden-V3_{version}_amd64.deb` - Debian/Ubuntu package
 - `latest-linux.yml` - Auto-updater metadata
@@ -732,6 +792,7 @@ Each platform produces multiple files:
 **Installer Size**: ~150-200MB
 
 **Includes**:
+
 - Compiled JavaScript (`dist/`)
 - Electron runtime (~100MB)
 - Production dependencies (node_modules, tree-shaken)
@@ -740,6 +801,7 @@ Each platform produces multiple files:
 - Package metadata
 
 **Does NOT Include**:
+
 - ❌ AI models (12GB) - Too large, downloaded on first run
 - ❌ Source TypeScript files
 - ❌ Development dependencies
@@ -754,11 +816,13 @@ Code signing removes security warnings for users, but requires paid certificates
 #### macOS Code Signing
 
 **Prerequisites**:
+
 - Apple Developer account ($99/year)
 - "Developer ID Application" certificate
 - Certificate exported as `.p12` file
 
 **Setup**:
+
 ```bash
 # Set environment variables
 export CSC_LINK=/path/to/certificate.p12
@@ -770,12 +834,14 @@ npm run build:mac
 ```
 
 **Verify Signing**:
+
 ```bash
 codesign -dv --verbose=4 release/mac-arm64/Garden\ of\ Eden\ V3.app
 # Should show: "Authority=Developer ID Application"
 ```
 
 **Notarization** (required for macOS 10.15+):
+
 ```bash
 # electron-builder can auto-notarize
 export APPLE_ID=your@email.com
@@ -790,10 +856,12 @@ See Apple's docs for getting app-specific password.
 #### Windows Code Signing
 
 **Prerequisites**:
+
 - Code signing certificate from CA (Sectigo, DigiCert, etc.) - ~$100-400/year
 - Certificate as `.pfx` or `.p12` file
 
 **Setup**:
+
 ```bash
 # Set environment variables
 export CSC_LINK=/path/to/certificate.pfx
@@ -804,6 +872,7 @@ npm run build:win
 ```
 
 **Verify Signing**:
+
 - Right-click .exe → Properties → Digital Signatures
 - Should show your certificate
 
@@ -814,12 +883,14 @@ npm run build:win
 If you don't have certificates:
 
 **electron-builder.yml** (already configured):
+
 ```yaml
 mac:
-  identity: null  # Skip code signing
+  identity: null # Skip code signing
 ```
 
 Users will see warnings but app still works:
+
 - macOS: "Unidentified developer" warning (can bypass)
 - Windows: SmartScreen warning (can bypass)
 
@@ -828,6 +899,7 @@ Users will see warnings but app still works:
 ### Creating a GitHub Release
 
 1. **Build all platforms**:
+
    ```bash
    # On macOS machine
    npm run build:mac
@@ -838,12 +910,14 @@ Users will see warnings but app still works:
    ```
 
 2. **Generate checksums** (for integrity):
+
    ```bash
    cd release/
    shasum -a 256 *.dmg *.exe *.AppImage *.deb > SHA256SUMS.txt
    ```
 
 3. **Create GitHub release**:
+
    ```bash
    # Via GitHub CLI
    gh release create v1.0.0 \
@@ -942,9 +1016,11 @@ Before releasing to public:
 ### Development Issues
 
 #### Model Not Loading
+
 **Error**: "Failed to initialize AI model"
 
 **Solutions**:
+
 1. Verify model file exists:
    ```bash
    ls -lh ~/.garden-of-eden-v3/models/llama-3.1-8b-instruct-q4_k_m.gguf
@@ -956,9 +1032,11 @@ Before releasing to public:
 ---
 
 #### Slow AI Responses
-**Symptoms**: Responses take >10 seconds
+
+**Symptoms**: Responses take >30 seconds
 
 **Solutions**:
+
 1. Check GPU acceleration:
    ```bash
    # macOS: Should use Metal
@@ -971,9 +1049,11 @@ Before releasing to public:
 ---
 
 #### Database Errors
+
 **Error**: "Database locked" or "Failed to save message"
 
 **Solutions**:
+
 1. Close all app windows
 2. Delete database (will recreate):
    ```bash
@@ -984,10 +1064,13 @@ Before releasing to public:
 ---
 
 #### Port Already in Use
+
 **Error**: "Port 5173 already in use"
 
 **Solutions**:
+
 1. Kill existing Vite process:
+
    ```bash
    # macOS/Linux
    lsof -ti:5173 | xargs kill
@@ -995,17 +1078,22 @@ Before releasing to public:
    # Windows (PowerShell)
    Get-Process -Id (Get-NetTCPConnection -LocalPort 5173).OwningProcess | Stop-Process
    ```
+
 2. Or change port in `vite.config.ts`:
    ```ts
-   server: { port: 5174 }
+   server: {
+     port: 5174;
+   }
    ```
 
 ---
 
 #### Electron Not Starting
+
 **Error**: "Electron failed to start"
 
 **Solutions**:
+
 1. Rebuild native modules:
    ```bash
    npm run build:native
@@ -1028,6 +1116,7 @@ Before releasing to public:
 #### Build Fails with Type Errors
 
 **Solution**:
+
 ```bash
 # Fix TypeScript errors first
 npm run type-check
@@ -1043,6 +1132,7 @@ npm run build:electron
 **Error**: "The module was compiled against a different Node.js version"
 
 **Solution**:
+
 ```bash
 # Rebuild for Electron
 npm run build:native
@@ -1058,6 +1148,7 @@ npm rebuild better-sqlite3 --runtime=electron --target=39.1.2 --disturl=https://
 **Error**: "Application entry file not found"
 
 **Solution**:
+
 1. Ensure main process is built:
    ```bash
    npm run build:main
@@ -1077,6 +1168,7 @@ npm rebuild better-sqlite3 --runtime=electron --target=39.1.2 --disturl=https://
 **Cause**: Gatekeeper quarantine
 
 **Solution**:
+
 ```bash
 xattr -cr /Applications/Garden\ of\ Eden\ V3.app
 ```
@@ -1088,6 +1180,7 @@ xattr -cr /Applications/Garden\ of\ Eden\ V3.app
 **Cause**: App is not code-signed
 
 **Solution**:
+
 1. Click "More info"
 2. Click "Run anyway"
 3. Or add exception in Windows Defender
@@ -1099,6 +1192,7 @@ xattr -cr /Applications/Garden\ of\ Eden\ V3.app
 **Symptoms**: Stuck at "Downloading models..." for >1 hour
 
 **Solutions**:
+
 1. Check internet connection
 2. Check firewall (allow Node.js / Electron)
 3. Check disk space (need 15GB free)
@@ -1152,6 +1246,7 @@ npm install <package> --save-dev
 ```
 
 **Rebuild** if adding native modules:
+
 ```bash
 npm run build:native
 ```
@@ -1161,11 +1256,13 @@ npm run build:native
 ### Debugging
 
 **Main Process** (Node.js):
+
 - Chrome DevTools: Open `chrome://inspect` → "Open dedicated DevTools for Node"
 - VSCode: Attach debugger to port 5858
 - Logs: `~/.garden-of-eden-v3/logs/main.log`
 
 **Renderer Process** (React):
+
 - Open DevTools in app: `Cmd+Option+I` (macOS) / `Ctrl+Shift+I` (Windows)
 - Console, React DevTools available
 - Logs: Browser console
@@ -1253,16 +1350,19 @@ garden-of-eden-v3/
 ### Expected Performance
 
 **Apple Silicon (qwen2.5:7b)**:
+
 - **M3 MAX/Pro/Air**: 3-4s response time, ~40-50 tokens/sec, 6-8GB RAM
 - **M2 MAX/Pro/Air**: 3-5s response time, ~40-50 tokens/sec, 6-8GB RAM
 - **M1 MAX/Pro/Air**: 4-6s response time, ~30-40 tokens/sec, 6-8GB RAM
 
 **Intel/AMD (with AVX2)**:
+
 - **High-end** (i9, Ryzen 9): 4-6s response time, ~30-40 tokens/sec
 - **Mid-range** (i7, Ryzen 7): 5-7s response time, ~20-30 tokens/sec
 - **Low-end** (i5, Ryzen 5): 6-10s response time, ~15-25 tokens/sec
 
 **Memory Usage** (qwen2.5:7b):
+
 - Base app: ~100MB (Tauri is lightweight!)
 - With qwen2.5:7b loaded: ~6-8GB
 - With Whisper loaded: +3GB (optional)
@@ -1275,6 +1375,7 @@ garden-of-eden-v3/
 ## Next Steps
 
 ### For Users
+
 1. ✅ Try different personas and find your favorite
 2. ✅ Ask complex questions and see AI reasoning
 3. ✅ Test file and Git integrations
@@ -1283,6 +1384,7 @@ garden-of-eden-v3/
 6. ⏳ Wait for screen context analysis (in development)
 
 ### For Developers
+
 1. Read **PROJECT_EDEN_V3_MASTER_SPEC.md** (complete specification, 12,000 lines)
 2. Check **CLAUDE.md** (AI assistant development guidelines)
 3. Explore architecture in **README.md**
@@ -1295,6 +1397,7 @@ garden-of-eden-v3/
 ## Getting Help
 
 ### Documentation
+
 - **README.md** - Project overview and features
 - **QUICKSTART.md** - This file (setup and testing)
 - **TESTING.md** - Testing strategy and guides
@@ -1303,12 +1406,15 @@ garden-of-eden-v3/
 - **PROJECT_EDEN_V3_MASTER_SPEC.md** - Complete technical specification
 
 ### Community
+
 - **GitHub Issues**: [Report bugs or request features](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/issues)
 - **GitHub Discussions**: [Ask questions, share ideas](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/discussions)
 - **Discord**: Community chat server (coming soon)
 
 ### Logs
+
 Check logs for detailed error information:
+
 ```bash
 # macOS
 tail -f ~/Library/Application\ Support/garden-of-eden-v3/logs/main.log

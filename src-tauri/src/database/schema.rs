@@ -88,17 +88,17 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    // Episodic memory table
+    // Episodic memory table (RAG-enhanced)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS episodic_memory (
             id TEXT PRIMARY KEY,
-            content TEXT NOT NULL,
-            category TEXT NOT NULL,
-            importance REAL NOT NULL DEFAULT 0.5,
+            user_message TEXT NOT NULL,
+            ai_response TEXT NOT NULL,
+            satisfaction REAL NOT NULL DEFAULT 0.5,
             embedding_id TEXT,
             created_at INTEGER NOT NULL,
-            last_accessed INTEGER NOT NULL,
-            access_count INTEGER DEFAULT 0
+            access_count INTEGER DEFAULT 0,
+            importance REAL NOT NULL DEFAULT 0.5
         )",
         [],
     )?;

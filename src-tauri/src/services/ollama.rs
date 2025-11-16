@@ -1,9 +1,13 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use futures_util::StreamExt;
+use std::sync::Arc;
+
+use super::rag::{RagService, format_episodes_for_context};
 
 const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
 const MODEL_NAME: &str = "qwen2.5:7b"; // Fast 3-4s responses, excellent Korean support, better reasoning
+const RAG_TOP_K: usize = 3; // Retrieve top 3 most relevant memories
 
 #[derive(Debug, Serialize)]
 struct OllamaRequest {
@@ -27,12 +31,20 @@ struct OllamaResponse {
     done: bool,
 }
 
-/// Generate a response from Ollama using Llama 3.1 8B
+/// Generate a response from Ollama (without RAG - fallback mode)
 pub async fn generate_response(user_message: &str) -> Result<String, String> {
+    generate_response_with_rag(user_message, None).await
+}
+
+/// Generate a response from Ollama with RAG context
+pub async fn generate_response_with_rag(
+    user_message: &str,
+    rag_service: Option<Arc<RagService>>,
+) -> Result<String, String> {
     log::info!("Generating AI response for message: {}", user_message);
 
     // Build system prompt (Korean-first AI assistant)
-    let system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
+    let mut system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
                          ⚠️ IMPORTANT: If the user asks in Korean, you MUST respond only in Korean!\n\
                          - If the user message contains Hangul (Korean characters) → Respond 100% in Korean\n\
                          - Only respond in English when the question is in English\n\
@@ -42,7 +54,26 @@ pub async fn generate_response(user_message: &str) -> Result<String, String> {
                          - Use *italics* for parts that need emphasis\n\
                          - Use - or 1. for lists\n\
                          - Wrap code with ```\n\
-                         - Use emojis appropriately for a friendly tone";
+                         - Use emojis appropriately for a friendly tone".to_string();
+
+    // RAG: Retrieve relevant past conversations
+    if let Some(rag) = &rag_service {
+        match rag.retrieve_relevant(user_message, RAG_TOP_K).await {
+            Ok(episodes) => {
+                if !episodes.is_empty() {
+                    log::info!("Retrieved {} relevant memories from RAG", episodes.len());
+                    let memory_context = format_episodes_for_context(&episodes);
+                    system_prompt.push_str(&memory_context);
+                    system_prompt.push_str("\n💡 Use the above memories to provide more contextual and personalized responses. Reference past conversations when relevant.\n");
+                } else {
+                    log::debug!("No relevant memories found");
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to retrieve RAG context: {} - Continuing without memory", e);
+            }
+        }
+    }
 
     let full_prompt = format!("{}\n\nUser: {}\nAssistant:", system_prompt, user_message);
 
@@ -96,10 +127,21 @@ pub async fn generate_response(user_message: &str) -> Result<String, String> {
     Ok(ollama_response.response.trim().to_string())
 }
 
-/// Generate a streaming response from Ollama
-/// Returns chunks of text as they arrive via a callback function
+/// Generate a streaming response from Ollama (without RAG - fallback mode)
 pub async fn generate_response_stream<F>(
     user_message: &str,
+    on_chunk: F,
+) -> Result<String, String>
+where
+    F: FnMut(String) -> Result<(), String>,
+{
+    generate_response_stream_with_rag(user_message, None, on_chunk).await
+}
+
+/// Generate a streaming response from Ollama with RAG context
+pub async fn generate_response_stream_with_rag<F>(
+    user_message: &str,
+    rag_service: Option<Arc<RagService>>,
     mut on_chunk: F,
 ) -> Result<String, String>
 where
@@ -108,7 +150,7 @@ where
     log::info!("Generating streaming AI response for message: {}", user_message);
 
     // Build system prompt (Korean-first AI assistant)
-    let system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
+    let mut system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
                          ⚠️ IMPORTANT: If the user asks in Korean, you MUST respond only in Korean!\n\
                          - If the user message contains Hangul (Korean characters) → Respond 100% in Korean\n\
                          - Only respond in English when the question is in English\n\
@@ -118,7 +160,26 @@ where
                          - Use *italics* for parts that need emphasis\n\
                          - Use - or 1. for lists\n\
                          - Wrap code with ```\n\
-                         - Use emojis appropriately for a friendly tone";
+                         - Use emojis appropriately for a friendly tone".to_string();
+
+    // RAG: Retrieve relevant past conversations
+    if let Some(rag) = &rag_service {
+        match rag.retrieve_relevant(user_message, RAG_TOP_K).await {
+            Ok(episodes) => {
+                if !episodes.is_empty() {
+                    log::info!("Retrieved {} relevant memories from RAG for streaming", episodes.len());
+                    let memory_context = format_episodes_for_context(&episodes);
+                    system_prompt.push_str(&memory_context);
+                    system_prompt.push_str("\n💡 Use the above memories to provide more contextual and personalized responses. Reference past conversations when relevant.\n");
+                } else {
+                    log::debug!("No relevant memories found for streaming");
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to retrieve RAG context for streaming: {} - Continuing without memory", e);
+            }
+        }
+    }
 
     let full_prompt = format!("{}\n\nUser: {}\nAssistant:", system_prompt, user_message);
 
@@ -220,4 +281,23 @@ pub async fn test_connection() -> Result<bool, String> {
             Err(format!("Failed to connect to Ollama: {}", e))
         }
     }
+}
+
+/// Store a conversation episode in RAG memory
+/// Should be called after a successful response generation
+pub async fn store_conversation_in_rag(
+    rag_service: Arc<RagService>,
+    user_message: &str,
+    ai_response: &str,
+    satisfaction: f32,
+) -> Result<String, String> {
+    log::info!("Storing conversation in RAG (satisfaction: {})", satisfaction);
+
+    rag_service
+        .store_episode(user_message, ai_response, satisfaction)
+        .await
+        .map_err(|e| {
+            log::error!("Failed to store episode in RAG: {}", e);
+            format!("Failed to store conversation in memory: {}", e)
+        })
 }

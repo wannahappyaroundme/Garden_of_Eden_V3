@@ -11,6 +11,7 @@ use services::whisper::WhisperService;
 use services::tts::TtsService;
 use services::llava::LlavaService;
 use services::model_installer::ModelInstallerService;
+use services::learning::LearningService;
 use std::sync::{Arc, Mutex};
 
 /// Application state shared across Tauri commands
@@ -21,6 +22,7 @@ pub struct AppState {
     tts_service: TtsService,
     llava_service: Mutex<LlavaService>,
     model_installer: Arc<ModelInstallerService>,
+    learning_service: LearningService,
 }
 
 fn main() {
@@ -54,6 +56,10 @@ fn main() {
     // Initialize Model Installer service
     let model_installer = Arc::new(ModelInstallerService::new());
 
+    // Initialize Learning service
+    let learning_service = LearningService::new(Arc::clone(&db_arc))
+        .expect("Failed to initialize Learning service");
+
     let app_state = AppState {
         db: Mutex::new(
             Database::new().expect("Failed to initialize database for app state")
@@ -63,6 +69,7 @@ fn main() {
         tts_service,
         llava_service: Mutex::new(llava_service),
         model_installer,
+        learning_service,
     };
 
     tauri::Builder::default()
@@ -110,6 +117,9 @@ fn main() {
             commands::screen::screen_get_status,
             commands::screen::screen_get_recent,
             commands::screen::screen_clear_all,
+            commands::screen::screen_capture_with_context,
+            commands::screen::screen_get_active_window,
+            commands::screen::screen_analyze_current,
             commands::settings::get_settings,
             commands::settings::update_settings,
             commands::settings::get_available_models_for_system,
@@ -120,6 +130,12 @@ fn main() {
             commands::settings::get_ollama_model_size,
             commands::settings::get_model_description,
             commands::system::get_system_info,
+            commands::learning::learning_record_feedback,
+            commands::learning::learning_optimize_persona,
+            commands::learning::learning_get_stats,
+            commands::learning::learning_generate_system_prompt,
+            commands::learning::learning_save_persona,
+            commands::learning::learning_load_persona,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

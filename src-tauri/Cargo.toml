@@ -35,6 +35,30 @@ cpal = "0.15"           # Cross-platform audio I/O
 hound = "3.5"           # WAV file handling
 tts = "0.26"            # Text-to-speech
 
+# RAG & Vector DB dependencies (Phase 1)
+# lancedb = "0.11"        # Vector database (temporarily disabled - dependency conflict)
+# ort = "2.0.0-rc.10"     # ONNX Runtime for BGE-M3 embeddings
+# tokenizers = "0.15"     # Tokenization for embedding model
+# ndarray = "0.16"        # N-dimensional arrays for ML
+# TODO: Re-enable once arrow-arith dependency conflict is resolved
+# For now, using SQLite-only RAG with keyword matching
+
+# Voice Activity Detection (Phase 3)
+webrtc-vad = "0.4"      # Voice activity detection
+
+# Proactive Mode dependencies (Phase 4)
+notify = "6.1"          # File system watching
+regex = "1.10"          # Pattern matching for trigger detection
+uuid = { version = "1.18.1", features = ["v4"] }
+
+# Active window detection (Phase 2)
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.25"          # macOS NSWorkspace API
+objc = "0.2"            # Objective-C runtime
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
 [features]
 # By default, Tauri runs in production mode when `tauri build` is run
 default = ["custom-protocol"]

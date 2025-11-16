@@ -16,6 +16,7 @@ import { Button } from '../components/ui/button';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useSmoothScroll } from '../hooks/useSmoothScroll';
 import { DynamicIsland, useDynamicIsland } from '../components/DynamicIsland';
+import { ProactiveNotification, ProactiveSuggestion, useProactiveNotifications } from '../components/ProactiveNotification';
 import { Eye, EyeOff } from 'lucide-react';
 import SuggestedPromptCard from '../components/SuggestedPromptCard';
 import ModeIndicator from '../components/ModeIndicator';
@@ -55,6 +56,9 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
   // Dynamic Island notifications
   const { notification, showNotification, hideNotification } = useDynamicIsland();
+
+  // Proactive notifications
+  const { currentSuggestion, dismissSuggestion } = useProactiveNotifications();
 
   // Toggle screen tracking
   const handleToggleTracking = useCallback(async () => {
@@ -314,6 +318,50 @@ export function Chat({ onOpenSettings }: ChatProps) {
     handleSendMessage(originalMessage);
   }, [handleSendMessage]);
 
+  // Handle feedback (thumbs up/down) for learning system
+  const handleFeedback = useCallback(async (messageId: string, satisfaction: 'positive' | 'negative') => {
+    try {
+      // Convert positive/negative to 0.0-1.0 satisfaction score
+      const satisfactionScore = satisfaction === 'positive' ? 1.0 : 0.0;
+
+      // Find the message to get its content
+      const message = messages.find(msg => msg.id === messageId);
+      if (!message || message.role !== 'assistant') {
+        console.warn('Invalid message for feedback:', messageId);
+        return;
+      }
+
+      // Record feedback with learning service
+      await invoke('learning_record_feedback', {
+        feedback: {
+          conversation_id: currentConversationId || 'unknown',
+          satisfaction: satisfactionScore,
+          timestamp: Date.now(),
+          // We'll send persona snapshot from settings or use defaults
+          persona_snapshot: {
+            formality: 0.3,
+            verbosity: 0.5,
+            humor: 0.2,
+            emoji_usage: 0.1,
+            proactiveness: 0.4,
+            technical_depth: 0.6,
+            empathy: 0.5,
+            code_examples: 0.7,
+            questioning: 0.5,
+            suggestions: 0.4,
+          }
+        }
+      });
+
+      console.log(`Feedback recorded: ${satisfaction} for message ${messageId}`);
+
+      // Show brief notification
+      showNotification('feedback', { type: satisfaction });
+    } catch (error) {
+      console.error('Failed to record feedback:', error);
+    }
+  }, [messages, currentConversationId, showNotification]);
+
   const handleVoiceStart = async () => {
     try {
       const audioPath = await invoke<string>('whisper_start_recording');
@@ -371,6 +419,48 @@ export function Chat({ onOpenSettings }: ChatProps) {
         timestamp: new Date().toISOString()
       }]);
     }
+  };
+
+  const handleScreenContext = async () => {
+    try {
+      showNotification('screen_capturing', {});
+
+      // Capture and analyze screen with level 2 (detailed)
+      const analysis = await invoke<{
+        description: string;
+        detected_application: string | null;
+        detected_language: string | null;
+        workspace_type: string | null;
+        confidence: number;
+        context_level: number;
+      }>('screen_analyze_current', {
+        contextLevel: 2,
+      });
+
+      console.log('Screen analysis:', analysis);
+
+      // Format context message
+      const contextMessage = `[Screen Context]\nApplication: ${analysis.detected_application || 'Unknown'}\n${analysis.detected_language ? `Language: ${analysis.detected_language}\n` : ''}${analysis.workspace_type ? `Workspace: ${analysis.workspace_type}\n` : ''}${analysis.description}`;
+
+      // Insert context into chat input
+      inputRef.current?.setValue(contextMessage);
+
+      showNotification('screen_captured', { app: analysis.detected_application || 'Unknown' });
+    } catch (error) {
+      console.error('Failed to capture screen context:', error);
+      showNotification('error', { message: 'Failed to capture screen context' });
+    }
+  };
+
+  // Proactive suggestion handlers
+  const handleAcceptSuggestion = (suggestion: ProactiveSuggestion) => {
+    // Insert suggestion into chat input for user to review
+    inputRef.current?.setValue(suggestion.suggestion);
+    dismissSuggestion(suggestion.id);
+  };
+
+  const handleDismissSuggestion = (suggestionId: string) => {
+    dismissSuggestion(suggestionId);
   };
 
   // Group messages by date for date dividers (memoized)
@@ -593,9 +683,11 @@ export function Chat({ onOpenSettings }: ChatProps) {
                     ) : (
                       <ChatBubble
                         key={message.id}
+                        messageId={message.id}
                         message={message.content}
                         role={message.role}
                         timestamp={message.timestamp}
+                        onFeedback={handleFeedback}
                       />
                     )
                   )}
@@ -617,6 +709,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
           onSendMessage={handleSendMessage}
           onVoiceStart={handleVoiceStart}
           onVoiceStop={handleVoiceStop}
+          onScreenContext={handleScreenContext}
           isRecording={isRecording}
           isLoading={isTyping}
           placeholder="메시지를 입력하세요..."
@@ -641,6 +734,13 @@ export function Chat({ onOpenSettings }: ChatProps) {
           onAction={handleToggleTracking}
         />
       )}
+
+      {/* Proactive Notification */}
+      <ProactiveNotification
+        onAccept={handleAcceptSuggestion}
+        onDismiss={handleDismissSuggestion}
+        onOpenSettings={onOpenSettings}
+      />
 
       {/* Keyboard Shortcuts Help */}
       <ShortcutHelp

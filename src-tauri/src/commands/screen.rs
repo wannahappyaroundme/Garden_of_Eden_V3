@@ -1,5 +1,7 @@
 use crate::AppState;
-use crate::services::screen::{ScreenTrackingState, ScreenCapture};
+use crate::services::screen::{ScreenTrackingState, ScreenCapture, EnhancedScreenCapture};
+use crate::services::active_window::ActiveWindow;
+use crate::services::llava::ScreenAnalysis;
 use tauri::State;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -86,4 +88,35 @@ pub async fn screen_get_recent(
 pub async fn screen_clear_all(state: State<'_, AppState>) -> Result<usize, String> {
     log::info!("Clearing all screen captures");
     state.screen_service.clear_all_captures()
+}
+
+/// Capture screen with active window detection and vision analysis
+#[tauri::command]
+pub async fn screen_capture_with_context(
+    state: State<'_, AppState>,
+    context_level: Option<u8>,
+) -> Result<EnhancedScreenCapture, String> {
+    let level = context_level.unwrap_or(1); // Default to Level 1 (quick)
+    log::info!("Capturing screen with context level {}", level);
+
+    state.screen_service.capture_with_context(level).await
+}
+
+/// Get currently active window information
+#[tauri::command]
+pub async fn screen_get_active_window(state: State<'_, AppState>) -> Result<ActiveWindow, String> {
+    log::info!("Getting active window");
+    state.screen_service.get_active_window()
+}
+
+/// Analyze current screen with LLaVA vision model
+#[tauri::command]
+pub async fn screen_analyze_current(
+    state: State<'_, AppState>,
+    context_level: Option<u8>,
+) -> Result<ScreenAnalysis, String> {
+    let level = context_level.unwrap_or(2); // Default to Level 2 (detailed)
+    log::info!("Analyzing current screen with context level {}", level);
+
+    state.screen_service.analyze_current_screen(level).await
 }

@@ -4,6 +4,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::interval;
 use crate::database::Database;
+use super::active_window::{ActiveWindowService, ActiveWindow};
+use super::llava::{LlavaService, ScreenAnalysis};
 
 /// Screen capture tracking state
 #[derive(Debug, Clone)]
@@ -25,17 +27,35 @@ impl Default for ScreenTrackingState {
     }
 }
 
-/// Screen capture service
+/// Screen capture service with vision analysis
 pub struct ScreenCaptureService {
     state: Arc<Mutex<ScreenTrackingState>>,
     db: Arc<Mutex<Database>>,
+    active_window_service: ActiveWindowService,
+    llava_service: Option<Arc<LlavaService>>,
 }
 
 impl ScreenCaptureService {
     pub fn new(db: Arc<Mutex<Database>>) -> Self {
+        let active_window_service = ActiveWindowService::new()
+            .unwrap_or_else(|e| {
+                log::warn!("Failed to initialize active window service: {}", e);
+                ActiveWindowService::new().unwrap()
+            });
+
+        let llava_service = match LlavaService::new() {
+            Ok(service) => Some(Arc::new(service)),
+            Err(e) => {
+                log::warn!("LLaVA vision service not available: {}", e);
+                None
+            }
+        };
+
         Self {
             state: Arc::new(Mutex::new(ScreenTrackingState::default())),
             db,
+            active_window_service,
+            llava_service,
         }
     }
 
@@ -235,6 +255,74 @@ impl ScreenCaptureService {
         log::info!("Cleared {} screen captures", deleted);
         Ok(deleted)
     }
+
+    /// Capture screen with active window detection and vision analysis
+    pub async fn capture_with_context(&self, context_level: u8) -> Result<EnhancedScreenCapture, String> {
+        // Capture screen
+        let screens = Screen::all().map_err(|e| format!("Failed to get screens: {}", e))?;
+        if screens.is_empty() {
+            return Err("No screens found".to_string());
+        }
+
+        let screen = &screens[0];
+        let image = screen
+            .capture()
+            .map_err(|e| format!("Failed to capture screen: {}", e))?;
+
+        // Convert to PNG and base64
+        let mut png_data: Vec<u8> = Vec::new();
+        let mut cursor = std::io::Cursor::new(&mut png_data);
+        use screenshots::image::ImageFormat;
+        image
+            .write_to(&mut cursor, ImageFormat::Png)
+            .map_err(|e| format!("Failed to encode PNG: {}", e))?;
+
+        let base64_image = general_purpose::STANDARD.encode(&png_data);
+
+        // Get active window
+        let active_window = self.active_window_service.get_active_window().ok();
+
+        // Analyze with LLaVA if available
+        let vision_analysis = if let Some(llava) = &self.llava_service {
+            match llava.analyze_screen_context(base64_image.clone(), context_level).await {
+                Ok(analysis) => Some(analysis),
+                Err(e) => {
+                    log::warn!("Vision analysis failed: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| format!("Failed to get timestamp: {}", e))?
+            .as_millis() as i64;
+
+        Ok(EnhancedScreenCapture {
+            screenshot_base64: base64_image,
+            active_window,
+            vision_analysis,
+            timestamp,
+            context_level,
+        })
+    }
+
+    /// Get active window information
+    pub fn get_active_window(&self) -> Result<ActiveWindow, String> {
+        self.active_window_service.get_active_window()
+            .map_err(|e| format!("Failed to get active window: {}", e))
+    }
+
+    /// Analyze current screen with LLaVA
+    pub async fn analyze_current_screen(&self, context_level: u8) -> Result<ScreenAnalysis, String> {
+        let capture = self.capture_with_context(context_level).await?;
+
+        capture.vision_analysis.ok_or_else(||
+            "Vision analysis not available (LLaVA service not initialized)".to_string()
+        )
+    }
 }
 
 /// Screen capture data model
@@ -246,4 +334,14 @@ pub struct ScreenCapture {
     pub active_window: Option<String>,
     pub timestamp: i64,
     pub analyzed: i32,
+}
+
+/// Enhanced screen capture with active window and vision analysis
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EnhancedScreenCapture {
+    pub screenshot_base64: String,
+    pub active_window: Option<ActiveWindow>,
+    pub vision_analysis: Option<ScreenAnalysis>,
+    pub timestamp: i64,
+    pub context_level: u8,
 }

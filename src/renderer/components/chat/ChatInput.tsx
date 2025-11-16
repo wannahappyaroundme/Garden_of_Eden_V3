@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect, KeyboardEvent, forwardRef, useImperativeHandle } from 'react';
-import { Mic, MicOff, Send } from 'lucide-react';
+import { Mic, MicOff, Send, Monitor } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { cn } from '../../lib/utils';
@@ -14,6 +14,7 @@ export interface ChatInputProps {
   onSendMessage: (message: string) => void;
   onVoiceStart?: () => void;
   onVoiceStop?: () => void;
+  onScreenContext?: () => void;
   isRecording?: boolean;
   isLoading?: boolean;
   disabled?: boolean;
@@ -31,6 +32,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onSendMessage,
       onVoiceStart,
       onVoiceStop,
+      onScreenContext,
       isRecording = false,
       isLoading = false,
       disabled = false,
@@ -39,6 +41,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     ref
   ) => {
     const [message, setMessage] = useState('');
+    const [isCapturingScreen, setIsCapturingScreen] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Expose focus and setValue methods to parent
@@ -89,6 +92,16 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }
   };
 
+  const handleScreenContext = async () => {
+    if (!onScreenContext) return;
+    setIsCapturingScreen(true);
+    try {
+      await onScreenContext();
+    } finally {
+      setIsCapturingScreen(false);
+    }
+  };
+
   return (
     <div className="border-t border-border bg-background p-4">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
@@ -108,6 +121,20 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             title={isRecording ? '녹음 중지' : '음성 입력'}
           >
             {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {/* Screen context button */}
+        <div className="flex-shrink-0">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleScreenContext}
+            disabled={disabled || isLoading || isCapturingScreen}
+            className={cn('flex-shrink-0', isCapturingScreen && 'ring-2 ring-primary ring-offset-2')}
+            title="화면 컨텍스트 추가"
+          >
+            <Monitor className={cn('h-4 w-4', isCapturingScreen && 'animate-pulse')} />
           </Button>
         </div>
 

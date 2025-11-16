@@ -7,3 +7,16 @@ pub mod system_info;
 pub mod model_recommender;
 pub mod model_installer;
 pub mod prompt_customizer;
+
+// Phase 1: RAG & Episodic Memory
+pub mod embedding;
+pub mod rag;
+
+// Phase 2: Screen Context & Vision
+pub mod active_window;
+
+// Phase 4: Proactive Mode
+pub mod proactive_manager;
+
+// Phase 5: Learning System
+pub mod learning;
