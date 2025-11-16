@@ -1,320 +1,335 @@
-# Garden of Eden V3 - Testing Guide
+# Testing Guide - Garden of Eden V3
 
-## 테스트 완료 현황 (2025-11-14)
-
-### ✅ 완료된 테스트
-
-#### 1. 스크린 캡처 서비스 테스트
-**실행 명령어:**
-```bash
-npm run build:main
-node test-screen-capture.js
-```
-
-**테스트 결과:**
-- ✅ Level 1 캡처 성공 (현재 화면)
-- ✅ Level 2 캡처 성공 (최근 작업 컨텍스트)
-- ✅ Level 3 캡처 성공 (전체 프로젝트 분석)
-- ✅ 캡처 히스토리 관리 정상
-- ✅ 최근 컨텍스트 조회 정상
-- ✅ 서비스 초기화 및 종료 정상
-
-**캡처 파일 위치:**
-```
-~/.garden-of-eden-v3/captures/
-```
-
-**테스트 로그 예시:**
-```
-🧪 Testing Screen Capture Service...
-✅ Service initialized
-✅ Captured: capture-1762986969739-level1.png (7.4MB)
-✅ Total captures in history: 1
-✅ Screen Capture Test Complete!
-```
-
-#### 2. 애플리케이션 실행 테스트
-**실행 명령어:**
-```bash
-npm run dev
-```
-
-**테스트 결과:**
-- ✅ Vite 개발 서버 시작 (http://localhost:5173)
-- ✅ Tauri 앱 빌드 성공
-- ✅ 앱 프로세스 실행 중 (PID: 60048)
-- ✅ Rust 컴파일 성공 (3개 경고만 존재, 치명적 오류 없음)
-
-**실행 로그:**
-```
-✓ Vite ready in 106ms
-✓ Compiling garden-of-eden-v3
-✓ Finished dev profile [unoptimized + debuginfo]
-✓ Running target/debug/garden-of-eden-v3
-```
-
-#### 3. 빌드 테스트
-**실행 명령어:**
-```bash
-npm run build:main
-npm run build:renderer
-```
-
-**테스트 결과:**
-- ✅ Main 프로세스 TypeScript 컴파일 성공
-- ✅ Renderer 프로세스 Vite 빌드 성공 (875KB)
-- ✅ 모든 서비스 컴파일 오류 없음
-- ✅ JSX 구문 오류 수정 완료 (Settings.tsx, PersonaPreviewPanel.tsx)
-
-**빌드 출력:**
-```
-dist/renderer/assets/main-CJT66Hd3.js   874.61 kB │ gzip: 268.53 kB
-✓ built in 1.88s
-```
-
-#### 4. UX 성능 테스트 (2025-11-14)
-**실행 명령어:**
-```bash
-node test-ux-flows.js
-```
-
-**테스트 결과:**
-- ✅ Ollama 연결 성공 (qwen2.5:14b)
-- ⚠️ 응답 속도: 느림 (18-28초/응답)
-  - Simple Greeting: 18.1초 (목표: <5초)
-  - Casual Question: 28.6초 (목표: <5초)
-- ✅ Korean 응답 품질: 정상
-- ⚠️ 토큰 생성 속도: 0.25-1.14 t/s (목표: 10+ t/s)
-
-**성능 이슈 분석:**
-- 현재 속도가 예상보다 현저히 느림
-- 원인 분석 필요: 모델 로딩, 시스템 리소스, Ollama 설정
-- Fine-tuning 후 속도 개선 예상
-
-### 🎯 구현 완료된 기능
-
-#### AI 서비스
-1. **Llama 3.1 8B 통합** ✅
-   - 모델 파일: ~/.garden-of-eden-v3/models/llama-3.1-8b-instruct-q4_k_m.gguf (4.6GB)
-   - 스트리밍 응답 지원
-   - 대화 컨텍스트 관리
-   - 페르소나 시스템 통합
-
-2. **Whisper STT 통합** ✅
-   - Hugging Face Transformers 기반
-   - 자동 모델 다운로드 (Xenova/whisper-small)
-   - 한국어/영어 자동 감지
-   - 오디오 파일 및 버퍼 transcription 지원
-
-3. **LLaVA 비전 모델 통합** ✅
-   - 화면 분석 기능
-   - 3단계 컨텍스트 레벨 (Level 1, 2, 3)
-   - Hugging Face 자동 다운로드 (Xenova/vit-gpt2-image-captioning)
-   - 객체 감지 및 액션 제안
-
-4. **스크린 캡처 서비스** ✅
-   - screenshot-desktop 라이브러리 사용
-   - 멀티 모니터 지원
-   - 자동 캡처 모드 (30초 간격)
-   - 캡처 히스토리 관리 (최근 50개)
-   - 24시간 자동 정리
-
-#### 데이터베이스 통합
-1. **메시지 저장** ✅
-   - SQLite 기반 영구 저장
-   - 대화별 메시지 관리
-   - 메타데이터 저장 (토큰 수, 응답 시간 등)
-
-2. **대화 관리** ✅
-   - 대화 생성/조회/삭제/업데이트
-   - 자동 제목 생성 (첫 30자)
-   - Cascade 삭제 (대화 삭제 시 메시지도 삭제)
-   - 메시지 수 자동 추적
-
-#### UI/UX
-1. **채팅 인터페이스** ✅
-   - KakaoTalk 스타일 UI
-   - 실시간 스트리밍 응답
-   - 마크다운 렌더링 (코드 하이라이팅 포함)
-   - 타이핑 인디케이터
-   - 에러 처리 및 재시도 기능
-
-2. **대화 히스토리** ✅
-   - 사이드바 대화 목록
-   - 자동 새로고침
-   - 대화 삭제 기능
-   - 제목 편집 기능
-
-### 📦 설치된 패키지
-
-#### AI 관련
-- `@huggingface/transformers` - Whisper STT 및 LLaVA 비전 모델
-- `node-llama-cpp@3.4.0` - Llama 3.1 8B 통합
-- `screenshot-desktop` - 화면 캡처
-
-#### 데이터베이스
-- `better-sqlite3` - SQLite 데이터베이스
-- `uuid@9` - 고유 ID 생성
-
-#### UI/UX
-- `react-markdown` - 마크다운 렌더링
-- `rehype-highlight` - 코드 신택스 하이라이팅
-- `remark-gfm` - GitHub Flavored Markdown
-- `highlight.js` - 코드 하이라이팅
-
-### 🔧 다음 단계
-
-#### 필요한 테스트
-1. **음성 입력 테스트** (실제 마이크 사용)
-   - 녹음 시작/정지
-   - Whisper 모델 transcription
-   - 한국어/영어 자동 감지
-
-2. **화면 분석 테스트** (실제 캡처 이미지 분석)
-   - Level 1: 현재 화면 분석
-   - Level 2: 최근 10분 컨텍스트 분석
-   - Level 3: 전체 프로젝트 컨텍스트 분석
-
-3. **E2E 통합 테스트**
-   - 음성 입력 → AI 응답
-   - 화면 분석 → AI 제안
-   - 대화 저장 → 히스토리 로드
-
-#### 성능 최적화
-1. **모델 로딩 시간 개선**
-   - Lazy initialization 확인
-   - 모델 캐싱 최적화
-
-2. **메모리 사용량 모니터링**
-   - 현재 목표: <15GB RAM
-   - AI 모델 동시 로드 시 메모리 확인
-
-3. **응답 시간 측정**
-   - 목표: M3 MAX에서 2-3초
-   - 스트리밍 첫 토큰 시간
-
-#### 프로덕션 준비
-1. **에러 처리 강화**
-   - 모델 로딩 실패 시 graceful degradation
-   - 네트워크 오류 처리
-   - 디스크 공간 부족 처리
-
-2. **로깅 개선**
-   - Winston 로거 전면 적용
-   - 성능 메트릭 수집
-   - 에러 리포팅 (Sentry)
-
-3. **빌드 및 배포**
-   - electron-builder 설정
-   - 코드 서명 (macOS/Windows)
-   - Auto-updater 구현
-   - 첫 실행 시 모델 다운로드 UI
-
-### 📊 성능 지표
-
-#### 현재 측정값
-- **스크린 캡처 시간**: ~1.1초 (7.4MB PNG)
-- **빌드 시간**:
-  - Main: ~5초
-  - Renderer: ~1.65초
-  - Tauri: ~2.7초
-- **앱 시작 시간**: ~8초 (개발 모드)
-
-#### 메모리 사용량
-- **Llama 모델 파일**: 4.6GB (디스크)
-- **런타임 메모리**: 측정 필요
-- **캡처 파일**: ~7.4MB/캡처
-
-### 🐛 알려진 이슈
-
-#### TypeScript 경고
-- Renderer 프로세스: API 타입 정의 불일치 (20개 경고)
-  - 영향: 낮음 (런타임 동작 정상)
-  - 해결 방안: preload.ts API 타입 업데이트 필요
-
-#### Rust 경고
-- `Conversation` 구조체 미사용 (1개)
-- `test_connection` 함수 미사용 (1개)
-  - 영향: 없음 (컴파일 성공)
-  - 해결 방안: 불필요한 코드 제거 또는 `#[allow(dead_code)]` 추가
-
-#### 기능 제한사항
-1. **음성 녹음**: 실제 마이크 입력 미구현
-   - 현재: 플레이스홀더 반환
-   - 필요: node-record-lpcm16 또는 Web Audio API 통합
-
-2. **LLaVA 모델**: 경량 모델 사용 중
-   - 현재: Xenova/vit-gpt2-image-captioning
-   - 목표: LLaVA 7B (더 정확한 분석)
-
-3. **Whisper 모델**: Small 모델 사용 중
-   - 현재: Xenova/whisper-small (~250MB)
-   - 목표: Whisper Large V3 (~3GB, 더 정확한 transcription)
-
-### 📝 테스트 체크리스트
-
-#### Phase 6: Testing Infrastructure ✅
-- [x] Jest 테스팅 프레임워크 설치
-- [x] Jest 이중 설정 (Main + Renderer)
-- [x] Electron API 모킹 헬퍼 작성
-- [x] 테스트 환경 설정 (NODE_ENV=test)
-- [x] 샘플 단위 테스트 작성 (AI 서비스)
-- [x] 데이터베이스 Repository 테스트 작성
-- [x] Winston 로깅 설정 완료
-- [x] 에러 경계 (Error Boundary) 구현
-- [x] 성능 모니터링 기반 구축
-
-#### 기본 기능
-- [x] 앱 실행
-- [x] 채팅 인터페이스 렌더링
-- [x] AI 메시지 전송
-- [x] 스트리밍 응답 수신
-- [x] 메시지 데이터베이스 저장
-- [x] 대화 히스토리 로드
-- [x] 스크린 캡처 (Level 1, 2, 3)
-
-#### Phase 5B: RAG & Advanced Integration ✅
-- [x] ChromaDB 벡터 데이터베이스 통합
-- [x] RAG 서비스 구현 (의미론적 검색)
-- [x] 에피소딕 메모리 시스템
-- [x] 사용자 선호도 학습
-- [x] 페르소나 최적화 (경사하강법)
-- [x] 화면 추적 모니터링 서비스
-- [x] 워크스페이스 감지 시스템
-- [x] 캘린더 통합 (Google Calendar API + ICS)
-- [x] 웹훅 시스템 (수신/발신)
-- [x] 피드백 루프 시스템
-
-#### 고급 기능 (미테스트)
-- [ ] 음성 입력 녹음
-- [ ] Whisper STT 실제 transcription
-- [ ] 화면 분석 (LLaVA)
-- [x] 페르소나 커스터마이징
-- [ ] 파일 시스템 통합
-- [ ] Git 통합
-- [x] 자동 화면 캡처 (30초 간격)
-
-#### 성능 테스트 (미실행)
-- [ ] 장시간 실행 안정성 (24시간)
-- [ ] 메모리 누수 테스트
-- [ ] 대용량 대화 처리 (1000+ 메시지)
-- [ ] 멀티 모니터 캡처
-- [ ] 동시 AI 모델 로드
-
-#### 에러 처리 (미테스트)
-- [ ] 모델 파일 없을 때
-- [ ] 디스크 공간 부족
-- [ ] 네트워크 오류
-- [ ] 데이터베이스 손상
-- [ ] 권한 거부 (마이크, 스크린)
+Complete testing guide for Garden of Eden V3 covering manual testing, UX testing, and automated testing.
 
 ---
 
-**마지막 업데이트**: 2025-11-14
-**테스트 환경**: macOS, Node.js 20, Ollama (Qwen 2.5 14B)
-**테스터**: Claude Code
+## 📋 Table of Contents
 
-## 수정된 파일 (2025-11-14)
-1. ✅ [src/renderer/pages/Settings.tsx](src/renderer/pages/Settings.tsx) - JSX 구문 오류 수정 (orphaned Preview Panel 제거)
-2. ✅ [src/renderer/components/PersonaPreviewPanel.tsx](src/renderer/components/PersonaPreviewPanel.tsx) - 3개 ternary operator 구문 오류 수정
-3. ✅ [test-ux-flows.js](test-ux-flows.js) - UX 성능 테스트 스크립트 추가
+1. [Test Environment Setup](#test-environment-setup)
+2. [Onboarding Testing](#onboarding-testing)
+3. [Core Features Testing](#core-features-testing)
+4. [UX Testing](#ux-testing)
+5. [Performance Testing](#performance-testing)
+6. [Accessibility Testing](#accessibility-testing)
+7. [Bug Reporting](#bug-reporting)
+
+---
+
+## Test Environment Setup
+
+### Prerequisites
+
+**Services Required:**
+- ✅ **Ollama Service**: Running (`ollama serve`)
+- ✅ **phi3:mini Model**: Installed (`ollama pull phi3:mini`)
+- ✅ **Development Server**: Running (`npm run dev`)
+
+**System Requirements:**
+- **OS**: macOS 14+ or Windows 11
+- **RAM**: Minimum 8GB (16GB recommended for optimal performance)
+- **Disk**: 20GB free space
+- **Microphone**: For voice input testing
+- **Speakers/Headphones**: For TTS output testing
+
+### Installation
+
+```bash
+# 1. Clone and install dependencies
+git clone https://github.com/wannahappyaroundme/Garden_of_Eden_V3.git
+cd Garden_of_Eden_V3
+npm install
+
+# 2. Install Ollama and model
+brew install ollama  # macOS
+ollama pull phi3:mini
+
+# 3. Run development mode
+npm run dev
+```
+
+---
+
+## Onboarding Testing
+
+### Step 1: System Check (Auto, 2-3 seconds)
+
+**What to test:**
+- [ ] App shows "시스템 분석 중..." with loading spinner
+- [ ] Progress items appear one by one (CPU, RAM, GPU, Disk)
+- [ ] After detection, shows system specs:
+  - CPU: Processor name and cores
+  - RAM: Total and available
+  - GPU: Graphics card info
+  - Disk: Free space
+- [ ] Auto-proceeds to Step 2 after 1.5 seconds
+
+**Expected behavior:** Clean detection, no errors
+
+---
+
+### Step 2: Model Recommendation (User action required)
+
+**What to test:**
+- [ ] Shows appropriate recommendation badge based on RAM:
+  - 8-12GB: "기본 성능" (phi3:mini or gemma2:2b)
+  - 12-20GB: "균형 성능" (phi3:mini)
+  - 20GB+: "최적 성능" (phi3:mini with higher performance)
+- [ ] Lists required models:
+  - 대화 AI (LLM): phi3:mini (~2.2GB)
+  - Optional: Whisper for voice (if enabled)
+- [ ] Shows total size and expected RAM usage
+- [ ] "다음: 개성 설정" button is clickable
+- [ ] "이전으로" button goes back to System Check
+
+**Expected behavior:** Correct recommendation for user's system
+
+---
+
+### Step 3: Persona Survey (7 questions)
+
+**What to test:**
+- [ ] Progress bar shows "1 / 7", "2 / 7", etc.
+- [ ] Each question has clear options
+- [ ] Selection is highlighted
+- [ ] "다음" button enabled after selection
+- [ ] "이전" button works correctly
+- [ ] Final question shows "완료" button
+- [ ] Persona parameters calculated correctly
+
+**Questions covered:**
+1. Formality level (격식/반말)
+2. Response length preference
+3. Explanation style (간단/상세)
+4. Humor usage
+5. Emoji usage
+6. Technical depth
+7. Proactive suggestions
+
+---
+
+### Step 4: Model Download
+
+**What to test:**
+- [ ] Download starts automatically
+- [ ] Progress bar shows percentage
+- [ ] Shows current/total size (e.g., "0.5GB / 2.2GB")
+- [ ] Download speed displayed
+- [ ] Success screen shows after completion
+- [ ] "앱 시작하기" button appears
+
+**Expected behavior:** Smooth download with accurate progress
+
+---
+
+## Core Features Testing
+
+### Chat Interface
+
+**Test Scenarios:**
+
+#### 1. Basic Text Chat
+- [ ] Type message in input field
+- [ ] Press Enter or click send button
+- [ ] Message appears as user bubble (right-aligned, blue)
+- [ ] AI response appears as assistant bubble (left-aligned, gray)
+- [ ] Timestamp shows below each message
+- [ ] Markdown rendering works (bold, italic, code blocks, lists)
+- [ ] Code syntax highlighting works
+- [ ] Response time < 5 seconds (phi3:mini)
+
+#### 2. Streaming Response
+- [ ] AI response appears word-by-word
+- [ ] Typing indicator shows before response
+- [ ] No visual glitches during streaming
+- [ ] Can scroll while streaming
+- [ ] Stream completes successfully
+
+#### 3. Korean Language Support
+- [ ] Korean questions get Korean responses
+- [ ] English questions get English responses
+- [ ] Mixed language handled correctly
+- [ ] No encoding issues with Korean text
+- [ ] Emojis render correctly
+
+#### 4. Voice Input (if enabled)
+- [ ] Click microphone button
+- [ ] Recording indicator shows
+- [ ] Stop button appears
+- [ ] Audio waveform visualizes input
+- [ ] Transcription appears in input field
+- [ ] Can edit transcription before sending
+
+#### 5. Text-to-Speech
+- [ ] Speaker button appears on AI messages
+- [ ] Click speaker to play TTS
+- [ ] Audio plays correctly (Korean or English)
+- [ ] Can pause/stop playback
+- [ ] Volume/speed settings work
+
+---
+
+### Settings Panel
+
+**Test Scenarios:**
+
+- [ ] Settings icon opens panel
+- [ ] Persona sliders work smoothly
+- [ ] Changes apply in real-time
+- [ ] Reset to defaults works
+- [ ] Export persona configuration
+- [ ] Import persona configuration
+- [ ] Dark mode toggle works
+- [ ] Language toggle (Korean/English) works
+- [ ] Model selection dropdown works
+
+---
+
+### Conversation History
+
+**Test Scenarios:**
+
+- [ ] History sidebar opens/closes
+- [ ] Shows list of past conversations
+- [ ] Click conversation to load
+- [ ] Delete conversation works
+- [ ] Search conversations works
+- [ ] New conversation button creates fresh chat
+- [ ] Conversation titles auto-generate
+- [ ] Can rename conversations
+
+---
+
+## UX Testing
+
+### Usability Checklist
+
+#### First-Time User Experience
+- [ ] Onboarding is intuitive (no confusion)
+- [ ] Clear instructions at each step
+- [ ] Can complete onboarding in < 5 minutes
+- [ ] Error messages are helpful
+
+#### Visual Design
+- [ ] UI feels modern and clean
+- [ ] Colors are pleasant (not harsh)
+- [ ] Typography is readable
+- [ ] Icons are intuitive
+- [ ] Spacing feels comfortable
+
+#### Interaction Design
+- [ ] Buttons have clear hover states
+- [ ] Loading states are visible
+- [ ] Transitions are smooth
+- [ ] No accidental clicks
+- [ ] Keyboard shortcuts work (Enter to send, etc.)
+
+---
+
+## Performance Testing
+
+### Response Time Benchmarks
+
+**Target: < 5 seconds for all responses**
+
+Test with different message types:
+- [ ] Short question (< 20 words): < 4 seconds
+- [ ] Medium question (20-50 words): < 5 seconds
+- [ ] Long question (50+ words): < 7 seconds
+- [ ] Code generation request: < 8 seconds
+
+### Memory Usage
+
+- [ ] Initial load: < 500MB
+- [ ] After 10 messages: < 800MB
+- [ ] After 50 messages: < 1.2GB
+- [ ] No memory leaks after extended use
+
+### UI Responsiveness
+
+- [ ] Smooth scrolling (60 FPS)
+- [ ] No lag when typing
+- [ ] Animations don't stutter
+- [ ] App remains responsive during AI generation
+
+---
+
+## Accessibility Testing
+
+### Keyboard Navigation
+- [ ] Tab through all interactive elements
+- [ ] Enter/Space activates buttons
+- [ ] Escape closes modals/panels
+- [ ] Arrow keys navigate lists
+
+### Screen Reader Support
+- [ ] All buttons have aria-labels
+- [ ] Messages announce correctly
+- [ ] Loading states announced
+- [ ] Error messages readable
+
+### Visual Accessibility
+- [ ] Color contrast meets WCAG AA
+- [ ] Text is resizable
+- [ ] Focus indicators visible
+- [ ] No flashing content
+
+---
+
+## Bug Reporting
+
+### Bug Report Template
+
+```markdown
+**Bug Title**: [Clear, one-line description]
+
+**Severity**: [Critical / High / Medium / Low]
+
+**Steps to Reproduce**:
+1. Step 1
+2. Step 2
+3. Step 3
+
+**Expected Behavior**:
+[What should happen]
+
+**Actual Behavior**:
+[What actually happened]
+
+**Screenshots/Video**:
+[Attach if applicable]
+
+**Environment**:
+- OS: [macOS 14 / Windows 11]
+- RAM: [16GB]
+- Model: [phi3:mini]
+- Build: [Development / Production]
+
+**Console Errors**:
+[Paste any console errors]
+```
+
+### Common Issues
+
+| Issue | Severity | Solution |
+|-------|----------|----------|
+| Ollama not running | Critical | Run `ollama serve` |
+| Model not found | High | Run `ollama pull phi3:mini` |
+| Slow responses (>10s) | High | Check system RAM, restart app |
+| Voice input fails | Medium | Check microphone permissions |
+| TTS not working | Medium | Check system audio settings |
+
+---
+
+## Test Coverage Goals
+
+- **Unit Tests**: 80% coverage (Jest)
+- **Integration Tests**: Key user flows
+- **E2E Tests**: Critical paths (Playwright)
+- **Manual Testing**: All features before release
+
+---
+
+**Last Updated**: 2025-11-16
+**Test Status**: ✅ Core features tested | ⏳ Performance optimization ongoing
+**Next Test Cycle**: Before v1.0.0 release

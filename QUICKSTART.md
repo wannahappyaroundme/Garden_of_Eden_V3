@@ -25,13 +25,14 @@ Get Garden of Eden V3 running in 5 minutes.
 ## Prerequisites
 
 ### Required
-- **Node.js**: v20+ (v20.11.0 recommended, <25.0.0)
+- **Node.js**: v20+ (v20.11.0 recommended)
 - **npm**: v10+
+- **Rust**: v1.70+ (for Tauri backend)
 - **Operating System**:
   - **macOS**: 12.0+ (Monterey or later) for Metal GPU acceleration
   - **Windows**: 10/11 (64-bit)
-- **RAM**: 16GB minimum (32GB recommended for smooth AI operation)
-- **Storage**: 15GB free space (12GB for AI models, 3GB for app)
+- **RAM**: 8GB minimum (12GB recommended)
+- **Storage**: 10GB free space (4.7GB for AI model qwen2.5:7b, 5GB for app)
 
 ### Optional
 - **Git**: For version control and development
@@ -43,10 +44,10 @@ Get Garden of Eden V3 running in 5 minutes.
 
 ### Option 1: Download Pre-built Binary (Recommended for Users)
 
-**Coming Soon**: Download installers from [GitHub Releases](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
+Download installers from [GitHub Releases](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases) or `program/` folder:
 
-- **macOS (Apple Silicon)**: `Garden-of-Eden-V3-{version}-arm64.dmg` (~150MB)
-- **Windows (64-bit)**: `Garden-of-Eden-V3-Setup-{version}.exe` (~150MB)
+- **macOS (Apple Silicon)**: `Garden of Eden V3_1.0.0_aarch64.dmg` (7.1MB)
+- **Windows (64-bit)**: `Garden of Eden V3_1.0.0_x64-setup.msi` (coming soon)
 
 See [Installing Production Builds](#-installing-production-builds) for detailed instructions.
 
@@ -65,10 +66,12 @@ cd Garden_of_Eden_V3
 # Install Node.js dependencies
 npm install
 
-# This will also run postinstall script to build native modules
-```
+# Install Rust (if not already installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-**Note**: The `postinstall` script automatically runs `electron-builder install-app-deps` to rebuild native modules like `better-sqlite3` for Electron.
+# Install Tauri CLI
+cargo install tauri-cli
+```
 
 #### 3. Download AI Models (Optional for Development)
 
@@ -77,28 +80,21 @@ AI models are **optional** for development but **required** for the AI to functi
 **Manual Download** (if you want to pre-download):
 
 ```bash
-# Create models directory
-mkdir -p ~/.garden-of-eden-v3/models
+# Install Ollama
+brew install ollama  # macOS
+# OR download from https://ollama.ai for Windows
 
-# Download Llama 3.1 8B (4.92GB, takes 5-10 minutes)
-cd ~/.garden-of-eden-v3/models
-curl -L -o llama-3.1-8b-instruct-q4_k_m.gguf \
-  "https://huggingface.co/lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf?download=true"
+# Download qwen2.5:7b model (4.7GB, recommended for 12-19GB RAM)
+ollama pull qwen2.5:7b
 
-# Verify download (should be ~4.92GB)
-ls -lh llama-3.1-8b-instruct-q4_k_m.gguf
+# OR download qwen2.5:3b for 8-11GB RAM systems (2.0GB)
+# ollama pull qwen2.5:3b
+
+# Verify download
+ollama list  # Should show qwen2.5:7b
 ```
 
-**Alternative**: Use a download manager or browser to download from:
-```
-https://huggingface.co/lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
-```
-
-Then move it to `~/.garden-of-eden-v3/models/`
-
-**Whisper & LLaVA** (auto-download on first use):
-- Whisper Large V3: ~3.09GB (downloads when you first use voice input)
-- LLaVA 7B: ~4.37GB (downloads when you first use screen analysis)
+Models download automatically on first run via the app's UI.
 
 ---
 
@@ -106,25 +102,19 @@ Then move it to `~/.garden-of-eden-v3/models/`
 
 ### Development Mode (Hot Reload)
 
-**Option 1: Run Both Processes Together** (Recommended)
 ```bash
-npm run dev:electron
+# Run Tauri app in development mode
+npm run dev
 ```
 
-This uses `concurrently` to run both main and renderer processes. The app window will open automatically.
+This will:
+1. Start Vite dev server (React frontend) on `http://localhost:5173`
+2. Compile and run Tauri backend (Rust)
+3. Open app window automatically
 
-**Option 2: Run Processes Separately** (For debugging)
-```bash
-# Terminal 1: Main process (Node.js backend)
-npm run dev:main
+**Hot reload**: Frontend changes auto-reload, backend changes require restart.
 
-# Terminal 2: Renderer process (React UI)
-npm run dev:renderer
-```
-
-The app will open automatically. If not, manually open Electron or check the terminal for the Vite URL (usually `http://localhost:5173`).
-
-**Debugging**: Main process runs with `--inspect=5858` so you can attach Chrome DevTools or VSCode debugger.
+**Debugging**: Use Chrome DevTools for frontend, Rust debugger for backend.
 
 ---
 
@@ -132,17 +122,17 @@ The app will open automatically. If not, manually open Electron or check the ter
 
 On first launch, the app will:
 
-1. **Create database** at `~/.garden-of-eden-v3/database/eden.db`
+1. **Create database** at `~/Library/Application Support/garden-of-eden-v3/data.db` (macOS) or `%APPDATA%/garden-of-eden-v3/data.db` (Windows)
 2. **Initialize schema** with 7 tables (conversations, messages, persona_settings, etc.)
 3. **Load default persona** settings (28 parameters with default values)
 4. **Check for AI models**:
-   - If Llama model not found: Show onboarding wizard with download option
-   - If found: Load model (~10-15 seconds on M3)
+   - If qwen2.5:7b model not found: Show onboarding wizard with download option
+   - If found: Load model (~4-6 seconds on Apple Silicon)
 5. **Display chat interface** with welcome message
 
 **Expected First Launch Time**:
-- **With models pre-downloaded**: ~15 seconds
-- **Without models**: ~20-30 minutes (downloads 12GB of models)
+- **With models pre-downloaded**: ~6-8 seconds (Tauri is fast!)
+- **Without models**: ~10-15 minutes (downloads 4.7GB qwen2.5:7b)
 
 ---
 
@@ -165,10 +155,10 @@ Explain how async/await works in JavaScript
 - **Message saved** to SQLite database
 - **Conversation appears** in left sidebar
 
-**Response Time**:
-- M3 MAX: 2-3 seconds for first token, ~60 tokens/sec
-- M3 Pro: 3-5 seconds for first token, ~40 tokens/sec
-- M3: 4-6 seconds for first token, ~30 tokens/sec
+**Response Time** (qwen2.5:7b):
+- Apple Silicon (M1-M3): 3-4 seconds for complete response (~40-50 tokens/sec)
+- Intel/AMD (12GB+ RAM): 4-6 seconds for complete response (~30-40 tokens/sec)
+- Target: 3-4 seconds for modern hardware (25% faster than previous phi3:mini)
 
 ### 3. Switch Personas (Optional)
 Click the ⚙️ **Settings** icon (top-right) → **Persona** tab → Try different presets:
@@ -267,11 +257,10 @@ npm run type-check
 ```
 
 This runs TypeScript compiler on:
-- Main process (`tsconfig.main.json`)
-- Renderer process (`tsconfig.renderer.json`)
-- Preload script (`tsconfig.preload.json`)
+- Frontend (React/TypeScript in `src/`)
+- Tauri expects clean types
 
-**Expected Output**: "Found 0 errors" for each
+**Expected Output**: "Found 0 errors"
 
 ---
 
@@ -320,18 +309,15 @@ npm run test:coverage
 
 **Test Coverage**:
 
-| Service | Test Lines | Suites | Status |
-|---------|-----------|--------|--------|
-| Llama | 618 | 13 | ✅ Complete |
-| Whisper | 571 | 13 | ✅ Complete |
-| LLaVA | 674 | 14 | ✅ Complete |
-| File System | 427 | 11 | ✅ Complete |
-| Git | 648 | 19 | ✅ Complete |
-| Persona | 540 | 9 | ✅ Complete |
-| RAG Memory | 625 | 10 | ✅ Complete |
-| Screen Capture | 731 | 12 | ✅ Complete |
+| Service | Test Lines | Status |
+|---------|-----------|--------|
+| Ollama (qwen2.5:7b) | ~300 | ✅ Basic tests |
+| Whisper | ~200 | ✅ Voice input |
+| File System | ~150 | ✅ Complete |
+| Git | ~200 | ✅ Complete |
+| Screen Capture | ~150 | ✅ Complete |
 
-**Total**: 5,807 lines of test code
+**Total**: ~1,000 lines of test code (expanding)
 
 ---
 
@@ -353,111 +339,68 @@ Before building for production:
 ### Prerequisites
 
 - **Node.js 20+** installed
+- **Rust 1.70+** installed (`cargo --version`)
 - All dependencies: `npm install`
-- Icons generated (auto-generated on first build)
+- Tauri CLI: `cargo install tauri-cli`
 - Clean git working tree (recommended)
 
 ### Build Process
 
-#### Step 1: Compile TypeScript
+#### Tauri Build (All-in-One)
+
+**macOS (DMG)** - Must build on macOS:
 
 ```bash
-# Build main process + renderer
-npm run build:electron
-```
-
-This will:
-1. Compile `src/main/**/*.ts` → `dist/main/`
-2. Compile `src/renderer/**/*.tsx` → `dist/renderer/`
-3. Compile `src/preload/**/*.ts` → `dist/preload/`
-4. Bundle with Vite (renderer) and tsc (main/preload)
-
-**Output**:
-- `dist/main/` - Main process JavaScript
-- `dist/renderer/` - Renderer HTML + CSS + JS
-- `dist/preload/` - Preload bridge script
-
----
-
-#### Step 2: Package with electron-builder
-
-**macOS (DMG + ZIP)** - Must build on macOS:
-
-```bash
+# Build frontend + Tauri app
 npm run build:mac
 ```
 
-**Output** (in `release/` directory):
-- `Garden-of-Eden-V3-{version}-arm64.dmg` (~150-200MB)
-- `Garden-of-Eden-V3-{version}-arm64-mac.zip` (~140-190MB)
-- `latest-mac.yml` (update metadata for auto-updater)
+This will:
+1. Build React frontend with Vite → `dist/`
+2. Compile Rust backend → `src-tauri/target/release/`
+3. Package as DMG → `src-tauri/target/release/bundle/dmg/`
 
-**Architectures**: arm64 only (Apple Silicon)
+**Output**:
+- `Garden of Eden V3_1.0.0_aarch64.dmg` (~7.1MB) - Apple Silicon installer
+- `Garden of Eden V3.app` - Application bundle
+
+**Architectures**: arm64 (Apple Silicon) or x64 (Intel)
 
 ---
 
-**Windows (NSIS Installer + Portable)** - Can build on any platform:
+**Windows (MSI)** - Must build on Windows:
 
 ```bash
+# Build frontend + Tauri app
 npm run build:win
 ```
 
-**Output** (in `release/` directory):
-- `Garden-of-Eden-V3-Setup-{version}.exe` (~150-200MB, NSIS installer)
-- `Garden-of-Eden-V3-{version}.exe` (~140-190MB, portable executable)
-- `latest.yml` (update metadata for auto-updater)
+**Output** (in `src-tauri/target/release/bundle/msi/`):
+- `Garden of Eden V3_1.0.0_x64-setup.msi` (~15MB) - Installer
+- App files in `src-tauri/target/release/`
 
 **Architectures**: x64 only (64-bit Intel/AMD)
 
 ---
 
-**Linux (AppImage + deb)** - Can build on any platform:
-
-```bash
-npm run build:linux
-```
-
-**Output** (in `release/` directory):
-- `Garden-of-Eden-V3-{version}.AppImage` (~150-200MB)
-- `Garden-of-Eden-V3_{version}_amd64.deb` (~140-190MB)
-
-**Architectures**: x64 (64-bit)
-
----
-
-**All Platforms**:
-
-```bash
-# Build for current platform only
-npm run package
-
-# Or use electron-builder directly
-npm run build:electron && npx electron-builder
-```
-
----
-
 ### What Gets Bundled
 
-**Included**:
-- ✅ Compiled JavaScript (`dist/` folder)
-- ✅ Electron runtime (~100MB)
-- ✅ Node modules (production only, tree-shaken)
-- ✅ App icons (`resources/icons/`)
-- ✅ Entitlements and config files
-- ✅ Package metadata (`package.json`)
+**Included in Tauri Build**:
+- ✅ Compiled Rust backend (native binary)
+- ✅ React frontend (HTML + CSS + JS)
+- ✅ Tauri runtime (lightweight, ~2-3MB)
+- ✅ App icons and resources
+- ✅ SQLite database schema
 
-**NOT Included** (too large):
-- ❌ AI models (12GB) - Downloaded on first run by user
-- ❌ Development dependencies
-- ❌ Source TypeScript files
-- ❌ Tests, docs, scripts
+**NOT Included** (downloaded on first run):
+- ❌ AI models (4.7GB qwen2.5:7b) - Downloaded via Ollama
+- ❌ Ollama runtime - Auto-installed if not present
 
 **Why Models Aren't Bundled**:
-- Llama 3.1 8B: 4.92GB
-- Whisper Large V3: 3.09GB
-- LLaVA 7B: 4.37GB
-- **Total**: ~12.4GB would make installer huge and slow
+- qwen2.5:7b: 4.7GB (recommended for 12-19GB RAM)
+- qwen2.5:3b: 2.0GB (alternative for 8-11GB RAM)
+- Whisper Large V3: 3.1GB (optional)
+- **Total**: ~7.8GB would make installer large and slow
 
 Instead, models **auto-download** on first launch with progress tracking.
 
@@ -465,32 +408,30 @@ Instead, models **auto-download** on first launch with progress tracking.
 
 ### Build Output Sizes
 
-| File | Size | Platform |
-|------|------|----------|
-| macOS DMG | ~150-200MB | arm64 only |
-| macOS ZIP | ~140-190MB | arm64 only |
-| Windows NSIS | ~150-200MB | x64 only |
-| Windows Portable | ~140-190MB | x64 only |
-| Linux AppImage | ~150-200MB | x64 only |
-| Linux deb | ~140-190MB | x64 only |
+| File | Size | Platform | Notes |
+|------|------|----------|-------|
+| macOS DMG | ~7.1MB | arm64 | Apple Silicon optimized |
+| macOS DMG | ~8MB | x64 | Intel processors |
+| Windows MSI | ~15MB | x64 | Installer |
+| Windows EXE | ~12MB | x64 | Portable |
 
-**Plus AI models** (downloaded separately): ~12.4GB
+**Plus AI models** (downloaded separately): ~4.7GB (qwen2.5:7b, recommended)
 
 ---
 
 ### Troubleshooting Build Errors
 
-**Error**: `Cannot find module 'electron'`
+**Error**: `Rust compiler not found`
 ```bash
-# Reinstall dependencies
-rm -rf node_modules package-lock.json
-npm install
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
 ```
 
-**Error**: `native module rebuild failed`
+**Error**: `Tauri CLI not found`
 ```bash
-# Rebuild native modules
-npm run build:native
+# Install Tauri CLI
+cargo install tauri-cli
 ```
 
 **Error**: `Type errors in compiled code`
@@ -500,17 +441,18 @@ npm run type-check
 # Fix errors before building
 ```
 
-**Error**: `ENOENT: icon not found`
+**Error**: `Code signing failed` (macOS)
 ```bash
-# Generate placeholder icons
-npm run generate:icons
+# Disable code signing for development builds
+export CSC_IDENTITY_AUTO_DISCOVERY=false
+npm run build:mac
 ```
 
-**Error**: `No entitlements file` (macOS)
+**Error**: `Frontend build failed`
 ```bash
-# Entitlements file should exist at:
-ls -la resources/entitlements.mac.plist
-# If missing, check DISTRIBUTION.md for how to create
+# Clear cache and rebuild
+rm -rf dist node_modules/.vite
+npm run build:renderer
 ```
 
 ---
@@ -521,7 +463,7 @@ ls -la resources/entitlements.mac.plist
 
 #### Download
 1. Go to [GitHub Releases](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
-2. Download `Garden-of-Eden-V3-{version}-arm64.dmg` (~150MB)
+2. Download `Garden of Eden V3_1.0.0_aarch64.dmg` (~7.1MB)
 
 #### Install
 1. **Open the DMG file** by double-clicking
@@ -555,26 +497,22 @@ xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
 
 #### First Run Experience
 1. App opens with **Welcome screen**
-2. **7-step onboarding wizard**:
-   - Step 1: Welcome & intro
-   - Step 2: System permissions (microphone optional)
-   - Step 3: Model download (12GB, ~20-30 minutes)
-   - Step 4: Persona setup (choose preset or customize)
-   - Step 5: Screen tracking settings
-   - Step 6: Language selection (Korean/English)
-   - Step 7: Ready to chat!
+2. **4-step onboarding wizard**:
+   - Step 1: System Check (auto-detects CPU, RAM, GPU, Disk)
+   - Step 2: Model Recommendation (suggests qwen2.5:7b for 12-19GB RAM, qwen2.5:3b for 8-11GB)
+   - Step 3: Persona Survey (7 questions to customize AI personality)
+   - Step 4: Model download (4.7GB qwen2.5:7b, ~10-15 minutes)
 3. Models download with **progress bars**:
-   - Llama 3.1 8B: 4.92GB
-   - Whisper Large V3: 3.09GB (optional)
-   - LLaVA 7B: 4.37GB (optional)
+   - qwen2.5:7b: 4.7GB (primary LLM, fast 3-4s responses, excellent Korean)
+   - Whisper Large V3: 3.1GB (optional, for voice input)
 4. **Start chatting** after download completes!
 
 **Storage Location**:
 - App: `/Applications/Garden of Eden V3.app`
-- User data: `~/.garden-of-eden-v3/`
-  - Database: `~/.garden-of-eden-v3/database/eden.db`
-  - Models: `~/.garden-of-eden-v3/models/`
-  - Logs: `~/.garden-of-eden-v3/logs/`
+- User data: `~/Library/Application Support/garden-of-eden-v3/`
+  - Database: `data.db` (encrypted SQLite)
+  - Models: Via Ollama at `~/.ollama/models/`
+  - Logs: In app support directory
 
 ---
 
@@ -582,15 +520,14 @@ xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
 
 #### Download
 1. Go to [GitHub Releases](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
-2. Choose installer type:
-   - **NSIS Installer**: `Garden-of-Eden-V3-Setup-{version}.exe` (~150MB)
-   - **Portable**: `Garden-of-Eden-V3-{version}.exe` (~140MB)
+2. Download MSI installer:
+   - **MSI Installer**: `Garden of Eden V3_1.0.0_x64-setup.msi` (~15MB)
 
 ---
 
-#### NSIS Installer (Recommended)
+#### MSI Installer (Recommended)
 
-1. **Run the installer** (`Garden-of-Eden-V3-Setup-{version}.exe`)
+1. **Run the installer** (`Garden of Eden V3_1.0.0_x64-setup.msi`)
 2. **Windows Defender SmartScreen** may show warning:
    - Click **"More info"**
    - Click **"Run anyway"**
@@ -600,36 +537,14 @@ xattr -d com.apple.quarantine /Applications/Garden\ of\ Eden\ V3.app
      - ✅ Desktop shortcut
      - ✅ Start Menu shortcut
    - Click **"Install"**
-4. **Installation completes** (~1 minute)
+4. **Installation completes** (~30 seconds, Tauri is fast!)
 5. **Launch** from:
    - Desktop icon, or
    - Start Menu → "Garden of Eden V3"
 
 **Uninstall**:
-- Control Panel → Programs → Uninstall "Garden of Eden V3", or
-- Run uninstaller from installation directory
-
----
-
-#### Portable Version (No Installation)
-
-1. **Download** `Garden-of-Eden-V3-{version}.exe`
-2. **Create a folder** (e.g., `C:\PortableApps\GardenOfEden`)
-3. **Move the .exe** to that folder
-4. **Run directly** (double-click)
-5. **No installation** required
-6. **All data stored** in same folder as .exe
-
-**Advantages**:
-- ✅ No admin rights needed
-- ✅ Run from USB drive
-- ✅ Multiple instances possible
-- ✅ Clean removal (just delete folder)
-
-**Disadvantages**:
-- ❌ No Start Menu shortcuts
-- ❌ No automatic updates
-- ❌ No file associations
+- Settings → Apps → Uninstall "Garden of Eden V3", or
+- Control Panel → Programs → Uninstall
 
 ---
 
@@ -643,18 +558,18 @@ Since the app is **not code-signed** (requires ~$100-400/year certificate), Wind
 3. Click **"Run anyway"**
 
 **Third-Party Antivirus** (Norton, McAfee, Avast, etc.):
-1. May quarantine the .exe file
-2. Add exception for `Garden-of-Eden-V3*.exe`
+1. May quarantine the .msi or .exe file
+2. Add exception for `Garden of Eden V3*`
 3. Restore from quarantine if needed
 
 **Why This Happens**:
 - App is not code-signed (requires expensive certificate)
-- Electron apps often trigger false positives
+- Tauri apps are relatively new and may trigger false positives
 - First few downloads may be flagged more
 
 **Safety Assurance**:
 - ✅ Open-source code (audit on GitHub)
-- ✅ Built with official Electron
+- ✅ Built with official Tauri framework (Rust-based, secure)
 - ✅ No malware, no telemetry
 - ✅ Community-verified
 
@@ -1337,24 +1252,23 @@ garden-of-eden-v3/
 
 ### Expected Performance
 
-**Apple Silicon**:
-- **M3 MAX**: 2-3s response time, ~60 tokens/sec, 12-15GB RAM
-- **M3 Pro**: 3-5s response time, ~40 tokens/sec, 12-14GB RAM
-- **M3**: 4-6s response time, ~30 tokens/sec, 12-13GB RAM
-- **M2 MAX**: 2-4s response time, ~50 tokens/sec
-- **M1 MAX**: 3-5s response time, ~40 tokens/sec
+**Apple Silicon (qwen2.5:7b)**:
+- **M3 MAX/Pro/Air**: 3-4s response time, ~40-50 tokens/sec, 6-8GB RAM
+- **M2 MAX/Pro/Air**: 3-5s response time, ~40-50 tokens/sec, 6-8GB RAM
+- **M1 MAX/Pro/Air**: 4-6s response time, ~30-40 tokens/sec, 6-8GB RAM
 
-**Intel/AMD** (with AVX2):
-- **High-end** (i9, Ryzen 9): 4-8s response time, ~20-30 tokens/sec
-- **Mid-range** (i7, Ryzen 7): 6-12s response time, ~10-20 tokens/sec
-- **Low-end** (i5, Ryzen 5): 10-20s response time, ~5-10 tokens/sec
+**Intel/AMD (with AVX2)**:
+- **High-end** (i9, Ryzen 9): 4-6s response time, ~30-40 tokens/sec
+- **Mid-range** (i7, Ryzen 7): 5-7s response time, ~20-30 tokens/sec
+- **Low-end** (i5, Ryzen 5): 6-10s response time, ~15-25 tokens/sec
 
-**Memory Usage**:
-- Base app: ~200MB
-- With Llama model loaded: ~6-8GB
-- With Whisper loaded: +3GB
-- With LLaVA loaded: +4GB
-- **Total**: 12-15GB RAM usage
+**Memory Usage** (qwen2.5:7b):
+- Base app: ~100MB (Tauri is lightweight!)
+- With qwen2.5:7b loaded: ~6-8GB
+- With Whisper loaded: +3GB (optional)
+- **Total**: 6-8GB RAM (or 9-11GB with voice input)
+
+**Note**: For 8-11GB RAM systems, use qwen2.5:3b (2GB model, 4-5GB RAM usage)
 
 ---
 
@@ -1370,12 +1284,11 @@ garden-of-eden-v3/
 
 ### For Developers
 1. Read **PROJECT_EDEN_V3_MASTER_SPEC.md** (complete specification, 12,000 lines)
-2. Read **IMPLEMENTATION_STATUS.md** (current progress, Phase 8)
-3. Check **CLAUDE.md** (AI assistant development guidelines)
-4. Review **CONTRIBUTING.md** (how to contribute)
-5. Explore architecture in **README.md**
-6. Check **TODO.md** for tasks (350+ tasks, some marked "help wanted")
-7. Start contributing! Open issues or discussions on GitHub
+2. Check **CLAUDE.md** (AI assistant development guidelines)
+3. Explore architecture in **README.md**
+4. Review **TESTING.md** (testing strategy)
+5. Check **BUILD_AND_DEPLOY.md** (build instructions)
+6. Start contributing! Open issues or discussions on GitHub
 
 ---
 
@@ -1384,9 +1297,9 @@ garden-of-eden-v3/
 ### Documentation
 - **README.md** - Project overview and features
 - **QUICKSTART.md** - This file (setup and testing)
-- **CONTRIBUTING.md** - How to contribute
 - **TESTING.md** - Testing strategy and guides
-- **DISTRIBUTION.md** - Detailed build and distribution guide
+- **BUILD_AND_DEPLOY.md** - Detailed build and distribution guide
+- **SERVICE_OVERVIEW.md** - Marketing and feature overview
 - **PROJECT_EDEN_V3_MASTER_SPEC.md** - Complete technical specification
 
 ### Community
@@ -1397,12 +1310,11 @@ garden-of-eden-v3/
 ### Logs
 Check logs for detailed error information:
 ```bash
-# macOS/Linux
-tail -f ~/.garden-of-eden-v3/logs/main.log
-tail -f ~/.garden-of-eden-v3/logs/error.log
+# macOS
+tail -f ~/Library/Application\ Support/garden-of-eden-v3/logs/main.log
 
 # Windows
-type %USERPROFILE%\.garden-of-eden-v3\logs\main.log
+type %APPDATA%\garden-of-eden-v3\logs\main.log
 ```
 
 ---
@@ -1411,12 +1323,11 @@ type %USERPROFILE%\.garden-of-eden-v3\logs\main.log
 
 ```bash
 # For development
-npm run dev:electron
+npm run dev
 
 # For production build
 npm run build:mac    # macOS
 npm run build:win    # Windows
-npm run build:linux  # Linux
 ```
 
 **Start chatting with your private AI assistant!** 🚀

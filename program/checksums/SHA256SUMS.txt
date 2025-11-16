@@ -1,2 +1,1 @@
-c6e47cae85c4009723e1e9e39d8cbe9c7d73ccab8a581adde49ea502a9cb954d  macOS/Garden of Eden V3-1.0.0-arm64.dmg
-886ecca84e3bd3fba9242571d3a409956207d5fa6bdc2ac73f2dbbab672bef76  macOS/Garden of Eden V3-1.0.0-arm64-mac.zip
+ab7875e51beb7a9a50c5b017255a4c55bb3610773825e1caa37d2cca0e6fcf87  ./program/macOS/Garden of Eden V3_1.0.0_aarch64.dmg

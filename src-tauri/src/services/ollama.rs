@@ -3,7 +3,7 @@ use reqwest::Client;
 use futures_util::StreamExt;
 
 const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
-const MODEL_NAME: &str = "qwen2.5:14b";
+const MODEL_NAME: &str = "qwen2.5:7b"; // Fast 3-4s responses, excellent Korean support, better reasoning
 
 #[derive(Debug, Serialize)]
 struct OllamaRequest {
@@ -18,6 +18,7 @@ struct OllamaOptions {
     temperature: f32,
     top_p: f32,
     top_k: i32,
+    repeat_penalty: f32, // Prevent overfitting and repetitive responses
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,31 +31,34 @@ struct OllamaResponse {
 pub async fn generate_response(user_message: &str) -> Result<String, String> {
     log::info!("Generating AI response for message: {}", user_message);
 
-    // Build system prompt (Korean-friendly AI assistant)
-    let system_prompt = "당신의 이름은 Adam입니다. Garden of Eden이라는 환경 안에 살고 있는 친절하고 도움이 되는 AI 비서입니다. \
-                         사용자의 질문에 명확하고 상세하게 답변하세요. \
-                         한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.\n\n\
-                         중요: 답변 시 반드시 마크다운 형식을 사용하세요:\n\
-                         - 중요한 부분은 **볼드**로 강조\n\
-                         - 기울임이 필요한 부분은 *이탤릭*으로 표시\n\
-                         - 목록은 - 또는 1. 을 사용\n\
-                         - 코드는 ```로 감싸기\n\
-                         - 이모지를 적절히 활용하여 친근하게 답변";
+    // Build system prompt (Korean-first AI assistant)
+    let system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
+                         ⚠️ IMPORTANT: If the user asks in Korean, you MUST respond only in Korean!\n\
+                         - If the user message contains Hangul (Korean characters) → Respond 100% in Korean\n\
+                         - Only respond in English when the question is in English\n\
+                         - Never respond in English to Korean questions\n\n\
+                         Response format:\n\
+                         - Emphasize important parts with **bold**\n\
+                         - Use *italics* for parts that need emphasis\n\
+                         - Use - or 1. for lists\n\
+                         - Wrap code with ```\n\
+                         - Use emojis appropriately for a friendly tone";
 
     let full_prompt = format!("{}\n\nUser: {}\nAssistant:", system_prompt, user_message);
 
     // Create HTTP client
     let client = Client::new();
 
-    // Prepare request
+    // Prepare request with overfitting prevention parameters
     let request = OllamaRequest {
         model: MODEL_NAME.to_string(),
         prompt: full_prompt,
         stream: false,
         options: OllamaOptions {
-            temperature: 0.7,
-            top_p: 0.9,
-            top_k: 40,
+            temperature: 0.8,      // Balanced creativity (prevent deterministic overfitting)
+            top_p: 0.92,          // Nucleus sampling (diverse token selection)
+            top_k: 45,            // Expanded token pool (avoid repetition)
+            repeat_penalty: 1.15, // Penalize repetitive phrases (key overfitting prevention)
         },
     };
 
@@ -103,31 +107,34 @@ where
 {
     log::info!("Generating streaming AI response for message: {}", user_message);
 
-    // Build system prompt
-    let system_prompt = "당신의 이름은 Adam입니다. Garden of Eden이라는 환경 안에 살고 있는 친절하고 도움이 되는 AI 비서입니다. \
-                         사용자의 질문에 명확하고 상세하게 답변하세요. \
-                         한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.\n\n\
-                         중요: 답변 시 반드시 마크다운 형식을 사용하세요:\n\
-                         - 중요한 부분은 **볼드**로 강조\n\
-                         - 기울임이 필요한 부분은 *이탤릭*으로 표시\n\
-                         - 목록은 - 또는 1. 을 사용\n\
-                         - 코드는 ```로 감싸기\n\
-                         - 이모지를 적절히 활용하여 친근하게 답변";
+    // Build system prompt (Korean-first AI assistant)
+    let system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
+                         ⚠️ IMPORTANT: If the user asks in Korean, you MUST respond only in Korean!\n\
+                         - If the user message contains Hangul (Korean characters) → Respond 100% in Korean\n\
+                         - Only respond in English when the question is in English\n\
+                         - Never respond in English to Korean questions\n\n\
+                         Response format:\n\
+                         - Emphasize important parts with **bold**\n\
+                         - Use *italics* for parts that need emphasis\n\
+                         - Use - or 1. for lists\n\
+                         - Wrap code with ```\n\
+                         - Use emojis appropriately for a friendly tone";
 
     let full_prompt = format!("{}\n\nUser: {}\nAssistant:", system_prompt, user_message);
 
     // Create HTTP client
     let client = Client::new();
 
-    // Prepare streaming request
+    // Prepare streaming request with overfitting prevention parameters
     let request = OllamaRequest {
         model: MODEL_NAME.to_string(),
         prompt: full_prompt,
         stream: true, // Enable streaming
         options: OllamaOptions {
-            temperature: 0.7,
-            top_p: 0.9,
-            top_k: 40,
+            temperature: 0.8,      // Balanced creativity (prevent deterministic overfitting)
+            top_p: 0.92,          // Nucleus sampling (diverse token selection)
+            top_k: 45,            // Expanded token pool (avoid repetition)
+            repeat_penalty: 1.15, // Penalize repetitive phrases (key overfitting prevention)
         },
     };
 

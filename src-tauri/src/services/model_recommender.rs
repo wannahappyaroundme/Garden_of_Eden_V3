@@ -159,20 +159,21 @@ impl ModelRecommenderService {
                 expected_ram_usage_gb: Some(5),
             }
         } else if specs.total_ram_gb < 20 {
-            // Moderate: Qwen 2.5 14B (default, will show alternatives)
+            // Moderate: Qwen 2.5 7B (fast 3-4s response, excellent Korean)
             ModelRecommendation {
                 recommendation_type: RecommendationType::Moderate,
-                model: Some("qwen2.5:14b".to_string()),
-                model_display_name: Some("Qwen 2.5 14B".to_string()),
-                size_gb: Some(9.0),
-                reason: "최상의 균형 (RAM 10-12GB 사용)".to_string(),
+                model: Some("qwen2.5:7b".to_string()),
+                model_display_name: Some("Qwen 2.5 7B".to_string()),
+                size_gb: Some(4.7),
+                reason: "빠른 응답 (3-4초 목표, RAM 6-8GB 사용)".to_string(),
                 notes: vec![
-                    "한국어 완벽 지원 (29개 언어)".to_string(),
-                    "대화, 코딩, 추론 모두 우수".to_string(),
-                    "빠른 응답 속도 (20-30 t/s)".to_string(),
-                    "12-20GB RAM 시스템에 최적".to_string(),
+                    "Alibaba Qwen 2.5 - 한국어 완벽 지원 (29개 언어)".to_string(),
+                    "빠른 응답 속도 (3-4초 목표)".to_string(),
+                    "phi3:mini 대비 우수한 추론 능력 (+5% MMLU)".to_string(),
+                    "코딩, 추론, 대화 모두 우수".to_string(),
+                    "12-19GB RAM 시스템에 최적화".to_string(),
                 ],
-                expected_ram_usage_gb: Some(12),
+                expected_ram_usage_gb: Some(8),
             }
         } else {
             // Optimal: Qwen 2.5 32B
@@ -474,7 +475,13 @@ impl ModelRecommenderService {
     /// Get all required models for full functionality
     pub fn get_required_models(llm_model: &str, voice_enabled: bool) -> Result<RequiredModels> {
         // Determine LLM size based on model
-        let llm_size = if llm_model.contains("3b") {
+        let llm_size = if llm_model.contains("phi3:mini") {
+            2.2
+        } else if llm_model.contains("gemma2:2b") {
+            1.6
+        } else if llm_model.contains("llama3.2:3b") {
+            2.0
+        } else if llm_model.contains("3b") {
             2.0
         } else if llm_model.contains("7b") {
             4.7
@@ -487,11 +494,17 @@ impl ModelRecommenderService {
         } else if llm_model.contains("32b") {
             20.0
         } else {
-            9.0 // Default to 14B size
+            2.2 // Default to Phi-3 Mini size (fast model)
         };
 
         // Determine RAM usage based on model size
-        let llm_ram = if llm_model.contains("3b") {
+        let llm_ram = if llm_model.contains("phi3:mini") {
+            4
+        } else if llm_model.contains("gemma2:2b") {
+            3
+        } else if llm_model.contains("llama3.2:3b") {
+            4
+        } else if llm_model.contains("3b") {
             5
         } else if llm_model.contains("7b") {
             8
@@ -504,7 +517,7 @@ impl ModelRecommenderService {
         } else if llm_model.contains("32b") {
             22
         } else {
-            12 // Default to 14B RAM
+            4 // Default to Phi-3 Mini RAM (fast model)
         };
 
         // Calculate total size and RAM based on voice features
@@ -529,6 +542,9 @@ impl ModelRecommenderService {
     /// Check if a model is valid/supported
     pub fn is_valid_model(model: &str) -> bool {
         matches!(model,
+            "phi3:mini" |
+            "gemma2:2b" |
+            "llama3.2:3b" |
             "qwen2.5:3b" |
             "qwen2.5:7b" |
             "qwen2.5:14b" |
@@ -542,6 +558,9 @@ impl ModelRecommenderService {
     /// Get user-friendly model description
     pub fn get_model_description(model: &str) -> String {
         match model {
+            "phi3:mini" => "Phi-3 Mini - 초고속 응답 (<5초, 2.2GB)".to_string(),
+            "gemma2:2b" => "Gemma 2 2B - 초경량 초고속 (1.6GB)".to_string(),
+            "llama3.2:3b" => "Llama 3.2 3B - 경량 범용 (2.0GB)".to_string(),
             "qwen2.5:3b" => "Qwen 2.5 3B - 초경량 모델 (2.0GB)".to_string(),
             "qwen2.5:7b" => "Qwen 2.5 7B - 경량 모델 (4.7GB)".to_string(),
             "qwen2.5:14b" => "Qwen 2.5 14B - 균형 모델 (9.0GB)".to_string(),
@@ -593,7 +612,7 @@ mod tests {
 
         let rec = ModelRecommenderService::recommend(&specs).unwrap();
         assert_eq!(rec.recommendation_type, RecommendationType::Lightweight);
-        assert_eq!(rec.model.as_deref(), Some("qwen2.5:1.5b"));
+        assert_eq!(rec.model.as_deref(), Some("qwen2.5:3b"));
     }
 
     #[test]
@@ -618,8 +637,8 @@ mod tests {
     #[test]
     fn test_recommend_optimal() {
         let specs = SystemSpecs {
-            total_ram_gb: 16,
-            available_ram_gb: 8,
+            total_ram_gb: 20,
+            available_ram_gb: 10,
             cpu_cores: 8,
             cpu_name: "Test CPU".to_string(),
             has_gpu: true,
@@ -631,7 +650,7 @@ mod tests {
 
         let rec = ModelRecommenderService::recommend(&specs).unwrap();
         assert_eq!(rec.recommendation_type, RecommendationType::Optimal);
-        assert_eq!(rec.model.as_deref(), Some("qwen2.5:14b"));
+        assert_eq!(rec.model.as_deref(), Some("qwen2.5:32b"));
     }
 
     #[test]

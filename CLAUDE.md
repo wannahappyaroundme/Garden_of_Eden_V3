@@ -15,36 +15,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Technology Stack
 
 ### Frontend
-- **Framework**: Electron (multi-process architecture)
+- **Framework**: Tauri 2.9 (Rust + WebView, ultra-lightweight 7.1MB builds)
 - **UI Library**: React 18+ with TypeScript 5.0+
-- **Build Tool**: Vite (fast HMR, optimized builds)
+- **Build Tool**: Vite 7.2 (fast HMR, optimized builds)
 - **State Management**: Zustand (lightweight, performant)
 - **UI Components**: shadcn/ui (headless, customizable)
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS 3.4
 - **Internationalization**: i18next + react-i18next (Korean + English)
 
-### Backend (Electron Main Process)
-- **Runtime**: Node.js 20+
-- **Language**: TypeScript 5.0+ (strict mode)
-- **Database**: SQLite via better-sqlite3 (encrypted with AES-256)
-- **Vector DB**: ChromaDB (for RAG/memory system)
-- **Git Integration**: simple-git
-- **Screen Capture**: screenshot-desktop
+### Backend (Tauri Rust Core)
+- **Runtime**: Rust (async with tokio)
+- **Language**: Rust (safe, fast, efficient)
+- **Database**: rusqlite 0.32 (encrypted with AES-256)
+- **Git Integration**: Via Rust
+- **Screen Capture**: screenshots 0.8 crate
 
 ### AI Stack (100% Local via Ollama)
-- **Primary LLM**: Qwen 2.5 14B Instruct Q4_K_M (~9.0GB) - Conversation, reasoning, code generation, Korean language
-  - 14.8B parameters (Q4_K_M quantization for speed/quality balance)
+- **Primary LLM**: phi3:mini (~2.2GB) - Conversation, reasoning, code generation, Korean language
+  - 4B parameters (Microsoft Phi-3)
+  - Ultra-fast <5 second responses
   - 29+ language support including Korean
-  - Context: 32K tokens
-  - Stable for continual fine-tuning (low catastrophic forgetting)
-  - Apache 2.0 license (commercial friendly)
-- **Vision Model**: LLaVA 7B (~4.4GB) - Screen analysis, image understanding
-- **Speech-to-Text**: Whisper Large V3 (~3.1GB) - Voice input (Korean + English)
+  - Context: 4K tokens
+  - MIT license (commercial friendly)
+  - **Overfitting Prevention**: temperature 0.8, top_p 0.92, top_k 45, repeat_penalty 1.15
+- **Vision Model**: (Future) LLaVA 7B (~4.4GB) - Screen analysis
+- **Speech-to-Text**: (Future) Whisper - Voice input
 - **Text-to-Speech**: System native TTS (platform-specific)
 - **AI Runtime**: Ollama with Metal (macOS) / CUDA (Windows) acceleration
 
-**Total AI Storage**: ~16.5GB
-**RAM Usage During Operation**: 10-14GB (Qwen 14B: ~12GB + OS + other models)
+**Total AI Storage**: ~2.2GB (phi3:mini only, 40x smaller than previous)
+**RAM Usage During Operation**: 3-4GB (phi3:mini: ~3GB + app)
 
 ## Key Architectural Decisions
 
@@ -70,18 +70,18 @@ AI understands context through screen analysis with 3 levels:
 - **RAG-based episodic memory** - Remembers past conversations and context
 - **Satisfaction feedback loop** - Optimizes persona based on user reactions
 
-### 5. Multi-Process Electron Architecture
+### 5. Tauri Architecture
 ```
 ┌─────────────────────────────────────────┐
-│  Main Process (Node.js Backend)        │
-│  - AI model management                  │
+│  Rust Backend (Tauri Core)              │
+│  - AI model management (Ollama)         │
 │  - System integration (files, git)      │
-│  - Database & storage                   │
-│  - IPC handlers                         │
+│  - Database & storage (rusqlite)        │
+│  - IPC commands                         │
 └─────────────────────────────────────────┘
-          ↕ (Type-safe IPC via contextBridge)
+          ↕ (Type-safe IPC via Tauri invoke)
 ┌─────────────────────────────────────────┐
-│  Renderer Process (React UI - Sandboxed)│
+│  React Frontend (WebView - Sandboxed)   │
 │  - Chat interface                       │
 │  - Settings & persona management        │
 │  - Notifications                        │
@@ -93,10 +93,18 @@ AI understands context through screen analysis with 3 levels:
 ```
 garden-of-eden-v3/
 ├── src/
-│   ├── main/                    # Electron main process (Node.js backend)
-│   │   ├── index.ts            # Entry point
-│   │   ├── window.ts           # Window management, system tray
-│   │   ├── ipc/                # IPC handlers (type-safe channels)
+│   ├── renderer/               # React frontend (WebView)
+│   │   ├── App.tsx            # Root component
+│   │   ├── pages/             # Chat, Settings, etc.
+│   │   ├── components/        # UI components
+│   │   └── stores/            # Zustand state
+│   │
+│   └── preload/               # (Tauri handles IPC internally)
+│
+├── src-tauri/                 # Rust backend
+│   ├── src/
+│   │   ├── main.rs           # Entry point
+│   │   ├── commands/         # Tauri IPC commands
 │   │   │   ├── ai.handler.ts
 │   │   │   ├── file.handler.ts
 │   │   │   ├── git.handler.ts
