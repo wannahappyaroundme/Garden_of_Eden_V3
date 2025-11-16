@@ -76,6 +76,73 @@ export interface Message {
   satisfaction?: 'positive' | 'negative';
 }
 
+// ==================== ONBOARDING TYPES ====================
+
+export interface SystemSpecs {
+  total_ram_gb: number;
+  available_ram_gb: number;
+  cpu_cores: number;
+  cpu_name: string;
+  has_gpu: boolean;
+  gpu_name?: string;
+  disk_free_gb: number;
+  os: string;
+  os_version: string;
+}
+
+export interface ModelRecommendation {
+  recommendation_type: 'insufficient' | 'lightweight' | 'moderate' | 'optimal';
+  model?: string;
+  model_display_name?: string;
+  size_gb?: number;
+  reason: string;
+  notes: string[];
+  expected_ram_usage_gb?: number;
+}
+
+export interface RequiredModels {
+  llm: string;
+  llava: string;
+  whisper: string;
+  total_size_gb: number;
+  total_ram_usage_gb: number;
+}
+
+export interface DownloadProgress {
+  model_name: string;
+  status: 'not_started' | 'downloading' | 'completed' | 'failed';
+  downloaded_bytes: number;
+  total_bytes?: number;
+  progress_percent: number;
+  speed_mbps?: number;
+  eta_seconds?: number;
+}
+
+export interface ModelDownloadState {
+  llm_model: DownloadProgress;
+  llava_model: DownloadProgress;
+  whisper_model: DownloadProgress;
+}
+
+export interface SurveyResults {
+  primary_use: string;
+  ai_experience: string;
+  primary_language: string;
+  speech_style: string;
+  ideal_ai_personality: string;
+  previous_ai_lacking: string;
+  desired_features: string;
+}
+
+export interface ModelConfig {
+  temperature: number;
+  top_p: number;
+  top_k: number;
+  repeat_penalty: number;
+  context_length_limit: number;
+  response_diversity: number;
+}
+
 /**
  * Tauri API
  * Drop-in replacement for Electron IPC
@@ -174,6 +241,100 @@ export const api = {
    */
   updateConversationTitle: async (conversationId: string, newTitle: string): Promise<void> => {
     return await invoke<void>('update_conversation_title', { conversationId, newTitle });
+  },
+
+  // ==================== ONBOARDING APIS ====================
+
+  /**
+   * Detect system specifications
+   */
+  detectSystemSpecs: async (): Promise<SystemSpecs> => {
+    return await invoke<SystemSpecs>('detect_system_specs');
+  },
+
+  /**
+   * Get model recommendation based on system specs
+   */
+  getModelRecommendation: async (specs: SystemSpecs): Promise<ModelRecommendation> => {
+    return await invoke<ModelRecommendation>('get_model_recommendation', { specs });
+  },
+
+  /**
+   * Get required models for a specific LLM
+   */
+  getRequiredModels: async (llmModel: string): Promise<RequiredModels> => {
+    return await invoke<RequiredModels>('get_required_models', { llmModel });
+  },
+
+  /**
+   * Check if Ollama is installed
+   */
+  checkOllamaInstalled: async (): Promise<boolean> => {
+    return await invoke<boolean>('check_ollama_installed');
+  },
+
+  /**
+   * Check if a specific model exists locally
+   */
+  checkModelExists: async (modelName: string): Promise<boolean> => {
+    return await invoke<boolean>('check_model_exists', { modelName });
+  },
+
+  /**
+   * Start downloading a model
+   */
+  startModelDownload: async (modelName: string, modelType: 'llm' | 'llava' | 'whisper'): Promise<void> => {
+    return await invoke<void>('start_model_download', { modelName, modelType });
+  },
+
+  /**
+   * Get download progress
+   */
+  getDownloadProgress: async (): Promise<ModelDownloadState> => {
+    return await invoke<ModelDownloadState>('get_download_progress');
+  },
+
+  /**
+   * Generate custom prompt from survey results
+   */
+  generateCustomPrompt: async (survey: SurveyResults): Promise<string> => {
+    return await invoke<string>('generate_custom_prompt', { survey });
+  },
+
+  /**
+   * Generate model config from survey results
+   */
+  generateModelConfig: async (survey: SurveyResults, modelName: string): Promise<ModelConfig> => {
+    return await invoke<ModelConfig>('generate_model_config', { survey, modelName });
+  },
+
+  /**
+   * Save onboarding state to database
+   */
+  saveOnboardingState: async (
+    systemSpecsJson: string,
+    recommendedModel: string,
+    selectedModel: string
+  ): Promise<void> => {
+    return await invoke<void>('save_onboarding_state', {
+      systemSpecsJson,
+      recommendedModel,
+      selectedModel,
+    });
+  },
+
+  /**
+   * Save survey results and custom prompt
+   */
+  saveSurveyResults: async (surveyJson: string, customPrompt: string): Promise<void> => {
+    return await invoke<void>('save_survey_results', { surveyJson, customPrompt });
+  },
+
+  /**
+   * Mark onboarding as completed
+   */
+  markOnboardingCompleted: async (): Promise<void> => {
+    return await invoke<void>('mark_onboarding_completed');
   },
 
   // Platform info (from Tauri)
