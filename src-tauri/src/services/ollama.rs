@@ -31,7 +31,7 @@ pub async fn generate_response(user_message: &str) -> Result<String, String> {
     log::info!("Generating AI response for message: {}", user_message);
 
     // Build system prompt (Korean-friendly AI assistant)
-    let system_prompt = "당신은 Garden of Eden이라는 이름의 친절하고 도움이 되는 AI 비서입니다. \
+    let system_prompt = "당신의 이름은 Adam입니다. Garden of Eden이라는 환경 안에 살고 있는 친절하고 도움이 되는 AI 비서입니다. \
                          사용자의 질문에 명확하고 상세하게 답변하세요. \
                          한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.\n\n\
                          중요: 답변 시 반드시 마크다운 형식을 사용하세요:\n\
@@ -104,7 +104,7 @@ where
     log::info!("Generating streaming AI response for message: {}", user_message);
 
     // Build system prompt
-    let system_prompt = "당신은 Garden of Eden이라는 이름의 친절하고 도움이 되는 AI 비서입니다. \
+    let system_prompt = "당신의 이름은 Adam입니다. Garden of Eden이라는 환경 안에 살고 있는 친절하고 도움이 되는 AI 비서입니다. \
                          사용자의 질문에 명확하고 상세하게 답변하세요. \
                          한국어와 영어를 모두 자연스럽게 구사할 수 있습니다.\n\n\
                          중요: 답변 시 반드시 마크다운 형식을 사용하세요:\n\

@@ -8,9 +8,9 @@ import { cn } from '../../lib/utils';
 export function TypingIndicator({ className }: { className?: string }) {
   return (
     <div className={cn('flex items-center gap-2.5 mb-4 animate-slide-in-left', className)}>
-      {/* AI Avatar */}
+      {/* AI Avatar (Adam) */}
       <div className="flex-shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold shadow-sm border border-primary/10">
-        E
+        A
       </div>
 
       {/* Typing animation */}

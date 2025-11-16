@@ -21,9 +21,9 @@ export function ErrorBubble({ message, onRetry, timestamp }: ErrorBubbleProps) {
 
   return (
     <div className="flex w-full gap-2.5 mb-4 justify-start animate-slide-in-left">
-      {/* Avatar for AI */}
+      {/* Avatar for AI (Adam) */}
       <div className="flex-shrink-0 w-11 h-11 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold shadow-sm border border-red-200 dark:border-red-800/50">
-        E
+        A
       </div>
 
       {/* Error content */}

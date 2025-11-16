@@ -85,15 +85,15 @@ export function ChatBubble({
         isUser ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'
       )}
       role="article"
-      aria-label={`${isUser ? '사용자' : 'AI'} 메시지`}
+      aria-label={`${isUser ? '사용자' : 'Adam'} 메시지`}
     >
-      {/* Avatar for AI */}
+      {/* Avatar for AI (Adam) */}
       {!isUser && (
         <div
           className="flex-shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold shadow-sm border border-primary/10"
           aria-hidden="true"
         >
-          E
+          A
         </div>
       )}
 

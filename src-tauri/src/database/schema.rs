@@ -132,6 +132,20 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Screen activities table (AI vision analysis)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS screen_activities (
+            id TEXT PRIMARY KEY,
+            timestamp INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            activity_description TEXT,
+            detected_context TEXT,
+            user_action TEXT,
+            ai_analysis TEXT
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 
@@ -176,6 +190,12 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_screen_context_timestamp
          ON screen_context(timestamp DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_screen_activities_timestamp
+         ON screen_activities(timestamp DESC)",
         [],
     )?;
 

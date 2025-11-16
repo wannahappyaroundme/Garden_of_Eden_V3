@@ -29,7 +29,7 @@ pub async fn screen_start_tracking(
 ) -> Result<ScreenStatus, String> {
     log::info!("Starting screen tracking with interval: {:?}", interval);
 
-    let interval_seconds = interval.unwrap_or(10);
+    let interval_seconds = interval.unwrap_or(30);
     state
         .screen_service
         .start_tracking(interval_seconds)
