@@ -157,14 +157,14 @@ pub async fn update_settings(
 
 /// Get available models for user's system specs and language preference
 #[tauri::command]
-pub async fn get_available_models_for_system(
+pub fn get_available_models_for_system(
     language_preference: String,
 ) -> Result<Vec<ModelOption>, String> {
     log::info!("Getting available models for language: {}", language_preference);
 
     // Detect system specs
-    let specs = SystemInfoService::detect()
-        .await
+    let mut system_info = SystemInfoService::new();
+    let specs = system_info.detect_specs()
         .map_err(|e| format!("Failed to detect system specs: {}", e))?;
 
     // Get available models
