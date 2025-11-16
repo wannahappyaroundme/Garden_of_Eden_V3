@@ -12,6 +12,7 @@ use services::tts::TtsService;
 use services::llava::LlavaService;
 use services::model_installer::ModelInstallerService;
 use services::learning::LearningService;
+use services::webhook_triggers::WebhookTriggerManager;
 use std::sync::{Arc, Mutex};
 
 /// Application state shared across Tauri commands
@@ -23,6 +24,7 @@ pub struct AppState {
     llava_service: Mutex<LlavaService>,
     model_installer: Arc<ModelInstallerService>,
     learning_service: LearningService,
+    webhook_trigger_manager: Arc<WebhookTriggerManager>,
 }
 
 fn main() {
@@ -60,6 +62,9 @@ fn main() {
     let learning_service = LearningService::new(Arc::clone(&db_arc))
         .expect("Failed to initialize Learning service");
 
+    // Initialize Webhook Trigger Manager
+    let webhook_trigger_manager = Arc::new(WebhookTriggerManager::new(Arc::clone(&db_arc)));
+
     let app_state = AppState {
         db: Mutex::new(
             Database::new().expect("Failed to initialize database for app state")
@@ -70,6 +75,7 @@ fn main() {
         llava_service: Mutex::new(llava_service),
         model_installer,
         learning_service,
+        webhook_trigger_manager,
     };
 
     tauri::Builder::default()

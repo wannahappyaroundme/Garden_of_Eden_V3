@@ -226,37 +226,36 @@ pub async fn trigger_webhook(
 ) -> Result<(), String> {
     log::info!("Triggering webhook: {} for event: {}", name, event);
 
-    // Get webhook config from database
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = db.conn();
+    // Get webhook config from database (scoped to release lock)
+    let config = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let conn = db.conn();
 
-    let record = conn
-        .query_row(
-            "SELECT name, preset, url, method, headers, enabled, timeout, retries, created_at, last_used_at
-             FROM webhooks
-             WHERE name = ?1",
-            [&name],
-            |row| {
-                Ok(WebhookRecord {
-                    name: row.get(0)?,
-                    preset: row.get(1)?,
-                    url: row.get(2)?,
-                    method: row.get(3)?,
-                    headers: row.get(4)?,
-                    enabled: row.get(5)?,
-                    timeout: row.get(6)?,
-                    retries: row.get(7)?,
-                    created_at: row.get(8)?,
-                    last_used_at: row.get(9)?,
-                })
-            },
-        )
-        .map_err(|e| format!("Webhook not found: {}", e))?;
+        let record = conn
+            .query_row(
+                "SELECT name, preset, url, method, headers, enabled, timeout, retries, created_at, last_used_at
+                 FROM webhooks
+                 WHERE name = ?1",
+                [&name],
+                |row| {
+                    Ok(WebhookRecord {
+                        name: row.get(0)?,
+                        preset: row.get(1)?,
+                        url: row.get(2)?,
+                        method: row.get(3)?,
+                        headers: row.get(4)?,
+                        enabled: row.get(5)?,
+                        timeout: row.get(6)?,
+                        retries: row.get(7)?,
+                        created_at: row.get(8)?,
+                        last_used_at: row.get(9)?,
+                    })
+                },
+            )
+            .map_err(|e| format!("Webhook not found: {}", e))?;
 
-    drop(conn);
-    drop(db);
-
-    let config = record.to_config()?;
+        record.to_config()?
+    }; // db lock is released here
 
     // Create payload
     let payload = WebhookPayload {
@@ -269,16 +268,18 @@ pub async fn trigger_webhook(
     let webhook_service = WebhookService::new();
     webhook_service.trigger(&config, payload).await?;
 
-    // Update last_used_at
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = db.conn();
-    let now = chrono::Utc::now().timestamp();
+    // Update last_used_at (scoped to release lock)
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let conn = db.conn();
+        let now = chrono::Utc::now().timestamp();
 
-    conn.execute(
-        "UPDATE webhooks SET last_used_at = ?1 WHERE name = ?2",
-        rusqlite::params![now, name],
-    )
-    .map_err(|e| e.to_string())?;
+        conn.execute(
+            "UPDATE webhooks SET last_used_at = ?1 WHERE name = ?2",
+            rusqlite::params![now, name],
+        )
+        .map_err(|e| e.to_string())?;
+    }
 
     log::info!("Webhook {} triggered successfully", name);
     Ok(())
@@ -289,37 +290,36 @@ pub async fn trigger_webhook(
 pub async fn test_webhook(state: State<'_, AppState>, name: String) -> Result<String, String> {
     log::info!("Testing webhook: {}", name);
 
-    // Get webhook config
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = db.conn();
+    // Get webhook config (scoped to release lock)
+    let config = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let conn = db.conn();
 
-    let record = conn
-        .query_row(
-            "SELECT name, preset, url, method, headers, enabled, timeout, retries, created_at, last_used_at
-             FROM webhooks
-             WHERE name = ?1",
-            [&name],
-            |row| {
-                Ok(WebhookRecord {
-                    name: row.get(0)?,
-                    preset: row.get(1)?,
-                    url: row.get(2)?,
-                    method: row.get(3)?,
-                    headers: row.get(4)?,
-                    enabled: row.get(5)?,
-                    timeout: row.get(6)?,
-                    retries: row.get(7)?,
-                    created_at: row.get(8)?,
-                    last_used_at: row.get(9)?,
-                })
-            },
-        )
-        .map_err(|e| format!("Webhook not found: {}", e))?;
+        let record = conn
+            .query_row(
+                "SELECT name, preset, url, method, headers, enabled, timeout, retries, created_at, last_used_at
+                 FROM webhooks
+                 WHERE name = ?1",
+                [&name],
+                |row| {
+                    Ok(WebhookRecord {
+                        name: row.get(0)?,
+                        preset: row.get(1)?,
+                        url: row.get(2)?,
+                        method: row.get(3)?,
+                        headers: row.get(4)?,
+                        enabled: row.get(5)?,
+                        timeout: row.get(6)?,
+                        retries: row.get(7)?,
+                        created_at: row.get(8)?,
+                        last_used_at: row.get(9)?,
+                    })
+                },
+            )
+            .map_err(|e| format!("Webhook not found: {}", e))?;
 
-    drop(conn);
-    drop(db);
-
-    let config = record.to_config()?;
+        record.to_config()?
+    }; // db lock is released here
 
     // Test webhook
     let webhook_service = WebhookService::new();

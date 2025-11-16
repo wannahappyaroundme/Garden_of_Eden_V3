@@ -24,14 +24,14 @@ pub enum WebhookPreset {
     Custom,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookPayload {
     pub event: String,
     pub data: serde_json::Value,
     pub timestamp: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WebhookService {
     client: Client,
 }
