@@ -24,6 +24,7 @@ log = "0.4"
 env_logger = "0.11"
 chrono = "0.4"
 sys-info = "0.9"
+sysinfo = "0.33"
 dirs = "6.0"
 reqwest = { version = "0.12", features = ["json", "stream"] }
 futures-util = "0.3"

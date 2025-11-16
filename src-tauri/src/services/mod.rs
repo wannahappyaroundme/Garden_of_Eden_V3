@@ -3,3 +3,7 @@ pub mod screen;
 pub mod whisper;
 pub mod tts;
 pub mod llava;
+pub mod system_info;
+pub mod model_recommender;
+pub mod model_installer;
+pub mod prompt_customizer;

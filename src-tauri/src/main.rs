@@ -10,6 +10,7 @@ use services::screen::ScreenCaptureService;
 use services::whisper::WhisperService;
 use services::tts::TtsService;
 use services::llava::LlavaService;
+use services::model_installer::ModelInstallerService;
 use std::sync::{Arc, Mutex};
 
 /// Application state shared across Tauri commands
@@ -19,6 +20,7 @@ pub struct AppState {
     whisper_service: WhisperService,
     tts_service: TtsService,
     llava_service: Mutex<LlavaService>,
+    model_installer: Arc<ModelInstallerService>,
 }
 
 fn main() {
@@ -49,6 +51,9 @@ fn main() {
     let llava_service = LlavaService::new()
         .expect("Failed to initialize LLaVA service");
 
+    // Initialize Model Installer service
+    let model_installer = Arc::new(ModelInstallerService::new());
+
     let app_state = AppState {
         db: Mutex::new(
             Database::new().expect("Failed to initialize database for app state")
@@ -57,6 +62,7 @@ fn main() {
         whisper_service,
         tts_service,
         llava_service: Mutex::new(llava_service),
+        model_installer,
     };
 
     tauri::Builder::default()
@@ -85,6 +91,18 @@ fn main() {
             commands::conversation::update_conversation_title,
             commands::onboarding::check_onboarding_status,
             commands::onboarding::complete_onboarding,
+            commands::onboarding::detect_system_specs,
+            commands::onboarding::get_model_recommendation,
+            commands::onboarding::get_required_models,
+            commands::onboarding::check_ollama_installed,
+            commands::onboarding::check_model_exists,
+            commands::onboarding::start_model_download,
+            commands::onboarding::get_download_progress,
+            commands::onboarding::generate_custom_prompt,
+            commands::onboarding::generate_model_config,
+            commands::onboarding::save_onboarding_state,
+            commands::onboarding::save_survey_results,
+            commands::onboarding::mark_onboarding_completed,
             commands::screen::screen_start_tracking,
             commands::screen::screen_stop_tracking,
             commands::screen::screen_toggle_tracking,

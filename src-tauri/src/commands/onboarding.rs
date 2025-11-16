@@ -1,5 +1,9 @@
 use crate::AppState;
 use crate::database::models::UserProfile;
+use crate::services::system_info::{SystemInfoService, SystemSpecs};
+use crate::services::model_recommender::{ModelRecommenderService, ModelRecommendation, RequiredModels};
+use crate::services::model_installer::{ModelInstallerService, ModelDownloadState};
+use crate::services::prompt_customizer::{PromptCustomizerService, SurveyResults, ModelConfig};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -183,7 +187,7 @@ fn apply_persona_from_onboarding(
     // Base values (default persona settings)
     let mut formality: i32 = 50;
     let mut humor: i32 = 40;
-    let mut verbosity: i32 = 50;
+    let verbosity: i32 = 50;
     let mut emoji_usage: i32 = 30;
     let mut enthusiasm: i32 = 60;
     let mut empathy: i32 = 70;
@@ -296,5 +300,204 @@ fn apply_persona_from_onboarding(
     .map_err(|e| format!("Failed to update persona settings: {}", e))?;
 
     log::info!("Persona settings applied successfully");
+    Ok(())
+}
+
+// ==================== NEW ONBOARDING COMMANDS ====================
+
+/// Detect system specifications
+#[tauri::command]
+pub async fn detect_system_specs() -> Result<SystemSpecs, String> {
+    log::info!("Detecting system specifications...");
+
+    let mut service = SystemInfoService::new();
+    let specs = service.detect_specs().map_err(|e| e.to_string())?;
+
+    Ok(specs)
+}
+
+/// Get model recommendation based on system specs
+#[tauri::command]
+pub async fn get_model_recommendation(specs: SystemSpecs) -> Result<ModelRecommendation, String> {
+    log::info!("Getting model recommendation for system specs");
+
+    let recommendation = ModelRecommenderService::recommend(&specs)
+        .map_err(|e| e.to_string())?;
+
+    Ok(recommendation)
+}
+
+/// Get required models list
+#[tauri::command]
+pub async fn get_required_models(llm_model: String) -> Result<RequiredModels, String> {
+    log::info!("Getting required models for LLM: {}", llm_model);
+
+    let models = ModelRecommenderService::get_required_models(&llm_model)
+        .map_err(|e| e.to_string())?;
+
+    Ok(models)
+}
+
+/// Check if Ollama is installed
+#[tauri::command]
+pub async fn check_ollama_installed(state: State<'_, AppState>) -> Result<bool, String> {
+    log::info!("Checking Ollama installation...");
+
+    let is_installed = state.model_installer.check_ollama_installed().await
+        .map_err(|e| e.to_string())?;
+
+    Ok(is_installed)
+}
+
+/// Check if a specific model exists
+#[tauri::command]
+pub async fn check_model_exists(
+    state: State<'_, AppState>,
+    model_name: String,
+) -> Result<bool, String> {
+    log::info!("Checking if model exists: {}", model_name);
+
+    let exists = state.model_installer.check_model_exists(&model_name).await
+        .map_err(|e| e.to_string())?;
+
+    Ok(exists)
+}
+
+/// Start downloading a model
+#[tauri::command]
+pub async fn start_model_download(
+    state: State<'_, AppState>,
+    model_name: String,
+    model_type: String,
+) -> Result<(), String> {
+    log::info!("Starting model download: {} ({})", model_name, model_type);
+
+    let model_type_enum = match model_type.as_str() {
+        "llm" => crate::services::model_installer::ModelType::LLM,
+        "llava" => crate::services::model_installer::ModelType::LLaVA,
+        "whisper" => crate::services::model_installer::ModelType::Whisper,
+        _ => return Err(format!("Invalid model type: {}", model_type)),
+    };
+
+    state.model_installer.start_model_download(model_name, model_type_enum).await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Get download progress
+#[tauri::command]
+pub async fn get_download_progress(
+    state: State<'_, AppState>,
+) -> Result<ModelDownloadState, String> {
+    let download_state = state.model_installer.get_download_state();
+
+    Ok(download_state)
+}
+
+/// Generate custom prompt from survey results
+#[tauri::command]
+pub async fn generate_custom_prompt(survey: SurveyResults) -> Result<String, String> {
+    log::info!("Generating custom prompt from survey results");
+
+    let prompt = PromptCustomizerService::generate_custom_prompt(&survey)
+        .map_err(|e| e.to_string())?;
+
+    Ok(prompt)
+}
+
+/// Generate model config from survey results
+#[tauri::command]
+pub async fn generate_model_config(
+    survey: SurveyResults,
+    model_name: String,
+) -> Result<ModelConfig, String> {
+    log::info!("Generating model config for: {}", model_name);
+
+    let config = PromptCustomizerService::generate_model_config(&survey, &model_name)
+        .map_err(|e| e.to_string())?;
+
+    Ok(config)
+}
+
+/// Save onboarding state to database
+#[tauri::command]
+pub async fn save_onboarding_state(
+    state: State<'_, AppState>,
+    system_specs_json: String,
+    recommended_model: String,
+    selected_model: String,
+) -> Result<(), String> {
+    log::info!("Saving onboarding state to database");
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = db.conn();
+
+    let now = chrono::Utc::now().timestamp_millis();
+
+    conn.execute(
+        "INSERT OR REPLACE INTO onboarding_state (
+            id, completed, system_specs_json, recommended_model, selected_model, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![
+            1, // Only one onboarding state
+            false,
+            &system_specs_json,
+            &recommended_model,
+            &selected_model,
+            now,
+        ],
+    )
+    .map_err(|e| format!("Failed to save onboarding state: {}", e))?;
+
+    log::info!("Onboarding state saved successfully");
+    Ok(())
+}
+
+/// Save survey results and custom prompt
+#[tauri::command]
+pub async fn save_survey_results(
+    state: State<'_, AppState>,
+    survey_json: String,
+    custom_prompt: String,
+) -> Result<(), String> {
+    log::info!("Saving survey results and custom prompt");
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = db.conn();
+
+    conn.execute(
+        "UPDATE onboarding_state SET
+            survey_results_json = ?1,
+            custom_prompt = ?2
+         WHERE id = 1",
+        rusqlite::params![&survey_json, &custom_prompt],
+    )
+    .map_err(|e| format!("Failed to save survey results: {}", e))?;
+
+    log::info!("Survey results saved successfully");
+    Ok(())
+}
+
+/// Mark onboarding as completed
+#[tauri::command]
+pub async fn mark_onboarding_completed(state: State<'_, AppState>) -> Result<(), String> {
+    log::info!("Marking onboarding as completed");
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = db.conn();
+
+    let now = chrono::Utc::now().timestamp_millis();
+
+    conn.execute(
+        "UPDATE onboarding_state SET
+            completed = 1,
+            completed_at = ?1
+         WHERE id = 1",
+        rusqlite::params![now],
+    )
+    .map_err(|e| format!("Failed to mark onboarding as completed: {}", e))?;
+
+    log::info!("Onboarding marked as completed");
     Ok(())
 }

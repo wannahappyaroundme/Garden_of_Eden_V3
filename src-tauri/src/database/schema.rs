@@ -146,6 +146,48 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Onboarding state table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS onboarding_state (
+            id INTEGER PRIMARY KEY CHECK(id = 1),
+            completed BOOLEAN NOT NULL DEFAULT 0,
+            system_specs_json TEXT,
+            recommended_model TEXT,
+            selected_model TEXT,
+            survey_results_json TEXT,
+            custom_prompt TEXT,
+            created_at INTEGER NOT NULL,
+            completed_at INTEGER
+        )",
+        [],
+    )?;
+
+    // Model download state table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS model_download_state (
+            model_name TEXT PRIMARY KEY,
+            status TEXT NOT NULL CHECK(status IN ('not_started', 'downloading', 'completed', 'failed')),
+            progress REAL DEFAULT 0.0,
+            downloaded_bytes INTEGER DEFAULT 0,
+            total_bytes INTEGER,
+            error_message TEXT,
+            started_at INTEGER,
+            completed_at INTEGER,
+            updated_at INTEGER NOT NULL
+        )",
+        [],
+    )?;
+
+    // Personalization settings table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS personalization (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 
