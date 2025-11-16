@@ -40,3 +40,20 @@ src-tauri/target/
 # Temporary files
 tmp/
 temp/
+
+# Build artifacts
+*.d.ts.map
+*.js.map
+coverage/
+release/
+program/
+
+# Models (large files)
+resources/models/*.gguf
+
+# Wiki repo (separate repository)
+Garden_of_Eden_V3.wiki/
+
+# Generated files
+src/renderer/types/
+src-tauri/Cargo.lock

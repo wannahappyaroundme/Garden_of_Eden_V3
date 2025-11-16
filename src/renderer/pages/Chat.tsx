@@ -10,13 +10,20 @@ import { useTranslation } from 'react-i18next';
 import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
 import { ChatInput, ChatInputHandle } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
-import { ConversationHistory, ConversationHistoryHandle } from '../components/sidebar/ConversationHistory';
+import {
+  ConversationHistory,
+  ConversationHistoryHandle,
+} from '../components/sidebar/ConversationHistory';
 import { ErrorBubble } from '../components/chat/ErrorBubble';
 import { Button } from '../components/ui/button';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useSmoothScroll } from '../hooks/useSmoothScroll';
 import { DynamicIsland, useDynamicIsland } from '../components/DynamicIsland';
-import { ProactiveNotification, ProactiveSuggestion, useProactiveNotifications } from '../components/ProactiveNotification';
+import {
+  ProactiveNotification,
+  ProactiveSuggestion,
+  useProactiveNotifications,
+} from '../components/ProactiveNotification';
 import { Eye, EyeOff } from 'lucide-react';
 import SuggestedPromptCard from '../components/SuggestedPromptCard';
 import ModeIndicator from '../components/ModeIndicator';
@@ -63,11 +70,14 @@ export function Chat({ onOpenSettings }: ChatProps) {
   // Toggle screen tracking
   const handleToggleTracking = useCallback(async () => {
     try {
-      const result = await invoke<{ is_tracking: boolean; capture_interval: number }>('screen_toggle_tracking', {
-        interval: 10, // 10 seconds
-      });
+      const result = await invoke<{ is_tracking: boolean; capture_interval: number }>(
+        'screen_toggle_tracking',
+        {
+          interval: 30, // 30 seconds
+        }
+      );
 
-      setTrackingStatus(prev => ({
+      setTrackingStatus((prev) => ({
         ...prev,
         isTracking: result.is_tracking,
         captureInterval: result.capture_interval,
@@ -101,7 +111,10 @@ export function Chat({ onOpenSettings }: ChatProps) {
   useEffect(() => {
     const handleQuestionMark = (e: KeyboardEvent) => {
       // Only trigger if not typing in an input
-      if (e.key === '?' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+      if (
+        e.key === '?' &&
+        !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
+      ) {
         e.preventDefault();
         setShowShortcutHelp(true);
       }
@@ -151,8 +164,13 @@ export function Chat({ onOpenSettings }: ChatProps) {
   // Setup screen tracking status polling
   useEffect(() => {
     // Get initial status
-    invoke<{ is_tracking: boolean; last_capture_time: number; capture_count: number; capture_interval: number }>('screen_get_status')
-      .then(status => {
+    invoke<{
+      is_tracking: boolean;
+      last_capture_time: number;
+      capture_count: number;
+      capture_interval: number;
+    }>('screen_get_status')
+      .then((status) => {
         setTrackingStatus({
           isTracking: status.is_tracking,
           lastCaptureTime: status.last_capture_time,
@@ -164,8 +182,13 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
     // Poll status every 5 seconds to keep UI updated
     const intervalId = setInterval(() => {
-      invoke<{ is_tracking: boolean; last_capture_time: number; capture_count: number; capture_interval: number }>('screen_get_status')
-        .then(status => {
+      invoke<{
+        is_tracking: boolean;
+        last_capture_time: number;
+        capture_count: number;
+        capture_interval: number;
+      }>('screen_get_status')
+        .then((status) => {
           setTrackingStatus({
             isTracking: status.is_tracking,
             lastCaptureTime: status.last_capture_time,
@@ -231,24 +254,23 @@ export function Chat({ onOpenSettings }: ChatProps) {
         // Update AI message with streaming chunks
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === aiMessageId
-              ? { ...msg, content: msg.content + event.payload.chunk }
-              : msg
+            msg.id === aiMessageId ? { ...msg, content: msg.content + event.payload.chunk } : msg
           )
         );
       });
 
       // Call Tauri streaming API
-      const response = await invoke<{ conversation_id: string; message_id: string; response: string }>(
-        'chat_stream',
-        {
-          request: {
-            message: content,
-            conversation_id: conversationId,
-            context_level: 1,
-          }
-        }
-      );
+      const response = await invoke<{
+        conversation_id: string;
+        message_id: string;
+        response: string;
+      }>('chat_stream', {
+        request: {
+          message: content,
+          conversation_id: conversationId,
+          context_level: 1,
+        },
+      });
 
       // Cleanup listener
       unlisten();
@@ -263,11 +285,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
       // Update AI message with final response (in case streaming didn't complete)
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === aiMessageId
-            ? { ...msg, content: response.response }
-            : msg
-        )
+        prev.map((msg) => (msg.id === aiMessageId ? { ...msg, content: response.response } : msg))
       );
 
       // Refresh conversation list to show the new/updated conversation
@@ -280,13 +298,15 @@ export function Chat({ onOpenSettings }: ChatProps) {
 
       if (error instanceof Error) {
         if (error.message.includes('Ollama') || error.message.includes('connect')) {
-          errorContent = '🔌 AI 서비스에 연결할 수 없습니다.\n\nOllama가 실행 중인지 확인해주세요:\n1. 터미널에서 "ollama serve" 실행\n2. "ollama pull qwen2.5:14b" 로 모델 다운로드';
+          errorContent =
+            '🔌 AI 서비스에 연결할 수 없습니다.\n\nOllama가 실행 중인지 확인해주세요:\n1. 터미널에서 "ollama serve" 실행\n2. "ollama pull qwen2.5:14b" 로 모델 다운로드';
         } else if (error.message.includes('timeout')) {
           errorContent = '⏱️ AI 응답 시간이 초과되었습니다.\n다시 시도해주세요.';
         } else if (error.message.includes('database') || error.message.includes('SQL')) {
           errorContent = '💾 데이터베이스 오류가 발생했습니다.\n앱을 재시작해주세요.';
         } else if (error.message.includes('model')) {
-          errorContent = '🤖 AI 모델 오류입니다.\n\nqwen2.5:14b 모델이 설치되어 있는지 확인해주세요:\n"ollama list" 명령어로 확인';
+          errorContent =
+            '🤖 AI 모델 오류입니다.\n\nqwen2.5:14b 모델이 설치되어 있는지 확인해주세요:\n"ollama list" 명령어로 확인';
         } else {
           // Show the actual error for debugging in production
           errorContent = `❌ 오류 발생:\n\n${error.message}\n\n문제가 계속되면 개발자에게 문의하세요.`;
@@ -303,7 +323,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
                 ...msg,
                 role: 'error',
                 content: errorContent,
-                errorRetryContent: content // Store original message for retry
+                errorRetryContent: content, // Store original message for retry
               }
             : msg
         )
@@ -314,53 +334,59 @@ export function Chat({ onOpenSettings }: ChatProps) {
   };
 
   // Handle retry for failed messages
-  const handleRetry = useCallback((originalMessage: string) => {
-    handleSendMessage(originalMessage);
-  }, [handleSendMessage]);
+  const handleRetry = useCallback(
+    (originalMessage: string) => {
+      handleSendMessage(originalMessage);
+    },
+    [handleSendMessage]
+  );
 
   // Handle feedback (thumbs up/down) for learning system
-  const handleFeedback = useCallback(async (messageId: string, satisfaction: 'positive' | 'negative') => {
-    try {
-      // Convert positive/negative to 0.0-1.0 satisfaction score
-      const satisfactionScore = satisfaction === 'positive' ? 1.0 : 0.0;
+  const handleFeedback = useCallback(
+    async (messageId: string, satisfaction: 'positive' | 'negative') => {
+      try {
+        // Convert positive/negative to 0.0-1.0 satisfaction score
+        const satisfactionScore = satisfaction === 'positive' ? 1.0 : 0.0;
 
-      // Find the message to get its content
-      const message = messages.find(msg => msg.id === messageId);
-      if (!message || message.role !== 'assistant') {
-        console.warn('Invalid message for feedback:', messageId);
-        return;
-      }
-
-      // Record feedback with learning service
-      await invoke('learning_record_feedback', {
-        feedback: {
-          conversation_id: currentConversationId || 'unknown',
-          satisfaction: satisfactionScore,
-          timestamp: Date.now(),
-          // We'll send persona snapshot from settings or use defaults
-          persona_snapshot: {
-            formality: 0.3,
-            verbosity: 0.5,
-            humor: 0.2,
-            emoji_usage: 0.1,
-            proactiveness: 0.4,
-            technical_depth: 0.6,
-            empathy: 0.5,
-            code_examples: 0.7,
-            questioning: 0.5,
-            suggestions: 0.4,
-          }
+        // Find the message to get its content
+        const message = messages.find((msg) => msg.id === messageId);
+        if (!message || message.role !== 'assistant') {
+          console.warn('Invalid message for feedback:', messageId);
+          return;
         }
-      });
 
-      console.log(`Feedback recorded: ${satisfaction} for message ${messageId}`);
+        // Record feedback with learning service
+        await invoke('learning_record_feedback', {
+          feedback: {
+            conversation_id: currentConversationId || 'unknown',
+            satisfaction: satisfactionScore,
+            timestamp: Date.now(),
+            // We'll send persona snapshot from settings or use defaults
+            persona_snapshot: {
+              formality: 0.3,
+              verbosity: 0.5,
+              humor: 0.2,
+              emoji_usage: 0.1,
+              proactiveness: 0.4,
+              technical_depth: 0.6,
+              empathy: 0.5,
+              code_examples: 0.7,
+              questioning: 0.5,
+              suggestions: 0.4,
+            },
+          },
+        });
 
-      // Show brief notification
-      showNotification('feedback', { type: satisfaction });
-    } catch (error) {
-      console.error('Failed to record feedback:', error);
-    }
-  }, [messages, currentConversationId, showNotification]);
+        console.log(`Feedback recorded: ${satisfaction} for message ${messageId}`);
+
+        // Show brief notification
+        showNotification('feedback', { type: satisfaction });
+      } catch (error) {
+        console.error('Failed to record feedback:', error);
+      }
+    },
+    [messages, currentConversationId, showNotification]
+  );
 
   const handleVoiceStart = async () => {
     try {
@@ -370,12 +396,15 @@ export function Chat({ onOpenSettings }: ChatProps) {
     } catch (error) {
       console.error('Failed to start voice recording:', error);
       // Show error notification to user
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'system',
-        content: t('errors.voiceRecordingFailed'),
-        timestamp: new Date().toISOString()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'system',
+          content: t('errors.voiceRecordingFailed'),
+          timestamp: new Date().toISOString(),
+        },
+      ]);
     }
   };
 
@@ -390,7 +419,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
       // Transcribe the audio file
       const transcript = await invoke<string>('whisper_transcribe', {
         audioPath,
-        language: i18n.language === 'ko' ? 'ko' : 'en'
+        language: i18n.language === 'ko' ? 'ko' : 'en',
       });
 
       console.log('Transcription result:', transcript);
@@ -401,23 +430,29 @@ export function Chat({ onOpenSettings }: ChatProps) {
         chatInputRef.current?.setValue(transcript.trim());
       } else if (transcript.includes('not yet configured')) {
         // Show setup message to user
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'system',
-          content: t('errors.whisperNotConfigured'),
-          timestamp: new Date().toISOString()
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: 'system',
+            content: t('errors.whisperNotConfigured'),
+            timestamp: new Date().toISOString(),
+          },
+        ]);
       }
     } catch (error) {
       console.error('Failed to stop voice recording or transcribe:', error);
       setIsRecording(false);
       // Show error notification to user
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'system',
-        content: t('errors.voiceTranscriptionFailed'),
-        timestamp: new Date().toISOString()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'system',
+          content: t('errors.voiceTranscriptionFailed'),
+          timestamp: new Date().toISOString(),
+        },
+      ]);
     }
   };
 
@@ -502,8 +537,8 @@ export function Chat({ onOpenSettings }: ChatProps) {
               size="sm"
               onClick={() => setShowConversationHistory(!showConversationHistory)}
               className="h-8 w-8 p-0 titlebar-no-drag"
-              aria-label={showConversationHistory ? "대화 목록 숨기기" : "대화 목록 보기"}
-              title={showConversationHistory ? "대화 목록 숨기기" : "대화 목록 보기"}
+              aria-label={showConversationHistory ? '대화 목록 숨기기' : '대화 목록 보기'}
+              title={showConversationHistory ? '대화 목록 숨기기' : '대화 목록 보기'}
             >
               <svg
                 width="20"
@@ -524,15 +559,14 @@ export function Chat({ onOpenSettings }: ChatProps) {
             </Button>
             <div>
               <h1 className="text-lg font-semibold">Garden of Eden</h1>
-              <p className="text-xs text-muted-foreground" aria-label="애플리케이션 설명">AI Assistant</p>
+              <p className="text-xs text-muted-foreground" aria-label="애플리케이션 설명">
+                AI Assistant
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4 titlebar-no-drag">
             {/* Mode Indicator - Shows user-led vs AI-led mode */}
-            <ModeIndicator
-              isTracking={trackingStatus.isTracking}
-              onToggle={handleToggleTracking}
-            />
+            <ModeIndicator isTracking={trackingStatus.isTracking} onToggle={handleToggleTracking} />
 
             {/* Keyboard Shortcuts Help Button */}
             <Button
@@ -646,14 +680,17 @@ export function Chat({ onOpenSettings }: ChatProps) {
               {/* Context-aware suggestion */}
               {trackingStatus.isTracking && (
                 <div className="mt-6 text-sm text-muted-foreground max-w-md">
-                  💡 화면 추적이 켜져있어요. "현재 화면 설명해줘" 또는 "이 코드 리뷰해줘"를 시도해보세요!
+                  💡 화면 추적이 켜져있어요. "현재 화면 설명해줘" 또는 "이 코드 리뷰해줘"를
+                  시도해보세요!
                 </div>
               )}
 
               {/* Keyboard shortcuts hint */}
               <div className="mt-8 flex items-center justify-center gap-6 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <kbd className="px-2 py-1 bg-muted rounded border border-border font-mono">⌘K</kbd>
+                  <kbd className="px-2 py-1 bg-muted rounded border border-border font-mono">
+                    ⌘K
+                  </kbd>
                   <span>채팅 입력창 포커스</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -743,10 +780,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
       />
 
       {/* Keyboard Shortcuts Help */}
-      <ShortcutHelp
-        isOpen={showShortcutHelp}
-        onClose={() => setShowShortcutHelp(false)}
-      />
+      <ShortcutHelp isOpen={showShortcutHelp} onClose={() => setShowShortcutHelp(false)} />
     </div>
   );
 }
