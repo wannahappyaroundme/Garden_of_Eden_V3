@@ -170,6 +170,18 @@ fn main() {
             commands::calendar::calendar_search_events,
             commands::calendar::calendar_quick_add,
             commands::calendar::calendar_load_saved_token,
+            commands::file::file_read,
+            commands::file::file_write,
+            commands::file::file_delete,
+            commands::file::file_get_metadata,
+            commands::file::file_list_directory,
+            commands::file::file_create_directory,
+            commands::file::file_delete_directory,
+            commands::file::file_search,
+            commands::file::file_detect_workspace,
+            commands::file::file_exists,
+            commands::file::file_is_directory,
+            commands::file::file_is_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

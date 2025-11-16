@@ -25,3 +25,6 @@ pub mod learning;
 pub mod webhook;
 pub mod webhook_triggers;
 pub mod calendar;
+
+// Phase 7: File System & Git Integration
+pub mod file;
