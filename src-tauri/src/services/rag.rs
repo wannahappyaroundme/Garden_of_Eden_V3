@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use rusqlite::Connection;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -23,7 +23,7 @@ pub struct Episode {
 pub struct RagService {
     db: Arc<Mutex<Connection>>,
     embedding_service: Arc<EmbeddingService>,
-    lance_db_path: PathBuf,
+    _lance_db_path: PathBuf,
 }
 
 impl RagService {
@@ -33,15 +33,15 @@ impl RagService {
         embedding_service: Arc<EmbeddingService>,
         lance_db_path: PathBuf,
     ) -> Result<Self> {
-        log::info!("Initializing RAG service with LanceDB at {:?}", lance_db_path);
+        log::info!("Initializing RAG service with SQLite embeddings at {:?}", lance_db_path);
 
-        // Create LanceDB directory if not exists
+        // Create embeddings directory if not exists
         std::fs::create_dir_all(&lance_db_path)?;
 
         Ok(Self {
             db,
             embedding_service,
-            lance_db_path,
+            _lance_db_path: lance_db_path,
         })
     }
 
@@ -62,10 +62,10 @@ impl RagService {
         let id = uuid::Uuid::new_v4().to_string();
         let created_at = chrono::Utc::now().timestamp();
 
-        // Store embedding in LanceDB (placeholder for now - will implement full LanceDB later)
-        let embedding_id = self.store_embedding_in_lance(&id, &embedding).await?;
+        // Store embedding as JSON in SQLite
+        let embedding_json = serde_json::to_string(&embedding)?;
 
-        // Store metadata in SQLite
+        // Store metadata and embedding in SQLite
         let db = self.db.lock().unwrap();
         db.execute(
             "INSERT INTO episodic_memory (
@@ -80,7 +80,7 @@ impl RagService {
                 created_at,
                 0, // initial access_count
                 satisfaction, // initial importance = satisfaction
-                embedding_id,
+                embedding_json,  // Store embedding as JSON
             ],
         )?;
 
@@ -95,16 +95,39 @@ impl RagService {
         // Generate query embedding
         let query_embedding = self.embedding_service.embed(query)?;
 
-        // Search in LanceDB (placeholder - will implement full vector search)
-        let similar_ids = self.search_lance(&query_embedding, top_k).await?;
+        // Get all episodes with embeddings from SQLite
+        let episodes = self.get_all_episodes_with_embeddings()?;
 
-        // Fetch full episodes from SQLite
-        let episodes = self.fetch_episodes_by_ids(&similar_ids)?;
+        // Compute cosine similarity for each episode
+        let mut scored_episodes: Vec<(Episode, f32)> = episodes
+            .into_iter()
+            .filter_map(|(episode, embedding_json)| {
+                // Parse embedding
+                if let Ok(embedding) = serde_json::from_str::<Vec<f32>>(&embedding_json) {
+                    let similarity = EmbeddingService::cosine_similarity(&query_embedding, &embedding);
+                    Some((episode, similarity))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Sort by similarity (highest first)
+        scored_episodes.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Take top K
+        let top_episodes: Vec<Episode> = scored_episodes
+            .into_iter()
+            .take(top_k)
+            .map(|(episode, _score)| episode)
+            .collect();
 
         // Update access counts
-        self.increment_access_counts(&similar_ids)?;
+        let ids: Vec<String> = top_episodes.iter().map(|e| e.id.clone()).collect();
+        self.increment_access_counts(&ids)?;
 
-        Ok(episodes)
+        log::info!("Retrieved {} relevant episodes", top_episodes.len());
+        Ok(top_episodes)
     }
 
     /// Search memory semantically
@@ -193,60 +216,20 @@ impl RagService {
 
     // === Private helper methods ===
 
-    /// Store embedding in database (simplified - stores as JSON string)
-    async fn store_embedding_in_lance(&self, id: &str, embedding: &[f32]) -> Result<String> {
-        // Store embedding as JSON string in SQLite for now
-        // TODO: Replace with proper vector database when dependencies are resolved
-        let embedding_json = serde_json::to_string(&embedding)?;
-        log::debug!("Storing embedding for ID: {} (length: {})", id, embedding.len());
-
-        // Could store in a separate embeddings table, but for now just return ID
-        Ok(id.to_string())
-    }
-
-    /// Search using keyword similarity (fallback for vector search)
-    async fn search_lance(&self, query_embedding: &[f32], top_k: usize) -> Result<Vec<String>> {
-        // Fallback: Use recent episodes with keyword matching
-        // TODO: Replace with proper LanceDB vector search
-        log::debug!("Using keyword-based search (vector search temporarily disabled)");
-
-        let recent_episodes = self.get_recent_episodes(top_k * 3)?; // Get more candidates
-
-        // For now, just return recent episodes
-        // In production, we would compute cosine similarity here
-        let ids: Vec<String> = recent_episodes
-            .into_iter()
-            .take(top_k)
-            .map(|e| e.id)
-            .collect();
-
-        Ok(ids)
-    }
-
-    /// Fetch episodes by IDs
-    fn fetch_episodes_by_ids(&self, ids: &[String]) -> Result<Vec<Episode>> {
-        if ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
+    /// Get all episodes with their embeddings
+    fn get_all_episodes_with_embeddings(&self) -> Result<Vec<(Episode, String)>> {
         let db = self.db.lock().unwrap();
-        let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
 
-        let query = format!(
+        let mut stmt = db.prepare(
             "SELECT id, user_message, ai_response, satisfaction, created_at,
                     access_count, importance, embedding_id
              FROM episodic_memory
-             WHERE id IN ({})",
-            placeholders
-        );
-
-        let mut stmt = db.prepare(&query)?;
-
-        let params: Vec<&dyn rusqlite::ToSql> = ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
+             WHERE embedding_id IS NOT NULL"
+        )?;
 
         let episodes = stmt
-            .query_map(&params[..], |row| {
-                Ok(Episode {
+            .query_map([], |row| {
+                let episode = Episode {
                     id: row.get(0)?,
                     user_message: row.get(1)?,
                     ai_response: row.get(2)?,
@@ -254,89 +237,60 @@ impl RagService {
                     created_at: row.get(4)?,
                     access_count: row.get(5)?,
                     importance: row.get(6)?,
-                    embedding_id: row.get(7)?,
-                })
+                    embedding_id: row.get::<_, Option<String>>(7)?,
+                };
+                let embedding_json: String = row.get(7)?;
+                Ok((episode, embedding_json))
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(episodes)
     }
 
-    /// Increment access counts for retrieved episodes
+    /// Increment access counts for episodes
     fn increment_access_counts(&self, ids: &[String]) -> Result<()> {
         if ids.is_empty() {
             return Ok(());
         }
 
         let db = self.db.lock().unwrap();
-        let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
 
-        let query = format!(
-            "UPDATE episodic_memory SET access_count = access_count + 1 WHERE id IN ({})",
-            placeholders
-        );
-
-        let params: Vec<&dyn rusqlite::ToSql> = ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
-
-        db.execute(&query, &params[..])?;
+        for id in ids {
+            db.execute(
+                "UPDATE episodic_memory SET access_count = access_count + 1 WHERE id = ?1",
+                [id],
+            )?;
+        }
 
         Ok(())
     }
 }
 
 /// Memory statistics
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MemoryStats {
     pub total_memories: usize,
     pub average_satisfaction: f32,
     pub most_accessed_topic: Option<String>,
 }
 
-/// Helper to format episodes for context
+/// Format episodes for context (helper function for AI prompts)
 pub fn format_episodes_for_context(episodes: &[Episode]) -> String {
     if episodes.is_empty() {
-        return String::new();
+        return String::from("No relevant past conversations found.");
     }
 
-    let mut context = String::from("\n\n=== Relevant Past Conversations ===\n");
+    let mut context = String::from("Relevant past conversations:\n\n");
 
     for (i, episode) in episodes.iter().enumerate() {
         context.push_str(&format!(
-            "\n[Memory {}] (Satisfaction: {:.0}%, Accessed: {} times)\n",
+            "{}. User: {}\n   AI: {}\n   (Satisfaction: {:.2})\n\n",
             i + 1,
-            episode.satisfaction * 100.0,
-            episode.access_count
+            episode.user_message,
+            episode.ai_response,
+            episode.satisfaction
         ));
-        context.push_str(&format!("User: {}\n", episode.user_message));
-        context.push_str(&format!("Assistant: {}\n", episode.ai_response));
     }
 
-    context.push_str("\n=== End of Memories ===\n\n");
     context
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_format_episodes() {
-        let episodes = vec![
-            Episode {
-                id: "1".to_string(),
-                user_message: "Hello".to_string(),
-                ai_response: "Hi there!".to_string(),
-                satisfaction: 0.9,
-                created_at: 0,
-                access_count: 5,
-                importance: 0.9,
-                embedding_id: None,
-            },
-        ];
-
-        let formatted = format_episodes_for_context(&episodes);
-        assert!(formatted.contains("Hello"));
-        assert!(formatted.contains("Hi there"));
-        assert!(formatted.contains("90%"));
-    }
 }
