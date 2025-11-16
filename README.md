@@ -16,7 +16,7 @@
 
 **100% Local • 100% Private • 0% Cloud • 0% Subscriptions**
 
-[🚀 Quick Start](docs/QUICKSTART.md) • [✨ Features](#-current-features) • [📖 Documentation](#-documentation) • [🛣️ Roadmap](#-roadmap)
+[🚀 Quick Start](docs/QUICKSTART.md) • [✨ Features](#-current-features) • [📖 Documentation](#-documentation) • [📚 Wiki](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/wiki) • [🛣️ Roadmap](#-roadmap)
 
 </div>
 
@@ -256,12 +256,20 @@ The onboarding wizard will guide you through:
 
 ## 📖 Documentation
 
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Get up and running in 5 minutes
+### Quick Links
+- **[📚 GitHub Wiki](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/wiki)** - Complete user and developer documentation
+- **[🚀 Quick Start](docs/QUICKSTART.md)** - Get up and running in 5 minutes
+- **[📘 User Guide](docs/USER_GUIDE.md)** - Complete feature guide
+- **[🔧 Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+
+### Developer Documentation
 - **[Building & Deployment](docs/BUILDING.md)** - Build from source, create releases
 - **[API Reference](docs/API.md)** - Tauri IPC commands documentation
 - **[Testing Guide](docs/TESTING.md)** - Running tests, adding new tests
 - **[Claude Development](docs/CLAUDE.md)** - Using Claude Code for development
 - **[Contributing](CONTRIBUTING.md)** - How to contribute
+
+### Additional Resources
 - **[Changelog](CHANGELOG.md)** - Version history
 - **[Master Specification](docs/archive/MASTER_SPEC.md)** - Complete original design (12,000 lines)
 
