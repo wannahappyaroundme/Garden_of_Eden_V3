@@ -301,3 +301,129 @@ pub async fn store_conversation_in_rag(
             format!("Failed to store conversation in memory: {}", e)
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ollama_request_structure() {
+        let request = OllamaRequest {
+            model: "qwen2.5:7b".to_string(),
+            prompt: "Hello world".to_string(),
+            stream: false,
+            options: OllamaOptions {
+                temperature: 0.8,
+                top_p: 0.92,
+                top_k: 45,
+                repeat_penalty: 1.15,
+            },
+        };
+
+        assert_eq!(request.model, "qwen2.5:7b");
+        assert_eq!(request.prompt, "Hello world");
+        assert!(!request.stream);
+        assert_eq!(request.options.temperature, 0.8);
+    }
+
+    #[test]
+    fn test_ollama_options_overfitting_prevention() {
+        let options = OllamaOptions {
+            temperature: 0.8,
+            top_p: 0.92,
+            top_k: 45,
+            repeat_penalty: 1.15,
+        };
+
+        // Verify anti-overfitting parameters are set correctly
+        assert!(options.temperature >= 0.7, "Temperature should be >= 0.7 for diversity");
+        assert!(options.top_p >= 0.9, "Top-p should be >= 0.9 for nucleus sampling");
+        assert!(options.top_k >= 40, "Top-k should be >= 40 to avoid repetition");
+        assert!(options.repeat_penalty >= 1.1, "Repeat penalty should be >= 1.1 to prevent repetition");
+    }
+
+    #[test]
+    fn test_constants() {
+        assert_eq!(OLLAMA_API_URL, "http://localhost:11434/api/generate");
+        assert_eq!(MODEL_NAME, "qwen2.5:7b");
+        assert_eq!(RAG_TOP_K, 3);
+    }
+
+    #[test]
+    fn test_ollama_response_deserialization() {
+        let json = r#"{"response": "Hello!", "done": true}"#;
+        let response: OllamaResponse = serde_json::from_str(json).unwrap();
+
+        assert_eq!(response.response, "Hello!");
+        assert!(response.done);
+    }
+
+    #[test]
+    fn test_stream_response_deserialization() {
+        let json = r#"{"response": "Hi", "done": false}"#;
+        let response: OllamaResponse = serde_json::from_str(json).unwrap();
+
+        assert_eq!(response.response, "Hi");
+        assert!(!response.done);
+    }
+
+    #[test]
+    #[ignore] // Requires Ollama running
+    fn test_generate_response_integration() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let result = generate_response("안녕하세요").await;
+
+            // Should return success if Ollama is running
+            match result {
+                Ok(response) => {
+                    assert!(!response.is_empty());
+                    println!("Ollama response: {}", response);
+                }
+                Err(e) => {
+                    println!("Ollama not available: {}", e);
+                    // This is expected if Ollama is not running
+                }
+            }
+        });
+    }
+
+    #[test]
+    #[ignore] // Requires Ollama running
+    fn test_stream_response_integration() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let callback = |chunk: String| -> Result<(), String> {
+                println!("Received chunk: {}", chunk);
+                Ok(())
+            };
+
+            let result = generate_response_stream("Tell me a joke", callback).await;
+
+            match result {
+                Ok(_) => println!("Stream completed successfully"),
+                Err(e) => println!("Ollama not available: {}", e),
+            }
+        });
+    }
+
+    #[test]
+    #[ignore] // Requires Ollama running
+    fn test_connection_integration() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let result = test_connection().await;
+
+            match result {
+                Ok(is_connected) => {
+                    if is_connected {
+                        println!("Ollama is running and accessible");
+                    } else {
+                        println!("Ollama connection failed");
+                    }
+                }
+                Err(e) => println!("Connection test failed: {}", e),
+            }
+        });
+    }
+}

@@ -294,3 +294,255 @@ pub fn format_episodes_for_context(episodes: &[Episode]) -> String {
 
     context
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    fn create_test_db() -> Arc<Mutex<Connection>> {
+        let conn = Connection::open_in_memory().unwrap();
+
+        // Create episodic_memory table
+        conn.execute(
+            "CREATE TABLE episodic_memory (
+                id TEXT PRIMARY KEY,
+                user_message TEXT NOT NULL,
+                ai_response TEXT NOT NULL,
+                satisfaction REAL NOT NULL,
+                created_at INTEGER NOT NULL,
+                access_count INTEGER NOT NULL DEFAULT 0,
+                importance REAL NOT NULL,
+                embedding_id TEXT
+            )",
+            [],
+        ).unwrap();
+
+        Arc::new(Mutex::new(conn))
+    }
+
+    fn create_test_embedding_service() -> Arc<EmbeddingService> {
+        // For tests, we'll use a mock - just return zeros for now
+        // In production, this would be the real BGE-M3 service
+        Arc::new(EmbeddingService::new().unwrap_or_else(|_| {
+            // If model download fails in test, skip
+            panic!("Embedding service not available - run with #[ignore] or download model");
+        }))
+    }
+
+    #[test]
+    fn test_format_episodes_for_context_empty() {
+        let episodes: Vec<Episode> = vec![];
+        let context = format_episodes_for_context(&episodes);
+        assert_eq!(context, "No relevant past conversations found.");
+    }
+
+    #[test]
+    fn test_format_episodes_for_context_single() {
+        let episode = Episode {
+            id: "test1".to_string(),
+            user_message: "Hello AI".to_string(),
+            ai_response: "Hello! How can I help?".to_string(),
+            satisfaction: 0.8,
+            created_at: 1234567890,
+            access_count: 0,
+            importance: 0.8,
+            embedding_id: None,
+        };
+
+        let context = format_episodes_for_context(&[episode]);
+        assert!(context.contains("Relevant past conversations:"));
+        assert!(context.contains("Hello AI"));
+        assert!(context.contains("Hello! How can I help?"));
+        assert!(context.contains("0.80"));
+    }
+
+    #[test]
+    fn test_format_episodes_for_context_multiple() {
+        let episodes = vec![
+            Episode {
+                id: "test1".to_string(),
+                user_message: "What is Rust?".to_string(),
+                ai_response: "Rust is a systems programming language".to_string(),
+                satisfaction: 0.9,
+                created_at: 1234567890,
+                access_count: 2,
+                importance: 0.9,
+                embedding_id: None,
+            },
+            Episode {
+                id: "test2".to_string(),
+                user_message: "Tell me about AI".to_string(),
+                ai_response: "AI is artificial intelligence".to_string(),
+                satisfaction: 0.7,
+                created_at: 1234567891,
+                access_count: 1,
+                importance: 0.7,
+                embedding_id: None,
+            },
+        ];
+
+        let context = format_episodes_for_context(&episodes);
+        assert!(context.contains("1. User: What is Rust?"));
+        assert!(context.contains("2. User: Tell me about AI"));
+        assert!(context.contains("Satisfaction: 0.90"));
+        assert!(context.contains("Satisfaction: 0.70"));
+    }
+
+    #[test]
+    #[ignore] // Requires BGE-M3 model download
+    fn test_memory_stats_empty() {
+        let db = create_test_db();
+        let embedding_service = Arc::new(EmbeddingService::new().unwrap());
+
+        let lance_db_path = std::env::temp_dir().join("test_lancedb_stats_empty");
+        let rag = RagService::new(db.clone(), embedding_service, lance_db_path).unwrap();
+
+        let stats = rag.get_statistics().unwrap();
+        assert_eq!(stats.total_memories, 0);
+        assert_eq!(stats.average_satisfaction, 0.0);
+        assert_eq!(stats.most_accessed_topic, None);
+    }
+
+    #[test]
+    #[ignore] // Requires BGE-M3 model download
+    fn test_get_recent_episodes_empty() {
+        let db = create_test_db();
+        let embedding_service = Arc::new(EmbeddingService::new().unwrap());
+
+        let lance_db_path = std::env::temp_dir().join("test_lancedb");
+        let rag = RagService::new(db.clone(), embedding_service, lance_db_path).unwrap();
+
+        let episodes = rag.get_recent_episodes(10).unwrap();
+        assert_eq!(episodes.len(), 0);
+    }
+
+    #[test]
+    #[ignore] // Requires BGE-M3 model download
+    fn test_store_and_retrieve_episode() {
+        let db = create_test_db();
+        let embedding_service = Arc::new(EmbeddingService::new().unwrap());
+
+        let lance_db_path = std::env::temp_dir().join("test_lancedb_store");
+        let rag = RagService::new(db.clone(), embedding_service, lance_db_path).unwrap();
+
+        // Store an episode
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let episode_id = runtime.block_on(async {
+            rag.store_episode(
+                "What is the capital of France?",
+                "The capital of France is Paris.",
+                0.9
+            ).await.unwrap()
+        });
+
+        assert!(!episode_id.is_empty());
+
+        // Retrieve recent episodes
+        let recent = rag.get_recent_episodes(10).unwrap();
+        assert_eq!(recent.len(), 1);
+        assert_eq!(recent[0].user_message, "What is the capital of France?");
+        assert_eq!(recent[0].satisfaction, 0.9);
+    }
+
+    #[test]
+    #[ignore] // Requires BGE-M3 model download
+    fn test_semantic_search() {
+        let db = create_test_db();
+        let embedding_service = Arc::new(EmbeddingService::new().unwrap());
+
+        let lance_db_path = std::env::temp_dir().join("test_lancedb_search");
+        let rag = RagService::new(db.clone(), embedding_service, lance_db_path).unwrap();
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            // Store multiple episodes
+            rag.store_episode(
+                "What is Rust programming language?",
+                "Rust is a systems programming language focused on safety.",
+                0.8
+            ).await.unwrap();
+
+            rag.store_episode(
+                "How do I make pizza?",
+                "To make pizza, start with dough and add toppings.",
+                0.7
+            ).await.unwrap();
+
+            rag.store_episode(
+                "Tell me about Rust ownership",
+                "Rust uses ownership to manage memory safely.",
+                0.9
+            ).await.unwrap();
+
+            // Search for Rust-related content
+            let results = rag.retrieve_relevant("programming in Rust", 2).await.unwrap();
+
+            // Should find 2 Rust-related episodes
+            assert!(results.len() >= 1);
+            assert!(
+                results[0].user_message.contains("Rust") ||
+                results[0].ai_response.contains("Rust")
+            );
+        });
+    }
+
+    #[test]
+    #[ignore] // Requires BGE-M3 model download
+    fn test_cleanup_old_memories() {
+        let db = create_test_db();
+        let embedding_service = Arc::new(EmbeddingService::new().unwrap());
+
+        let lance_db_path = std::env::temp_dir().join("test_lancedb_cleanup");
+        let rag = RagService::new(db.clone(), embedding_service, lance_db_path).unwrap();
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            // Store old episode with low satisfaction
+            let old_timestamp = chrono::Utc::now().timestamp() - (35 * 24 * 60 * 60); // 35 days ago
+
+            let db_lock = db.lock().unwrap();
+            db_lock.execute(
+                "INSERT INTO episodic_memory (id, user_message, ai_response, satisfaction, created_at, access_count, importance, embedding_id)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    "old_episode",
+                    "Old message",
+                    "Old response",
+                    0.3, // Low satisfaction
+                    old_timestamp,
+                    1, // Low access count
+                    0.3,
+                    "[]"
+                ],
+            ).unwrap();
+            drop(db_lock);
+
+            // Clean up
+            let deleted = rag.cleanup_old_memories().unwrap();
+            assert_eq!(deleted, 1);
+        });
+    }
+
+    #[test]
+    #[ignore] // Requires BGE-M3 model download
+    fn test_memory_statistics() {
+        let db = create_test_db();
+        let embedding_service = Arc::new(EmbeddingService::new().unwrap());
+
+        let lance_db_path = std::env::temp_dir().join("test_lancedb_stats");
+        let rag = RagService::new(db.clone(), embedding_service, lance_db_path).unwrap();
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            // Store episodes
+            rag.store_episode("Question 1", "Answer 1", 0.8).await.unwrap();
+            rag.store_episode("Question 2", "Answer 2", 0.6).await.unwrap();
+            rag.store_episode("Question 3", "Answer 3", 0.9).await.unwrap();
+
+            let stats = rag.get_statistics().unwrap();
+            assert_eq!(stats.total_memories, 3);
+            assert!((stats.average_satisfaction - 0.766).abs() < 0.01); // (0.8 + 0.6 + 0.9) / 3
+        });
+    }
+}

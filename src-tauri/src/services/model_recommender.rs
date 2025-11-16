@@ -655,19 +655,21 @@ mod tests {
 
     #[test]
     fn test_get_required_models() {
-        let models = ModelRecommenderService::get_required_models("qwen2.5:14b").unwrap();
+        let models = ModelRecommenderService::get_required_models("qwen2.5:14b", true).unwrap();
 
         assert_eq!(models.llm, "qwen2.5:14b");
         assert_eq!(models.llava, "llava:7b");
-        assert_eq!(models.whisper, "whisper:large-v3");
+        assert_eq!(models.whisper, Some("whisper:large-v3".to_string()));
         assert!(models.total_size_gb > 15.0); // 9 + 4.4 + 3.1 = 16.5GB
     }
 
     #[test]
     fn test_is_valid_model() {
-        assert!(ModelRecommenderService::is_valid_model("qwen2.5:1.5b"));
+        assert!(ModelRecommenderService::is_valid_model("qwen2.5:3b"));
         assert!(ModelRecommenderService::is_valid_model("qwen2.5:7b"));
         assert!(ModelRecommenderService::is_valid_model("qwen2.5:14b"));
+        assert!(ModelRecommenderService::is_valid_model("qwen2.5:32b"));
         assert!(!ModelRecommenderService::is_valid_model("invalid:model"));
+        assert!(!ModelRecommenderService::is_valid_model("qwen2.5:1.5b")); // Not in supported list
     }
 }
