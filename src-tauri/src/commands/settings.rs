@@ -1,5 +1,7 @@
 use crate::AppState;
 use crate::database::models::PersonaSettings;
+use crate::services::model_recommender::{ModelOption, ModelInfo, ModelRecommenderService};
+use crate::services::system_info::SystemInfoService;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -147,4 +149,114 @@ pub async fn update_settings(
     .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+// ============================================================================
+// Model Management Commands
+// ============================================================================
+
+/// Get available models for user's system specs and language preference
+#[tauri::command]
+pub async fn get_available_models_for_system(
+    language_preference: String,
+) -> Result<Vec<ModelOption>, String> {
+    log::info!("Getting available models for language: {}", language_preference);
+
+    // Detect system specs
+    let specs = SystemInfoService::detect()
+        .await
+        .map_err(|e| format!("Failed to detect system specs: {}", e))?;
+
+    // Get available models
+    let models = ModelRecommenderService::get_available_models(&specs, &language_preference)
+        .map_err(|e| format!("Failed to get available models: {}", e))?;
+
+    Ok(models)
+}
+
+/// Get currently active LLM model from Ollama
+#[tauri::command]
+pub async fn get_current_llm_model() -> Result<String, String> {
+    log::info!("Getting current LLM model");
+
+    let model = ModelRecommenderService::get_current_model()
+        .await
+        .map_err(|e| format!("Failed to get current model: {}", e))?;
+
+    Ok(model)
+}
+
+/// Switch to a different LLM model (download if not present)
+#[tauri::command]
+pub async fn switch_llm_model(
+    state: State<'_, AppState>,
+    model_name: String,
+) -> Result<(), String> {
+    log::info!("Switching to model: {}", model_name);
+
+    // Validate model name
+    if !ModelRecommenderService::is_valid_model(&model_name) {
+        return Err(format!("Invalid model name: {}", model_name));
+    }
+
+    // Save selected model to database
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = db.conn();
+    let now = chrono::Utc::now().timestamp_millis();
+
+    conn.execute(
+        "INSERT OR REPLACE INTO user_preferences (key, value, updated_at)
+         VALUES ('active_llm_model', ?1, ?2)",
+        rusqlite::params![model_name, now],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// List all downloaded Ollama models with sizes
+#[tauri::command]
+pub async fn list_ollama_models() -> Result<Vec<ModelInfo>, String> {
+    log::info!("Listing all downloaded Ollama models");
+
+    let models = ModelRecommenderService::list_downloaded_models()
+        .await
+        .map_err(|e| format!("Failed to list models: {}", e))?;
+
+    Ok(models)
+}
+
+/// Delete an Ollama model
+#[tauri::command]
+pub async fn delete_ollama_model(model_name: String) -> Result<(), String> {
+    log::info!("Deleting model: {}", model_name);
+
+    ModelRecommenderService::delete_model(&model_name)
+        .await
+        .map_err(|e| format!("Failed to delete model: {}", e))?;
+
+    Ok(())
+}
+
+/// Get size of a specific Ollama model
+#[tauri::command]
+pub async fn get_ollama_model_size(model_name: String) -> Result<f32, String> {
+    log::info!("Getting size of model: {}", model_name);
+
+    let models = ModelRecommenderService::list_downloaded_models()
+        .await
+        .map_err(|e| format!("Failed to list models: {}", e))?;
+
+    let model = models
+        .iter()
+        .find(|m| m.name == model_name)
+        .ok_or_else(|| format!("Model not found: {}", model_name))?;
+
+    Ok(model.size_gb)
+}
+
+/// Get user-friendly description of a model
+#[tauri::command]
+pub fn get_model_description(model_name: String) -> String {
+    ModelRecommenderService::get_model_description(&model_name)
 }

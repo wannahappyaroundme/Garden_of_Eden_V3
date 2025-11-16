@@ -21,6 +21,19 @@ interface Question {
 }
 
 const QUESTIONS: Question[] = [
+  // Question 1: Language (MOVED TO FIRST - Critical for model selection)
+  {
+    id: 'primary_language',
+    type: 'choice',
+    question: '주로 어떤 언어로 대화하실 건가요?',
+    description: '모델 추천에 영향을 줍니다',
+    choices: [
+      { value: '한국어', label: '한국어', emoji: '🇰🇷' },
+      { value: '영어', label: 'English', emoji: '🇺🇸' },
+      { value: '한영 혼용', label: '한국어 + English', emoji: '🌐' },
+    ],
+  },
+  // Question 2: Primary Use
   {
     id: 'primary_use',
     type: 'choice',
@@ -33,6 +46,7 @@ const QUESTIONS: Question[] = [
       { value: '창작 활동 (글쓰기, 아이디어 발상 등)', label: '창작 활동 (글쓰기, 아이디어 발상 등)', emoji: '🎨' },
     ],
   },
+  // Question 3: AI Experience
   {
     id: 'ai_experience',
     type: 'choice',
@@ -44,16 +58,7 @@ const QUESTIONS: Question[] = [
       { value: '거의 매일 사용합니다', label: '거의 매일 사용합니다', emoji: '🌲' },
     ],
   },
-  {
-    id: 'primary_language',
-    type: 'choice',
-    question: '주로 어떤 언어로 대화하실 건가요?',
-    choices: [
-      { value: '한국어', label: '한국어', emoji: '🇰🇷' },
-      { value: '영어', label: 'English', emoji: '🇺🇸' },
-      { value: '한영 혼용', label: '한국어 + English', emoji: '🌐' },
-    ],
-  },
+  // Question 4: Speech Style
   {
     id: 'speech_style',
     type: 'choice',
@@ -64,6 +69,7 @@ const QUESTIONS: Question[] = [
       { value: '전문적이고 격식있는 말투', label: '전문적이고 격식있는 말투', emoji: '👔' },
     ],
   },
+  // Question 5: Ideal AI Personality (Text)
   {
     id: 'ideal_ai_personality',
     type: 'text',
@@ -71,6 +77,7 @@ const QUESTIONS: Question[] = [
     description: '예: 유머러스하고 낙천적이며, 실수해도 격려해주는 친구 같은 AI',
     placeholder: '자유롭게 작성해주세요...',
   },
+  // Question 6: Previous AI Lacking (Text)
   {
     id: 'previous_ai_lacking',
     type: 'text',
@@ -78,6 +85,7 @@ const QUESTIONS: Question[] = [
     description: '없다면 "없음" 또는 "처음 사용"이라고 작성해주세요',
     placeholder: '예: 대화가 너무 딱딱했다, 맥락을 잘 이해하지 못했다 등...',
   },
+  // Question 7: Desired Features (Text)
   {
     id: 'desired_features',
     type: 'text',

@@ -111,6 +111,13 @@ fn main() {
             commands::screen::screen_clear_all,
             commands::settings::get_settings,
             commands::settings::update_settings,
+            commands::settings::get_available_models_for_system,
+            commands::settings::get_current_llm_model,
+            commands::settings::switch_llm_model,
+            commands::settings::list_ollama_models,
+            commands::settings::delete_ollama_model,
+            commands::settings::get_ollama_model_size,
+            commands::settings::get_model_description,
             commands::system::get_system_info,
         ])
         .run(tauri::generate_context!())

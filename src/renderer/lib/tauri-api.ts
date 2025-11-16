@@ -108,6 +108,26 @@ export interface RequiredModels {
   total_ram_usage_gb: number;
 }
 
+export interface ModelOption {
+  model: string;
+  display_name: string;
+  size_gb: number;
+  quantization: string;
+  expected_speed_ts: number;
+  quality_tier: string;
+  korean_support: string;
+  pros: string[];
+  cons: string[];
+  is_recommended: boolean;
+}
+
+export interface ModelInfo {
+  name: string;
+  size_bytes: number;
+  size_gb: number;
+  modified_at: number;
+}
+
 export interface DownloadProgress {
   model_name: string;
   status: 'not_started' | 'downloading' | 'completed' | 'failed';
@@ -335,6 +355,63 @@ export const api = {
    */
   markOnboardingCompleted: async (): Promise<void> => {
     return await invoke<void>('mark_onboarding_completed');
+  },
+
+  // ============================================================================
+  // Model Management
+  // ============================================================================
+
+  /**
+   * Get available models for system specs and language preference
+   */
+  getAvailableModelsForSystem: async (
+    languagePreference: string
+  ): Promise<ModelOption[]> => {
+    return await invoke<ModelOption[]>('get_available_models_for_system', {
+      languagePreference,
+    });
+  },
+
+  /**
+   * Get currently active LLM model
+   */
+  getCurrentLlmModel: async (): Promise<string> => {
+    return await invoke<string>('get_current_llm_model');
+  },
+
+  /**
+   * Switch to a different LLM model
+   */
+  switchLlmModel: async (modelName: string): Promise<void> => {
+    return await invoke<void>('switch_llm_model', { modelName });
+  },
+
+  /**
+   * List all downloaded Ollama models
+   */
+  listOllamaModels: async (): Promise<ModelInfo[]> => {
+    return await invoke<ModelInfo[]>('list_ollama_models');
+  },
+
+  /**
+   * Delete an Ollama model
+   */
+  deleteOllamaModel: async (modelName: string): Promise<void> => {
+    return await invoke<void>('delete_ollama_model', { modelName });
+  },
+
+  /**
+   * Get size of a specific Ollama model
+   */
+  getOllamaModelSize: async (modelName: string): Promise<number> => {
+    return await invoke<number>('get_ollama_model_size', { modelName });
+  },
+
+  /**
+   * Get user-friendly description of a model
+   */
+  getModelDescription: (modelName: string): string => {
+    return invoke<string>('get_model_description', { modelName }) as unknown as string;
   },
 
   // Platform info (from Tauri)

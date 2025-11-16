@@ -37,10 +37,25 @@ export default function SmartOnboarding({ onComplete }: SmartOnboardingProps) {
   // Step 1: System Check Complete
   const handleSystemCheckComplete = (specs: SystemSpecs) => {
     setSystemSpecs(specs);
-    setCurrentStep('recommendation');
+    setCurrentStep('survey'); // Go to survey first to get language preference
   };
 
-  // Step 2: Model Recommendation Accepted
+  // Step 2: Survey Complete (includes language preference)
+  const handleSurveyComplete = async (results: SurveyResults, prompt: string) => {
+    setSurveyResults(results);
+    setCustomPrompt(prompt);
+
+    // Save survey results to database
+    try {
+      await window.api.saveSurveyResults(JSON.stringify(results), prompt);
+    } catch (error) {
+      console.error('Failed to save survey results:', error);
+    }
+
+    setCurrentStep('recommendation'); // Now show model recommendation with language context
+  };
+
+  // Step 3: Model Recommendation Accepted
   const handleModelAccept = async (model: string, models: RequiredModels) => {
     setSelectedModel(model);
     setRequiredModels(models);
@@ -56,21 +71,6 @@ export default function SmartOnboarding({ onComplete }: SmartOnboardingProps) {
       } catch (error) {
         console.error('Failed to save onboarding state:', error);
       }
-    }
-
-    setCurrentStep('survey');
-  };
-
-  // Step 3: Survey Complete
-  const handleSurveyComplete = async (results: SurveyResults, prompt: string) => {
-    setSurveyResults(results);
-    setCustomPrompt(prompt);
-
-    // Save survey results to database
-    try {
-      await window.api.saveSurveyResults(JSON.stringify(results), prompt);
-    } catch (error) {
-      console.error('Failed to save survey results:', error);
     }
 
     setCurrentStep('download');
@@ -96,14 +96,14 @@ export default function SmartOnboarding({ onComplete }: SmartOnboardingProps) {
   // Navigation: Go Back
   const handleBack = () => {
     switch (currentStep) {
-      case 'recommendation':
+      case 'survey':
         setCurrentStep('system');
         break;
-      case 'survey':
-        setCurrentStep('recommendation');
+      case 'recommendation':
+        setCurrentStep('survey');
         break;
       case 'download':
-        setCurrentStep('survey');
+        setCurrentStep('recommendation');
         break;
       default:
         break;
@@ -117,18 +117,19 @@ export default function SmartOnboarding({ onComplete }: SmartOnboardingProps) {
         <SystemCheck onComplete={handleSystemCheckComplete} />
       )}
 
-      {/* Step 2: Model Recommendation */}
-      {currentStep === 'recommendation' && systemSpecs && (
+      {/* Step 2: Survey Flow (NOW BEFORE MODEL RECOMMENDATION) */}
+      {currentStep === 'survey' && (
+        <SurveyFlow onComplete={handleSurveyComplete} onBack={handleBack} />
+      )}
+
+      {/* Step 3: Model Recommendation (WITH LANGUAGE CONTEXT) */}
+      {currentStep === 'recommendation' && systemSpecs && surveyResults && (
         <ModelRecommendation
           specs={systemSpecs}
+          languagePreference={surveyResults.primary_language}
           onAccept={handleModelAccept}
           onBack={handleBack}
         />
-      )}
-
-      {/* Step 3: Survey Flow */}
-      {currentStep === 'survey' && (
-        <SurveyFlow onComplete={handleSurveyComplete} onBack={handleBack} />
       )}
 
       {/* Step 4: Model Downloader */}
