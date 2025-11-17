@@ -29,6 +29,8 @@ import SuggestedPromptCard from '../components/SuggestedPromptCard';
 import ModeIndicator from '../components/ModeIndicator';
 import ShortcutHelp from '../components/ShortcutHelp';
 import SuggestionsPanel from '../components/SuggestionsPanel';
+import { ToolCall } from '../../shared/types/tool.types';
+import { ToolCallIndicator, ToolResultCard } from '../components/tool';
 
 interface Message {
   id: string;
@@ -36,6 +38,7 @@ interface Message {
   role: 'user' | 'assistant' | 'error' | 'system';
   timestamp: Date;
   errorRetryContent?: string; // For error messages, stores the original user message
+  toolCalls?: ToolCall[]; // v3.7.0: Tool calls associated with this message
 }
 
 interface ChatProps {
@@ -53,6 +56,7 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [suggestionsPanelCollapsed, setSuggestionsPanelCollapsed] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false); // Hidden by default
+  const [activeToolCalls, setActiveToolCalls] = useState<Map<string, ToolCall[]>>(new Map()); // v3.7.0: Track tool calls by message ID
   const [trackingStatus, setTrackingStatus] = useState({
     isTracking: false,
     lastCaptureTime: 0,
@@ -202,6 +206,102 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
     }, 5000);
 
     return () => clearInterval(intervalId);
+  }, []);
+
+  // v3.7.0: Setup tool execution event listeners
+  useEffect(() => {
+    const setupToolListeners = async () => {
+      // Tool execution start
+      const unlistenStart = await listen<{
+        messageId: string;
+        toolName: string;
+        input: Record<string, any>;
+      }>('ai:tool-execution-start', (event) => {
+        const { messageId, toolName, input } = event.payload;
+        console.log('Tool execution started:', toolName, input);
+
+        setActiveToolCalls((prev) => {
+          const newMap = new Map(prev);
+          const existing = newMap.get(messageId) || [];
+          newMap.set(messageId, [
+            ...existing,
+            {
+              id: `${messageId}-${toolName}-${Date.now()}`,
+              toolName,
+              displayName: toolName,
+              status: 'loading',
+              startTime: Date.now(),
+              input,
+            },
+          ]);
+          return newMap;
+        });
+      });
+
+      // Tool execution complete
+      const unlistenComplete = await listen<{
+        messageId: string;
+        toolName: string;
+        output: any;
+        executionTimeMs: number;
+      }>('ai:tool-execution-complete', (event) => {
+        const { messageId, toolName, output, executionTimeMs } = event.payload;
+        console.log('Tool execution completed:', toolName, output);
+
+        setActiveToolCalls((prev) => {
+          const newMap = new Map(prev);
+          const calls = newMap.get(messageId) || [];
+          const updated = calls.map((call) =>
+            call.toolName === toolName && call.status === 'loading'
+              ? {
+                  ...call,
+                  status: 'success' as const,
+                  endTime: Date.now(),
+                  executionTimeMs,
+                  output,
+                }
+              : call
+          );
+          newMap.set(messageId, updated);
+          return newMap;
+        });
+      });
+
+      // Tool execution error
+      const unlistenError = await listen<{
+        messageId: string;
+        toolName: string;
+        error: string;
+      }>('ai:tool-execution-error', (event) => {
+        const { messageId, toolName, error } = event.payload;
+        console.error('Tool execution error:', toolName, error);
+
+        setActiveToolCalls((prev) => {
+          const newMap = new Map(prev);
+          const calls = newMap.get(messageId) || [];
+          const updated = calls.map((call) =>
+            call.toolName === toolName && call.status === 'loading'
+              ? {
+                  ...call,
+                  status: 'error' as const,
+                  endTime: Date.now(),
+                  error,
+                }
+              : call
+          );
+          newMap.set(messageId, updated);
+          return newMap;
+        });
+      });
+
+      return () => {
+        unlistenStart();
+        unlistenComplete();
+        unlistenError();
+      };
+    };
+
+    setupToolListeners();
   }, []);
 
   const handleSelectConversation = useCallback((conversationId: string | null) => {
@@ -782,14 +882,33 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
                         }
                       />
                     ) : (
-                      <ChatBubble
-                        key={message.id}
-                        messageId={message.id}
-                        message={message.content}
-                        role={message.role}
-                        timestamp={message.timestamp}
-                        onFeedback={handleFeedback}
-                      />
+                      <div key={message.id}>
+                        <ChatBubble
+                          messageId={message.id}
+                          message={message.content}
+                          role={message.role}
+                          timestamp={message.timestamp}
+                          onFeedback={handleFeedback}
+                        />
+                        {/* v3.7.0: Tool call visualizations */}
+                        {message.role === 'assistant' && activeToolCalls.get(message.id) && (
+                          <div className="ml-12 mt-2 space-y-2">
+                            {activeToolCalls.get(message.id)!.map((toolCall) => (
+                              <div key={toolCall.id}>
+                                {toolCall.status === 'loading' && (
+                                  <ToolCallIndicator
+                                    toolName={toolCall.toolName}
+                                    status={toolCall.status}
+                                  />
+                                )}
+                                {(toolCall.status === 'success' || toolCall.status === 'error') && (
+                                  <ToolResultCard toolCall={toolCall} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )
                   )}
                 </div>

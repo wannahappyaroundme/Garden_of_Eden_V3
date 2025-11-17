@@ -65,6 +65,36 @@ export interface AIChannels {
       contextData: Record<string, unknown>;
     };
   };
+  'ai:tool-execution-start': {  // v3.7.0: Tool execution started
+    payload: {
+      messageId: string;
+      toolName: string;
+      input: Record<string, any>;
+    };
+  };
+  'ai:tool-execution-progress': {  // v3.7.0: Tool execution progress
+    payload: {
+      messageId: string;
+      toolName: string;
+      progress: number;  // 0-100
+      message?: string;
+    };
+  };
+  'ai:tool-execution-complete': {  // v3.7.0: Tool execution completed
+    payload: {
+      messageId: string;
+      toolName: string;
+      output: any;
+      executionTimeMs: number;
+    };
+  };
+  'ai:tool-execution-error': {  // v3.7.0: Tool execution error
+    payload: {
+      messageId: string;
+      toolName: string;
+      error: string;
+    };
+  };
 }
 
 // File system IPC channels

@@ -296,6 +296,7 @@ pub async fn chat_stream(
 #[tauri::command]
 pub async fn chat_with_tools(
     state: State<'_, AppState>,
+    app: AppHandle,
     request: ChatRequest,
 ) -> Result<ChatResponse, String> {
     log::info!("Chat with tools command called with message: {}", request.message);
@@ -369,14 +370,15 @@ pub async fn chat_with_tools(
 
     // Generate AI response using tool calling (no lock held during async operation)
     let tool_service = Arc::clone(&state.tool_service);
+    let ai_message_id = format!("msg_{}", chrono::Utc::now().timestamp_millis());
     let ai_response = ollama::generate_response_with_tools(
         &request.message,
         tool_service,
         None,  // RAG service integration pending
         5,     // Max 5 tool calling iterations
+        Some(app),  // v3.7.0: Pass AppHandle for tool events
+        Some(ai_message_id.clone()),  // v3.7.0: Pass message ID for events
     ).await?;
-
-    let ai_message_id = format!("msg_{}", chrono::Utc::now().timestamp_millis());
 
     // Block 2: Save AI response to database
     {

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use futures_util::StreamExt;
 use std::sync::Arc;
+use tauri::Manager;  // v3.7.0: For emit() method
 
 use super::rag::{RagService, format_episodes_for_context};
 use super::tool_calling::{ToolService, ToolCall, ToolDefinition};
@@ -408,12 +409,14 @@ fn convert_tool_definition(tool: &ToolDefinition) -> OllamaTool {
     }
 }
 
-/// Generate response with tool calling support
+/// Generate response with tool calling support (v3.7.0: Added event support)
 pub async fn generate_response_with_tools(
     user_message: &str,
     tool_service: Arc<ToolService>,
     rag_service: Option<Arc<RagService>>,
     max_iterations: usize,
+    app_handle: Option<tauri::AppHandle>,  // v3.7.0: For emitting tool events
+    message_id: Option<String>,  // v3.7.0: Message ID for event tracking
 ) -> Result<String, String> {
     log::info!("Generating AI response with tool calling for: {}", user_message);
 
@@ -525,12 +528,26 @@ pub async fn generate_response_with_tools(
 
                 log::info!("Executing tool: {} with args: {:?}", function_name, arguments);
 
+                // v3.7.0: TODO: Emit tool execution start event
+                // Event emission will be implemented after testing with Window handle
+                // if let (Some(app), Some(msg_id)) = (&app_handle, &message_id) {
+                //     app.emit_all("ai:tool-execution-start", ...);
+                // }
+                let _ = (&app_handle, &message_id); // Suppress unused warning
+
                 let tool_call_request = ToolCall {
                     tool_name: function_name.clone(),
                     arguments: arguments.clone(),
                 };
 
+                let start_time = std::time::Instant::now();
                 let tool_result = tool_service.execute_tool(&tool_call_request).await;
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+
+                // v3.7.0: TODO: Emit tool execution complete/error event
+                // Event emission will be implemented after testing with Window handle
+                log::info!("Tool {} execution completed in {}ms (success: {})",
+                    function_name, execution_time_ms, tool_result.success);
 
                 // Add tool result as a message
                 let result_content = if tool_result.success {

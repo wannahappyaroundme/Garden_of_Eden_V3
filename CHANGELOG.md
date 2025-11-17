@@ -4,6 +4,71 @@ All notable changes to Garden of Eden V3 will be documented in this file.
 
 ## [Unreleased]
 
+## [3.7.0] - 2025-01-17 (Phase 1)
+
+### Added - 🎨 Tool Calling UI Visualization
+- **Tool Type System**: Comprehensive TypeScript definitions
+  - ToolStatus, ToolCall, ToolCallEvent interfaces (tool.types.ts, 105 lines)
+  - 4 Tool execution event types for real-time updates
+  - TOOL_DISPLAY_NAMES, TOOL_COLORS, TOOL_ICONS mappings
+  - Full metadata tracking (input, output, execution time, timestamps)
+- **ToolCallIndicator Component**: Real-time tool usage badges
+  - Inline display during AI responses (98 lines)
+  - Animated loading spinner with tool-specific colors
+  - Status icons: spinner (loading), checkmark (success), X (error)
+  - Execution time display (e.g., "Web Search (2.3s)")
+  - 6 color themes matching tool types
+- **ToolResultCard Component**: Expandable tool result display
+  - Collapsible card with detailed input/output (162 lines)
+  - Formatted JSON display for complex parameters
+  - Status badges (Success/Error/Running...)
+  - Execution timestamps and duration
+  - Scrollable output for long results
+- **Chat.tsx Integration**: Real-time tool visualization
+  - activeToolCalls state with Map<string, ToolCall[]>
+  - 3 event listeners (start/complete/error)
+  - Inline rendering below AI messages
+  - Conditional component display by status
+- **Backend Event Architecture**: Event emission infrastructure
+  - Updated chat_with_tools to accept AppHandle
+  - Updated generate_response_with_tools signature
+  - IPC channel types defined for 4 tool events
+  - Event emission implementation deferred pending Tauri API research
+- **Comprehensive Test Suite**: 70 tests, 100% pass rate
+  - ToolCallIndicator.test.tsx: 26 tests (280 lines)
+  - ToolResultCard.test.tsx: 44 tests (480 lines)
+  - Coverage: all 6 tools, all states, edge cases, accessibility
+  - Tests for input/output formatting, color themes, expand/collapse
+
+### Changed
+- **Version**: 3.6.0 → 3.7.0 (Phase 1)
+- **Chat.tsx**: Added tool visualization rendering (80 lines modified)
+- **Message Interface**: Added optional toolCalls?: ToolCall[] field
+- **IPC Types**: Added 4 new event channels for tool execution tracking
+- **Code Statistics**: 3,165+ → 4,260+ lines (+1,095 lines)
+
+### Technical
+- **New Files**:
+  - src/shared/types/tool.types.ts (105 lines)
+  - src/renderer/components/tool/ToolCallIndicator.tsx (98 lines)
+  - src/renderer/components/tool/ToolResultCard.tsx (162 lines)
+  - src/renderer/components/tool/index.ts (export file)
+  - tests/unit/components/tool/ToolCallIndicator.test.tsx (280 lines)
+  - tests/unit/components/tool/ToolResultCard.test.tsx (480 lines)
+- **Modified Files**:
+  - src/renderer/pages/Chat.tsx: Tool call tracking and rendering
+  - src/shared/types/ipc.types.ts: Added tool event types
+  - src-tauri/src/commands/ai.rs: Added AppHandle parameter
+  - src-tauri/src/services/ollama.rs: Updated function signature
+- **Build Status**: ✅ Clean build (0 errors, warnings only)
+- **Test Status**: ✅ 70/70 tests passing
+
+### Notes
+- Event emission from backend will be implemented after Tauri 2.x API verification
+- Frontend event listeners are ready to receive tool events
+- UI components fully functional and tested
+- Phase 2 will add tool settings and configuration panel
+
 ## [3.6.0] - 2025-01-17
 
 ### Added - 🔧 Tool Calling System & Frontend Integration
