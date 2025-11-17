@@ -36,3 +36,7 @@ pub mod git;
 // Phase 8: Auto-updater & Crash Reporting
 pub mod updater;
 pub mod crash_reporter;
+
+// Phase 9: Internet Access (v3.3.0)
+pub mod web_search;
+pub mod url_fetch;

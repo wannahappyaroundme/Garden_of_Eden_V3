@@ -3,6 +3,40 @@
 All notable changes to Garden of Eden V3 will be documented in this file.
 
 ## [Unreleased]
+## [3.3.0] - 2025-01-XX
+
+### Added - 🌐 Internet Access
+- **Web Search Integration**: Privacy-first web search
+  - DuckDuckGo Instant Answer API (no tracking)
+  - SearX meta-search engine support
+  - Rate limiting (2 seconds between searches)
+  - Configurable max results (default: 5)
+  - User opt-in required (disabled by default)
+- **URL Fetching Service**: Privacy-preserving content fetching
+  - Fetch and parse HTML content
+  - Extract main text (remove ads, navigation)
+  - Content length limits (1MB max)
+  - Timeout protection (10 seconds)
+  - No cookies or tracking
+- **Content Extraction**: Intelligent HTML parsing
+  - Automatic title extraction
+  - Main content area detection
+  - Clean text output
+  - Word count and summaries
+
+### Changed
+- **Version**: 3.2.0 → 3.3.0
+- **Privacy**: All internet features disabled by default
+
+### Technical
+- **New Services**:
+  - services/web_search.rs: DuckDuckGo/SearX integration (320 lines)
+  - services/url_fetch.rs: URL fetching and HTML parsing (380 lines)
+- **Dependencies**:
+  - urlencoding 2.1: URL encoding for search queries
+  - scraper 0.22: HTML parsing and content extraction
+- **Testing**: All 67 tests passing, new services include unit tests
+
 
 ## [3.2.0] - 2025-01-XX
 

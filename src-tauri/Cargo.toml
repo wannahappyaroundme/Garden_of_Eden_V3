@@ -48,6 +48,10 @@ ndarray = "0.16"        # N-dimensional arrays for ML
 # Voice Activity Detection (Phase 3)
 webrtc-vad = "0.4"      # Voice activity detection
 
+# Internet Access dependencies (v3.3.0)
+urlencoding = "2.1"     # URL encoding for search queries
+scraper = "0.22"        # HTML parsing and content extraction
+
 # Proactive Mode dependencies (Phase 4)
 notify = "6.1"          # File system watching
 regex = "1.10"          # Pattern matching for trigger detection
