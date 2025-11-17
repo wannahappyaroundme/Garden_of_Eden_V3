@@ -4,7 +4,7 @@
 
 ### **Your Private AI Assistant That Never Leaves Your Computer**
 
-[![Version](https://img.shields.io/badge/version-3.5.2-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
+[![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![Tauri](https://img.shields.io/badge/Tauri-2.9-24C8DB.svg)](https://tauri.app/)
@@ -63,13 +63,16 @@ Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama*
 
 ---
 
-## ✨ Current Features (v3.1.0)
+## ✨ Current Features (v3.6.0)
 
 ### 🤖 AI Intelligence
 - **Local LLM**: qwen2.5:7b (4.7GB) via Ollama - fast, multilingual, excellent reasoning
+- **Tool Calling System** ✨ NEW: AI can use 6 production tools (web search, file ops, system info, calculator)
+- **Internet Access** ✨ NEW: Privacy-preserving web search (DuckDuckGo/SearX) and URL fetching
+- **Plugin System**: V8 JavaScript runtime for extensible plugins
 - **Streaming Responses**: Real-time token-by-token output
 - **Markdown Support**: Code highlighting with rehype-highlight
-- **RAG Memory**: Episodic memory with TF-IDF embeddings for context retention
+- **RAG Memory**: Episodic memory with RAFT hallucination reduction
 - **Learning System**: AI optimizes personality based on user feedback
 
 ### 🎛️ Persona Customization
@@ -102,12 +105,20 @@ Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama*
 - **Error Boundaries**: Graceful error handling
 - **Toast Notifications**: Non-intrusive feedback
 
-### ⚙️ System Integration
+### ⚙️ System Integration & Tools ✨ NEW
+- **Tool Calling Framework**: AI can execute tools to complete tasks
+  - `web_search` - Search the web (DuckDuckGo/SearX, privacy-first)
+  - `fetch_url` - Fetch and parse web pages (HTML extraction)
+  - `read_file` - Read local files
+  - `write_file` - Write to local files
+  - `get_system_info` - Get CPU, RAM, GPU information
+  - `calculate` - Perform math calculations
 - **File Operations**: Read, write, search files
 - **Git Integration**: Status, diff, commit, push
 - **Workspace Detection**: Detects VSCode, IntelliJ, etc.
 - **Screen Tracking**: 3 context levels for AI awareness
 - **Webhook Support**: POST requests to external services
+- **Plugin System**: Load custom V8 JavaScript plugins (permission-based)
 
 ### 🔐 Privacy & Security
 - **100% Local Processing**: No cloud APIs, no telemetry
@@ -203,7 +214,7 @@ The onboarding wizard will guide you through:
 - [ ] Email reading/composition
 
 #### 🔌 Extensibility
-- [ ] Plugin system architecture
+- [x] Plugin system architecture ✅ (v3.6.0 - V8 runtime)
 - [ ] Plugin marketplace
 - [ ] Persona import/export marketplace
 - [ ] Custom model support (beyond qwen2.5:7b)
@@ -266,11 +277,13 @@ The onboarding wizard will guide you through:
 - **[Building & Deployment](docs/BUILDING.md)** - Build from source, create releases
 - **[API Reference](docs/API.md)** - Tauri IPC commands documentation
 - **[Testing Guide](docs/TESTING.md)** - Running tests, adding new tests
+- **[Tool Calling Testing](TESTING_v3.6.0.md)** - v3.6.0 tool system testing guide ✨ NEW
 - **[Claude Development](docs/CLAUDE.md)** - Using Claude Code for development
 - **[Contributing](CONTRIBUTING.md)** - How to contribute
 
 ### Additional Resources
 - **[Changelog](CHANGELOG.md)** - Version history
+- **[Progress Log](PROGRESS.md)** - Development progress and technical details
 - **[Master Specification](docs/archive/MASTER_SPEC.md)** - Complete original design (12,000 lines)
 
 ---

@@ -3,6 +3,63 @@
 All notable changes to Garden of Eden V3 will be documented in this file.
 
 ## [Unreleased]
+
+## [3.6.0] - 2025-01-17
+
+### Added - 🔧 Tool Calling System & Frontend Integration
+- **Global ToolService**: Centralized tool management system
+  - Arc-wrapped ToolService initialized in main.rs
+  - Thread-safe tool sharing across all Tauri commands
+  - Graceful error handling for tool initialization
+  - 6 production-ready tools registered on startup
+- **chat_with_tools Command**: New Tauri IPC command
+  - Type-safe integration with tool calling system
+  - Multi-turn tool execution (up to 5 iterations)
+  - Database persistence for tool-enabled conversations
+  - Webhook triggers for message events
+  - Streaming response support
+- **Frontend API Integration**: Type-safe React interface
+  - chatWithTools() function in tauri-api.ts
+  - 'ai:chat-with-tools' IPC channel type definition
+  - Drop-in replacement for regular chat() function
+  - Same request/response structures for consistency
+- **6 Registered Tools**:
+  1. WebSearchTool - DuckDuckGo/SearX privacy-first search
+  2. UrlFetchTool - HTML fetching and content extraction
+  3. FileReadTool - Read local files
+  4. FileWriteTool - Write to local files
+  5. SystemInfoTool - Get CPU, RAM, GPU information
+  6. CalculatorTool - Math expression evaluation
+- **Testing Documentation**: Comprehensive testing guide
+  - TESTING_v3.6.0.md (389 lines)
+  - Manual test cases for all 6 tools
+  - Expected behavior documentation
+  - Troubleshooting guide
+  - Performance benchmarks
+  - Success criteria checklist
+
+### Changed
+- **Version**: 3.5.2 → 3.6.0
+- **AppState**: Added tool_service: Arc<ToolService> field
+- **Ollama Structs**: Added Clone trait to OllamaTool and OllamaToolFunction
+- **Code Statistics**: 3,000+ → 3,165+ lines
+
+### Technical
+- **Modified Files**:
+  - src-tauri/src/main.rs: Global ToolService initialization
+  - src-tauri/src/commands/ai.rs: New chat_with_tools command
+  - src-tauri/src/services/ollama.rs: Added Clone derives
+  - src/renderer/lib/tauri-api.ts: chatWithTools() API
+  - src/shared/types/ipc.types.ts: 'ai:chat-with-tools' channel
+- **Build Status**: ✅ 0 errors, 79 warnings (expected)
+- **Testing**: Manual UI testing required, backend integration complete
+
+### Developer Experience
+- **Architecture**: Clean separation between tool registration and execution
+- **Type Safety**: Full TypeScript/Rust type correspondence
+- **Documentation**: Complete testing guide and verification scripts
+- **Next Steps**: UI enhancements for tool call visualization (v3.7.0)
+
 ## [3.3.0] - 2025-01-XX
 
 ### Added - 🌐 Internet Access
