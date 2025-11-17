@@ -1,19 +1,52 @@
 /**
- * Tool Implementations (v3.5.0)
+ * Tool Implementations (v3.5.2)
  *
- * Demonstration tool implementations for the tool calling system.
- * These show the architecture and will be fully integrated with services later.
+ * Production tool implementations for the tool calling system:
+ * - WebSearchTool: Fully integrated with WebSearchService (DuckDuckGo/SearX)
+ * - UrlFetchTool: Fully integrated with UrlFetchService (HTML parsing)
+ * - FileReadTool: Integrated with FileService
+ * - FileWriteTool: Integrated with FileService
+ * - SystemInfoTool: Integrated with SystemInfoService
+ * - CalculatorTool: Simple math expression evaluator
  */
 
 use anyhow::{anyhow, Result};
 use serde_json;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use super::tool_calling::{
     ToolCategory, ToolDefinition, ToolExecutor, ToolParameter, ParameterType,
 };
+use super::web_search::{WebSearchService, WebSearchSettings};
+use super::url_fetch::{UrlFetchService, UrlFetchSettings};
 
-/// Web search tool (demonstration)
-pub struct WebSearchTool;
+/// Web search tool (fully integrated with WebSearchService)
+pub struct WebSearchTool {
+    service: Arc<Mutex<WebSearchService>>,
+}
+
+impl WebSearchTool {
+    /// Create new web search tool with default settings
+    pub fn new() -> Result<Self> {
+        let settings = WebSearchSettings {
+            enabled: true,  // Enable for tool usage
+            ..Default::default()
+        };
+        let service = WebSearchService::new(settings)?;
+        Ok(Self {
+            service: Arc::new(Mutex::new(service)),
+        })
+    }
+
+    /// Create with custom settings
+    pub fn with_settings(settings: WebSearchSettings) -> Result<Self> {
+        let service = WebSearchService::new(settings)?;
+        Ok(Self {
+            service: Arc::new(Mutex::new(service)),
+        })
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for WebSearchTool {
@@ -24,18 +57,32 @@ impl ToolExecutor for WebSearchTool {
 
         log::info!("Web search tool executing: {}", query);
 
-        // Placeholder - will integrate with WebSearchService
-        Ok(serde_json::json!({
-            "results": [
-                {
-                    "title": format!("Search results for: {}", query),
-                    "url": "https://example.com",
-                    "snippet": "This is a placeholder result. Real integration pending."
-                }
-            ],
-            "query": query,
-            "count": 1
-        }))
+        // Get service lock and perform search
+        let mut service = self.service.lock().await;
+
+        match service.search(query).await {
+            Ok(results) => {
+                // Convert SearchResult to JSON
+                let json_results: Vec<serde_json::Value> = results.iter().map(|r| {
+                    serde_json::json!({
+                        "title": r.title,
+                        "url": r.url,
+                        "snippet": r.snippet,
+                        "source": r.source
+                    })
+                }).collect();
+
+                Ok(serde_json::json!({
+                    "results": json_results,
+                    "query": query,
+                    "count": results.len()
+                }))
+            }
+            Err(e) => {
+                log::error!("Web search failed: {}", e);
+                Err(anyhow!("Web search failed: {}", e))
+            }
+        }
     }
 
     fn definition(&self) -> ToolDefinition {
@@ -56,8 +103,32 @@ impl ToolExecutor for WebSearchTool {
     }
 }
 
-/// URL fetch tool (demonstration)
-pub struct UrlFetchTool;
+/// URL fetch tool (fully integrated with UrlFetchService)
+pub struct UrlFetchTool {
+    service: Arc<UrlFetchService>,
+}
+
+impl UrlFetchTool {
+    /// Create new URL fetch tool with default settings
+    pub fn new() -> Result<Self> {
+        let settings = UrlFetchSettings {
+            enabled: true,  // Enable for tool usage
+            ..Default::default()
+        };
+        let service = UrlFetchService::new(settings)?;
+        Ok(Self {
+            service: Arc::new(service),
+        })
+    }
+
+    /// Create with custom settings
+    pub fn with_settings(settings: UrlFetchSettings) -> Result<Self> {
+        let service = UrlFetchService::new(settings)?;
+        Ok(Self {
+            service: Arc::new(service),
+        })
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for UrlFetchTool {
@@ -68,13 +139,21 @@ impl ToolExecutor for UrlFetchTool {
 
         log::info!("URL fetch tool executing: {}", url);
 
-        // Placeholder - will integrate with UrlFetchService
-        Ok(serde_json::json!({
-            "url": url,
-            "title": "Example Page",
-            "text": "Placeholder content. Real URL fetching pending integration.",
-            "word_count": 10
-        }))
+        match self.service.fetch(url).await {
+            Ok(content) => {
+                Ok(serde_json::json!({
+                    "url": content.url,
+                    "title": content.title,
+                    "text": content.text,
+                    "summary": content.summary,
+                    "word_count": content.word_count
+                }))
+            }
+            Err(e) => {
+                log::error!("URL fetch failed: {}", e);
+                Err(anyhow!("URL fetch failed: {}", e))
+            }
+        }
     }
 
     fn definition(&self) -> ToolDefinition {
