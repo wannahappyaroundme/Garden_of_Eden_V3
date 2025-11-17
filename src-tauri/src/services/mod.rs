@@ -40,3 +40,6 @@ pub mod crash_reporter;
 // Phase 9: Internet Access (v3.3.0)
 pub mod web_search;
 pub mod url_fetch;
+
+// Phase 10: Plugin System (v3.4.0)
+pub mod plugin;

@@ -1,0 +1,11 @@
+{
+  "id": "calculator-plugin",
+  "name": "Calculator Plugin",
+  "version": "1.0.0",
+  "description": "Advanced calculator with scientific functions and unit conversions",
+  "author": "Garden of Eden Team",
+  "main": "index.js",
+  "permissions": [],
+  "icon": "🔢",
+  "homepage": "https://github.com/garden-of-eden/plugins/calculator"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "weather-plugin",
+  "name": "Weather Plugin",
+  "version": "1.0.0",
+  "description": "Get current weather information for any city",
+  "author": "Garden of Eden Team",
+  "main": "index.js",
+  "permissions": ["network"],
+  "icon": "☀️",
+  "homepage": "https://github.com/garden-of-eden/plugins/weather"
+}
