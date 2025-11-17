@@ -12,6 +12,7 @@ import PersonaParameterGroup from '../components/PersonaParameterGroup';
 import { PERSONA_GROUPS } from '@shared/types/persona-groups.types';
 import type { PersonaSettings } from '../lib/tauri-api';
 import { toast } from '../stores/toast.store';
+import { ToolsSettings } from '../components/settings';
 
 interface SettingsProps {
   onClose: () => void;
@@ -20,7 +21,7 @@ interface SettingsProps {
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'persona' | 'app' | 'about'>('persona');
+  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'app' | 'about'>('persona');
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -208,6 +209,16 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
             🎭 AI 성격
           </button>
           <button
+            onClick={() => setActiveTab('tools')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'tools'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🔧 도구 설정
+          </button>
+          <button
             onClick={() => setActiveTab('app')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'app'
@@ -258,6 +269,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
 
               {/* Right Column: Preview */}
               <PersonaPreviewPanel persona={persona} />
+            </div>
+          )}
+
+          {/* Tools Tab */}
+          {activeTab === 'tools' && (
+            <div className="max-w-5xl mx-auto">
+              <ToolsSettings />
             </div>
           )}
 

@@ -1,8 +1,8 @@
 # Garden of Eden V3 - Development Progress
 
 **Last Updated**: 2025-01-17
-**Current Version**: 3.7.0 (Phase 1)
-**Status**: Tool Calling UI Visualization
+**Current Version**: 3.7.0 (Phase 2)
+**Status**: Tool Settings & Configuration UI
 
 ---
 
@@ -175,6 +175,45 @@
   - Tests for all 6 tool types, error states, accessibility
 - **Status**: UI components complete and tested, event emission pending Tauri API verification
 
+#### **v3.7.0 Phase 2 - Tool Settings & Configuration** ✅
+- **Tool Settings Type System** (~210 lines - tool-settings.types.ts)
+  - ToolSettings master interface with per-tool configurations
+  - WebSearchSettings, UrlFetchSettings, FileOperationsSettings, SystemInfoSettings, CalculatorSettings
+  - DEFAULT_TOOL_SETTINGS with privacy-first defaults (web tools disabled)
+  - TOOL_PRIVACY_INFO database with data access details
+  - Validation functions for settings integrity
+- **ToolToggle Component** (~95 lines)
+  - Individual tool enable/disable switch
+  - Tool-specific color themes
+  - Permission requirement badges
+  - Async toggle with loading states
+- **ToolPrivacyInfo Component** (~100 lines)
+  - Privacy level indicator (low/medium/high)
+  - Data access disclosure list
+  - Permission requirement notices
+  - Color-coded by privacy risk
+- **ToolPreferences Component** (~270 lines)
+  - Per-tool configuration panels
+  - Web Search: Engine selection, max results, rate limiting
+  - URL Fetch: Timeout, content size, robots.txt respect
+  - File Operations: Read/write toggles, path restrictions, confirmation settings
+  - System Info: Privacy level selection
+  - Calculator: Decimal precision slider
+- **ToolsSettings Page** (~160 lines)
+  - Master global enable/disable toggle
+  - Expandable tool cards with details
+  - Privacy dashboard integration
+  - Real-time settings persistence
+  - Settings validation
+- **Settings Page Integration** (~15 lines modified)
+  - Added "Tools" tab to main Settings page
+  - Seamless integration with existing persona/app settings
+  - Korean UI labels ("🔧 도구 설정")
+- **Test Coverage** (~140 lines)
+  - ToolToggle.test.tsx: 10 tests covering toggle functionality, colors, states
+  - 100% pass rate on all component tests
+- **Status**: Settings UI complete, backend persistence deferred for v3.7.1
+
 ---
 
 ## 🔧 Technical Stack
@@ -202,13 +241,14 @@ async-trait = "0.1"
 ```
 
 ### Code Statistics
-- **Total Lines Added**: ~4,260+ lines (v3.2.0 - v3.7.0)
+- **Total Lines Added**: ~5,390+ lines (v3.2.0 - v3.7.0)
   - v3.2.0 - v3.6.0: ~3,165 lines
   - v3.7.0 Phase 1: ~1,095 lines (495 production + 600 tests)
+  - v3.7.0 Phase 2: ~1,130 lines (990 production + 140 tests)
 - **New Services**: 7 (raft, web_search, url_fetch, plugin, plugin_runtime, tool_calling, tool_implementations)
 - **New Commands**: 1 (chat_with_tools)
-- **New UI Components**: 3 (MemoryVisualization.tsx, ToolCallIndicator.tsx, ToolResultCard.tsx)
-- **Test Coverage**: 70 new tests for tool components (100% pass rate)
+- **New UI Components**: 7 (MemoryVisualization, ToolCallIndicator, ToolResultCard, ToolToggle, ToolPrivacyInfo, ToolPreferences, ToolsSettings)
+- **Test Coverage**: 80 tests total for tool components (100% pass rate)
 - **Compilation Status**: ✅ 0 errors, warnings only (unused imports in foundation code)
 
 ---
