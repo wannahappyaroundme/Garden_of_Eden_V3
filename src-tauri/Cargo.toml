@@ -52,6 +52,10 @@ webrtc-vad = "0.4"      # Voice activity detection
 urlencoding = "2.1"     # URL encoding for search queries
 scraper = "0.22"        # HTML parsing and content extraction
 
+# Plugin System dependencies (v3.4.0)
+deno_core = "0.329"     # V8 JavaScript runtime for plugin execution
+walkdir = "2.5"         # Directory traversal for plugin discovery
+
 # Proactive Mode dependencies (Phase 4)
 notify = "6.1"          # File system watching
 regex = "1.10"          # Pattern matching for trigger detection

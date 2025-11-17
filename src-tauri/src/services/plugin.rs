@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::plugin_runtime::PluginRuntimeManager;
+
 /// Plugin metadata (from manifest.json)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginManifest {
@@ -68,6 +70,7 @@ pub struct PluginResult {
 pub struct PluginService {
     plugins_dir: PathBuf,
     loaded_plugins: HashMap<String, Plugin>,
+    runtime_manager: PluginRuntimeManager,
 }
 
 impl PluginService {
@@ -81,6 +84,7 @@ impl PluginService {
         Ok(Self {
             plugins_dir,
             loaded_plugins: HashMap::new(),
+            runtime_manager: PluginRuntimeManager::new(),
         })
     }
 
@@ -135,6 +139,10 @@ impl PluginService {
 
         let code = fs::read_to_string(&main_file)?;
 
+        // Initialize V8 runtime for this plugin
+        self.runtime_manager
+            .initialize_plugin(plugin_id, manifest.clone(), &code)?;
+
         // Create plugin instance
         let plugin = Plugin {
             manifest: manifest.clone(),
@@ -152,6 +160,8 @@ impl PluginService {
     /// Unload a plugin
     pub fn unload_plugin(&mut self, plugin_id: &str) -> Result<()> {
         if self.loaded_plugins.remove(plugin_id).is_some() {
+            // Unload V8 runtime
+            self.runtime_manager.unload_plugin(plugin_id)?;
             log::info!("Unloaded plugin: {}", plugin_id);
             Ok(())
         } else {
@@ -161,10 +171,10 @@ impl PluginService {
 
     /// Execute a plugin function
     pub fn execute_plugin(
-        &self,
+        &mut self,
         plugin_id: &str,
         function_name: &str,
-        args: serde_json::Value,
+        args: Vec<serde_json::Value>,
     ) -> Result<PluginResult> {
         let plugin = self.loaded_plugins
             .get(plugin_id)
@@ -174,19 +184,16 @@ impl PluginService {
             return Err(anyhow!("Plugin is disabled: {}", plugin_id));
         }
 
-        // In a real implementation, this would use a JavaScript engine (V8)
-        // For now, we return a placeholder
         log::info!("Executing {}:{} with args: {:?}", plugin_id, function_name, args);
 
+        // Execute via V8 runtime
+        let result = self.runtime_manager
+            .execute_function(plugin_id, function_name, args)?;
+
         Ok(PluginResult {
-            success: true,
-            data: serde_json::json!({
-                "message": "Plugin execution not yet implemented (requires V8 runtime)",
-                "plugin": plugin_id,
-                "function": function_name,
-                "args": args,
-            }),
-            error: None,
+            success: result.success,
+            data: result.value,
+            error: result.error,
         })
     }
 

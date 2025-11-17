@@ -43,3 +43,4 @@ pub mod url_fetch;
 
 // Phase 10: Plugin System (v3.4.0)
 pub mod plugin;
+pub mod plugin_runtime;
