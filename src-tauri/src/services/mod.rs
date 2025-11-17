@@ -28,3 +28,8 @@ pub mod calendar;
 
 // Phase 7: File System & Git Integration
 pub mod file;
+pub mod git;
+
+// Phase 8: Auto-updater & Crash Reporting
+pub mod updater;
+pub mod crash_reporter;

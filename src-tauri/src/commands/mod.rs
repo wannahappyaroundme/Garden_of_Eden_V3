@@ -9,3 +9,6 @@ pub mod learning;
 pub mod webhook;
 pub mod calendar;
 pub mod file;
+pub mod git;
+pub mod updater;
+pub mod crash_reporter;

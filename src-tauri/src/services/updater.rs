@@ -1,0 +1,190 @@
+/**
+ * Auto-Updater Service
+ *
+ * Manages application updates using Tauri's built-in updater
+ * - Check for updates on GitHub releases
+ * - Download and install updates
+ * - User notification and confirmation
+ */
+
+use anyhow::{anyhow, Result};
+use log::{error, info, warn};
+use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
+
+/// Update check result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCheckResult {
+    pub available: bool,
+    pub current_version: String,
+    pub latest_version: Option<String>,
+    pub release_notes: Option<String>,
+    pub download_url: Option<String>,
+}
+
+/// Update status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UpdateStatus {
+    CheckingForUpdates,
+    UpdateAvailable {
+        version: String,
+        release_notes: String,
+    },
+    NoUpdateAvailable,
+    Downloading {
+        progress: f64,
+    },
+    Installing,
+    UpdateReady,
+    Error {
+        message: String,
+    },
+}
+
+/// Auto-Updater Service
+pub struct UpdaterService {
+    last_check: Option<SystemTime>,
+    check_interval_hours: u64,
+}
+
+impl UpdaterService {
+    /// Create new updater service
+    pub fn new() -> Self {
+        Self {
+            last_check: None,
+            check_interval_hours: 24, // Check once per day by default
+        }
+    }
+
+    /// Get current app version
+    pub fn get_current_version() -> String {
+        env!("CARGO_PKG_VERSION").to_string()
+    }
+
+    /// Check if we should check for updates (based on interval)
+    pub fn should_check_for_updates(&self) -> bool {
+        match self.last_check {
+            None => true,
+            Some(last) => {
+                let now = SystemTime::now();
+                let elapsed = now.duration_since(last).unwrap_or_default();
+                let hours_elapsed = elapsed.as_secs() / 3600;
+                hours_elapsed >= self.check_interval_hours
+            }
+        }
+    }
+
+    /// Update last check timestamp
+    pub fn update_last_check(&mut self) {
+        self.last_check = Some(SystemTime::now());
+    }
+
+    /// Set check interval in hours
+    pub fn set_check_interval(&mut self, hours: u64) {
+        self.check_interval_hours = hours;
+    }
+
+    /// Parse version string to comparable tuple
+    fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
+        let parts: Vec<&str> = version.trim_start_matches('v').split('.').collect();
+        if parts.len() != 3 {
+            return Err(anyhow!("Invalid version format: {}", version));
+        }
+
+        let major = parts[0].parse::<u32>()?;
+        let minor = parts[1].parse::<u32>()?;
+        let patch = parts[2].parse::<u32>()?;
+
+        Ok((major, minor, patch))
+    }
+
+    /// Compare two version strings
+    pub fn is_newer_version(current: &str, latest: &str) -> Result<bool> {
+        let current_ver = Self::parse_version(current)?;
+        let latest_ver = Self::parse_version(latest)?;
+
+        Ok(latest_ver > current_ver)
+    }
+
+    /// Get update endpoint URL (GitHub releases)
+    pub fn get_update_endpoint() -> String {
+        // This should be configured based on your GitHub releases
+        // For now, return placeholder
+        "https://api.github.com/repos/yourusername/garden-of-eden-v3/releases/latest".to_string()
+    }
+
+    /// Validate update signature (for security)
+    pub fn validate_update_signature(_update_data: &[u8], _signature: &str) -> Result<bool> {
+        // In production, implement proper signature verification
+        // using public key cryptography (Ed25519, RSA, etc.)
+        warn!("Update signature validation not implemented yet");
+        Ok(true)
+    }
+}
+
+impl Default for UpdaterService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_current_version() {
+        let version = UpdaterService::get_current_version();
+        assert!(!version.is_empty());
+        assert!(version.contains('.'));
+    }
+
+    #[test]
+    fn test_parse_version() {
+        assert_eq!(UpdaterService::parse_version("1.2.3").unwrap(), (1, 2, 3));
+        assert_eq!(UpdaterService::parse_version("v1.2.3").unwrap(), (1, 2, 3));
+        assert_eq!(UpdaterService::parse_version("10.20.30").unwrap(), (10, 20, 30));
+
+        assert!(UpdaterService::parse_version("1.2").is_err());
+        assert!(UpdaterService::parse_version("invalid").is_err());
+    }
+
+    #[test]
+    fn test_is_newer_version() {
+        assert!(UpdaterService::is_newer_version("1.0.0", "1.0.1").unwrap());
+        assert!(UpdaterService::is_newer_version("1.0.0", "1.1.0").unwrap());
+        assert!(UpdaterService::is_newer_version("1.0.0", "2.0.0").unwrap());
+
+        assert!(!UpdaterService::is_newer_version("1.0.1", "1.0.0").unwrap());
+        assert!(!UpdaterService::is_newer_version("2.0.0", "1.9.9").unwrap());
+        assert!(!UpdaterService::is_newer_version("1.0.0", "1.0.0").unwrap());
+    }
+
+    #[test]
+    fn test_should_check_for_updates() {
+        let mut updater = UpdaterService::new();
+
+        // Should check on first run
+        assert!(updater.should_check_for_updates());
+
+        // After updating last check, should not check immediately
+        updater.update_last_check();
+        assert!(!updater.should_check_for_updates());
+    }
+
+    #[test]
+    fn test_set_check_interval() {
+        let mut updater = UpdaterService::new();
+        assert_eq!(updater.check_interval_hours, 24);
+
+        updater.set_check_interval(12);
+        assert_eq!(updater.check_interval_hours, 12);
+    }
+
+    #[test]
+    fn test_get_update_endpoint() {
+        let endpoint = UpdaterService::get_update_endpoint();
+        assert!(endpoint.starts_with("https://"));
+        assert!(endpoint.contains("github.com"));
+    }
+}

@@ -13,7 +13,9 @@ use services::llava::LlavaService;
 use services::model_installer::ModelInstallerService;
 use services::learning::LearningService;
 use services::webhook_triggers::WebhookTriggerManager;
+use services::crash_reporter::CrashReporterService;
 use commands::calendar::CalendarServiceWrapper;
+use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
 
 /// Application state shared across Tauri commands
@@ -70,6 +72,12 @@ fn main() {
     // Initialize Calendar Service Wrapper
     let calendar_service = CalendarServiceWrapper::new();
 
+    // Initialize Crash Reporter Service
+    let crash_reporter_service = CrashReporterService::new();
+    let crash_reporter_state = CrashReporterState {
+        service: Mutex::new(crash_reporter_service),
+    };
+
     let app_state = AppState {
         db: Mutex::new(
             Database::new().expect("Failed to initialize database for app state")
@@ -86,6 +94,7 @@ fn main() {
 
     tauri::Builder::default()
         .manage(app_state)
+        .manage(crash_reporter_state)
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
             commands::ai::chat_stream,
@@ -182,6 +191,32 @@ fn main() {
             commands::file::file_exists,
             commands::file::file_is_directory,
             commands::file::file_is_file,
+            commands::git::git_is_repository,
+            commands::git::git_init_repository,
+            commands::git::git_get_status,
+            commands::git::git_get_diff,
+            commands::git::git_stage_files,
+            commands::git::git_unstage_files,
+            commands::git::git_commit,
+            commands::git::git_push,
+            commands::git::git_get_log,
+            commands::git::git_list_branches,
+            commands::git::git_create_branch,
+            commands::git::git_checkout_branch,
+            commands::git::git_get_current_branch,
+            commands::updater::updater_get_version,
+            commands::updater::updater_check_for_updates,
+            commands::updater::updater_install_update,
+            commands::updater::updater_set_check_interval,
+            commands::updater::updater_get_endpoint,
+            commands::updater::updater_is_newer_version,
+            commands::crash_reporter::crash_reporter_is_enabled,
+            commands::crash_reporter::crash_reporter_enable,
+            commands::crash_reporter::crash_reporter_disable,
+            commands::crash_reporter::crash_reporter_get_settings,
+            commands::crash_reporter::crash_reporter_update_settings,
+            commands::crash_reporter::crash_reporter_report_error,
+            commands::crash_reporter::crash_reporter_test,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
