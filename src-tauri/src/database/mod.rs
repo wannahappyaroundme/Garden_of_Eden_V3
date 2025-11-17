@@ -37,6 +37,21 @@ impl Database {
         Ok(db)
     }
 
+    /// Create an in-memory database for testing
+    #[cfg(test)]
+    pub fn new_test_db() -> AnyhowResult<Self> {
+        let conn = Connection::open_in_memory()
+            .context("Failed to create in-memory database")?;
+
+        // Enable foreign keys
+        conn.execute("PRAGMA foreign_keys = ON", [])?;
+
+        let mut db = Self { conn };
+        db.initialize()?;
+
+        Ok(db)
+    }
+
     /// Get database file path
     fn get_db_path() -> AnyhowResult<PathBuf> {
         // Use dirs crate for cross-platform data directory

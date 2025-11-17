@@ -25,6 +25,7 @@ pub mod proactive_manager;
 pub mod learning;
 pub mod personality_detector;  // v3.8.0 Phase 2.1: Conversation pattern analysis
 pub mod persona_adjuster;      // v3.8.0 Phase 2.3: Automatic persona adjustment
+pub mod lora_data_collector;   // v3.8.0 Phase 3.1: LoRA training data collection
 
 #[cfg(test)]
 mod personality_tests;  // v3.8.0 Phase 2: Comprehensive personality tests (30+ tests)
