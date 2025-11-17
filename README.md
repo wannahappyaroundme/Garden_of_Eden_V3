@@ -4,7 +4,7 @@
 
 ### **Your Private AI Assistant That Never Leaves Your Computer**
 
-[![Version](https://img.shields.io/badge/version-3.5.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
+[![Version](https://img.shields.io/badge/version-3.5.1-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![Tauri](https://img.shields.io/badge/Tauri-2.9-24C8DB.svg)](https://tauri.app/)

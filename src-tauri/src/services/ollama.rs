@@ -4,8 +4,10 @@ use futures_util::StreamExt;
 use std::sync::Arc;
 
 use super::rag::{RagService, format_episodes_for_context};
+use super::tool_calling::{ToolService, ToolCall, ToolDefinition};
 
 const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
+const OLLAMA_CHAT_API_URL: &str = "http://localhost:11434/api/chat";
 const MODEL_NAME: &str = "qwen2.5:7b"; // Fast 3-4s responses, excellent Korean support, better reasoning
 const RAG_TOP_K: usize = 3; // Retrieve top 3 most relevant memories
 
@@ -300,6 +302,265 @@ pub async fn store_conversation_in_rag(
             log::error!("Failed to store episode in RAG: {}", e);
             format!("Failed to store conversation in memory: {}", e)
         })
+}
+
+// ============================================================================
+// Tool Calling Support (v3.5.1) - Chat API with Function Calling
+// ============================================================================
+
+/// Chat message for /api/chat endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub role: String, // "system", "user", "assistant", "tool"
+    pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_calls: Option<Vec<ToolCallResponse>>,
+}
+
+/// Tool call response from LLM
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCallResponse {
+    pub function: FunctionCall,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FunctionCall {
+    pub name: String,
+    pub arguments: serde_json::Value,
+}
+
+/// Chat API request with tool support
+#[derive(Debug, Serialize)]
+struct OllamaChatRequest {
+    model: String,
+    messages: Vec<ChatMessage>,
+    stream: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<OllamaTool>>,
+    options: OllamaOptions,
+}
+
+/// Ollama tool definition (OpenAI-compatible)
+#[derive(Debug, Serialize, Deserialize)]
+struct OllamaTool {
+    r#type: String, // "function"
+    function: OllamaToolFunction,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OllamaToolFunction {
+    name: String,
+    description: String,
+    parameters: serde_json::Value,
+}
+
+/// Chat API response
+#[derive(Debug, Deserialize)]
+struct OllamaChatResponse {
+    message: ChatMessage,
+    done: bool,
+}
+
+/// Convert ToolDefinition to Ollama format
+fn convert_tool_definition(tool: &ToolDefinition) -> OllamaTool {
+    // Build JSON schema for parameters
+    let mut properties = serde_json::Map::new();
+    let mut required = Vec::new();
+
+    for param in &tool.parameters {
+        let param_type = match param.param_type {
+            super::tool_calling::ParameterType::String => "string",
+            super::tool_calling::ParameterType::Number => "number",
+            super::tool_calling::ParameterType::Boolean => "boolean",
+            super::tool_calling::ParameterType::Object => "object",
+            super::tool_calling::ParameterType::Array => "array",
+        };
+
+        let mut param_schema = serde_json::json!({
+            "type": param_type,
+            "description": param.description,
+        });
+
+        if let Some(enum_values) = &param.enum_values {
+            param_schema["enum"] = serde_json::json!(enum_values);
+        }
+
+        properties.insert(param.name.clone(), param_schema);
+
+        if param.required {
+            required.push(param.name.clone());
+        }
+    }
+
+    let parameters = serde_json::json!({
+        "type": "object",
+        "properties": properties,
+        "required": required,
+    });
+
+    OllamaTool {
+        r#type: "function".to_string(),
+        function: OllamaToolFunction {
+            name: tool.name.clone(),
+            description: tool.description.clone(),
+            parameters,
+        },
+    }
+}
+
+/// Generate response with tool calling support
+pub async fn generate_response_with_tools(
+    user_message: &str,
+    tool_service: Arc<ToolService>,
+    rag_service: Option<Arc<RagService>>,
+    max_iterations: usize,
+) -> Result<String, String> {
+    log::info!("Generating AI response with tool calling for: {}", user_message);
+
+    // Build system prompt
+    let mut system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
+                         ⚠️ IMPORTANT: If the user asks in Korean, you MUST respond only in Korean!\n\
+                         - If the user message contains Hangul (Korean characters) → Respond 100% in Korean\n\
+                         - Only respond in English when the question is in English\n\
+                         - Never respond in English to Korean questions\n\n\
+                         You have access to various tools to help answer user questions. Use tools when appropriate.\n\n\
+                         Response format:\n\
+                         - Emphasize important parts with **bold**\n\
+                         - Use *italics* for parts that need emphasis\n\
+                         - Use - or 1. for lists\n\
+                         - Wrap code with ```\n\
+                         - Use emojis appropriately for a friendly tone".to_string();
+
+    // RAG: Retrieve relevant past conversations
+    if let Some(rag) = &rag_service {
+        match rag.retrieve_relevant(user_message, RAG_TOP_K).await {
+            Ok(episodes) => {
+                if !episodes.is_empty() {
+                    log::info!("Retrieved {} relevant memories from RAG", episodes.len());
+                    let memory_context = format_episodes_for_context(&episodes);
+                    system_prompt.push_str(&memory_context);
+                    system_prompt.push_str("\n💡 Use the above memories to provide more contextual and personalized responses.\n");
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to retrieve RAG context: {} - Continuing without memory", e);
+            }
+        }
+    }
+
+    // Get tool definitions
+    let tool_definitions = tool_service.get_tool_definitions();
+    let ollama_tools: Vec<OllamaTool> = tool_definitions
+        .iter()
+        .map(convert_tool_definition)
+        .collect();
+
+    log::info!("Registered {} tools for this conversation", ollama_tools.len());
+
+    // Initialize conversation with system message and user message
+    let mut messages = vec![
+        ChatMessage {
+            role: "system".to_string(),
+            content: system_prompt,
+            tool_calls: None,
+        },
+        ChatMessage {
+            role: "user".to_string(),
+            content: user_message.to_string(),
+            tool_calls: None,
+        },
+    ];
+
+    let client = Client::new();
+    let mut final_response = String::new();
+
+    // Multi-turn tool calling loop
+    for iteration in 0..max_iterations {
+        log::debug!("Tool calling iteration {}/{}", iteration + 1, max_iterations);
+
+        let request = OllamaChatRequest {
+            model: MODEL_NAME.to_string(),
+            messages: messages.clone(),
+            stream: false,
+            tools: Some(ollama_tools.clone()),
+            options: OllamaOptions {
+                temperature: 0.8,
+                top_p: 0.92,
+                top_k: 45,
+                repeat_penalty: 1.15,
+            },
+        };
+
+        // Send request
+        let response = client
+            .post(OLLAMA_CHAT_API_URL)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| {
+                format!("Failed to connect to Ollama chat API: {}. Make sure Ollama is running.", e)
+            })?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("Ollama chat API error ({}): {}", status, error_text));
+        }
+
+        let chat_response: OllamaChatResponse = response.json().await.map_err(|e| {
+            format!("Failed to parse Ollama chat response: {}", e)
+        })?;
+
+        // Check if LLM wants to call a tool
+        if let Some(tool_calls) = &chat_response.message.tool_calls {
+            log::info!("LLM requested {} tool calls", tool_calls.len());
+
+            // Add assistant message with tool calls
+            messages.push(chat_response.message.clone());
+
+            // Execute each tool call
+            for tool_call in tool_calls {
+                let function_name = &tool_call.function.name;
+                let arguments = &tool_call.function.arguments;
+
+                log::info!("Executing tool: {} with args: {:?}", function_name, arguments);
+
+                let tool_call_request = ToolCall {
+                    tool_name: function_name.clone(),
+                    arguments: arguments.clone(),
+                };
+
+                let tool_result = tool_service.execute_tool(&tool_call_request).await;
+
+                // Add tool result as a message
+                let result_content = if tool_result.success {
+                    serde_json::to_string(&tool_result.result).unwrap_or_else(|_| "{}".to_string())
+                } else {
+                    format!("{{\"error\": \"{}\"}}", tool_result.error.unwrap_or_default())
+                };
+
+                messages.push(ChatMessage {
+                    role: "tool".to_string(),
+                    content: result_content,
+                    tool_calls: None,
+                });
+            }
+
+            // Continue loop to get final response
+            continue;
+        }
+
+        // No more tool calls - we have the final response
+        final_response = chat_response.message.content.trim().to_string();
+        log::info!("Received final response (iteration {})", iteration + 1);
+        break;
+    }
+
+    if final_response.is_empty() {
+        return Err("Failed to get response after maximum iterations".to_string());
+    }
+
+    Ok(final_response)
 }
 
 #[cfg(test)]

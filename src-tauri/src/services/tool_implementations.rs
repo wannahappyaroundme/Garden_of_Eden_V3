@@ -15,8 +15,9 @@ use super::tool_calling::{
 /// Web search tool (demonstration)
 pub struct WebSearchTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for WebSearchTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let query = arguments.get("query")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'query' parameter"))?;
@@ -58,8 +59,9 @@ impl ToolExecutor for WebSearchTool {
 /// URL fetch tool (demonstration)
 pub struct UrlFetchTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for UrlFetchTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let url = arguments.get("url")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'url' parameter"))?;
@@ -96,8 +98,9 @@ impl ToolExecutor for UrlFetchTool {
 /// File read tool (demonstration)
 pub struct FileReadTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for FileReadTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let path = arguments.get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'path' parameter"))?;
@@ -136,8 +139,9 @@ impl ToolExecutor for FileReadTool {
 /// File write tool (demonstration)
 pub struct FileWriteTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for FileWriteTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let path = arguments.get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'path' parameter"))?;
@@ -186,8 +190,9 @@ impl ToolExecutor for FileWriteTool {
 /// System information tool (demonstration)
 pub struct SystemInfoTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for SystemInfoTool {
-    fn execute(&self, _arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, _arguments: serde_json::Value) -> Result<serde_json::Value> {
         log::info!("System info tool executing");
 
         // Get system info using SystemInfoService
@@ -216,8 +221,9 @@ impl ToolExecutor for SystemInfoTool {
 /// Calculator tool (demonstration)
 pub struct CalculatorTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for CalculatorTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let expression = arguments.get("expression")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'expression' parameter"))?;

@@ -75,10 +75,11 @@ pub struct ToolResult {
     pub error: Option<String>,
 }
 
-/// Tool executor trait
+/// Tool executor trait (async support for v3.5.1)
+#[async_trait::async_trait]
 pub trait ToolExecutor: Send + Sync {
-    /// Execute the tool with given arguments
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value>;
+    /// Execute the tool with given arguments (now async)
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value>;
 
     /// Get tool definition
     fn definition(&self) -> ToolDefinition;
@@ -112,13 +113,13 @@ impl ToolService {
             .collect()
     }
 
-    /// Execute a tool call
-    pub fn execute_tool(&self, tool_call: &ToolCall) -> ToolResult {
+    /// Execute a tool call (now async)
+    pub async fn execute_tool(&self, tool_call: &ToolCall) -> ToolResult {
         log::info!("Executing tool: {} with args: {:?}", tool_call.tool_name, tool_call.arguments);
 
         match self.tools.get(&tool_call.tool_name) {
             Some(executor) => {
-                match executor.execute(tool_call.arguments.clone()) {
+                match executor.execute(tool_call.arguments.clone()).await {
                     Ok(result) => ToolResult {
                         success: true,
                         result,
@@ -199,8 +200,9 @@ impl Default for ToolService {
 /// Web search tool
 pub struct WebSearchTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for WebSearchTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let query = arguments.get("query")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'query' parameter"))?;
@@ -241,8 +243,9 @@ impl ToolExecutor for WebSearchTool {
 /// File read tool
 pub struct FileReadTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for FileReadTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let path = arguments.get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'path' parameter"))?;
@@ -277,8 +280,9 @@ impl ToolExecutor for FileReadTool {
 /// Calculator tool
 pub struct CalculatorTool;
 
+#[async_trait::async_trait]
 impl ToolExecutor for CalculatorTool {
-    fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, arguments: serde_json::Value) -> Result<serde_json::Value> {
         let expression = arguments.get("expression")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'expression' parameter"))?;
