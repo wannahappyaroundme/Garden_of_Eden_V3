@@ -4,6 +4,57 @@ All notable changes to Garden of Eden V3 will be documented in this file.
 
 ## [Unreleased]
 
+## [3.1.0] - 2025-01-XX
+
+### Added - 🪟 Windows Support
+- **Windows 10/11 Support**: Full native support for Windows platform
+- **Windows Screen Capture**: Native Win32 API integration for screen capture
+- **Windows Active Window Detection**: Using GetForegroundWindow and GetWindowThreadProcessId
+- **Windows TTS**: Microsoft SAPI integration (Zira, David voices)
+- **MSI Installer**: Windows Installer package for easy installation
+- **NSIS Installer**: Alternative installer option
+- **GitHub Actions**: Automated Windows builds on push/tag
+- **Cross-Platform Workflows**: Build macOS and Windows simultaneously
+
+### Added - 🔧 System Integration Enhancements
+- **Git Integration** (13 commands):
+  - Repository detection and initialization
+  - Status checking (modified, staged, untracked files)
+  - Diff generation (staged/unstaged)
+  - File staging/unstaging
+  - Commit creation (handles initial commits)
+  - Push to remote
+  - Branch operations (create, checkout, list)
+  - Commit log and history
+- **Auto-updater Framework** (6 commands):
+  - Version comparison (semantic versioning)
+  - Update check intervals
+  - GitHub releases integration
+  - Update signature validation
+- **Crash Reporting** (7 commands):
+  - Privacy-first Sentry integration (opt-in)
+  - Error sanitization (removes HOME, USER, API keys)
+  - User-controlled settings
+  - Crash report creation with context
+
+### Changed
+- **Platform Support**: macOS-only → macOS + Windows
+- **Test Coverage**: 47 tests → 67 tests (+20 new tests)
+- **Version**: 3.0.4 → 3.1.0
+- **README**: Updated with Windows installation instructions
+- **Cargo.toml**: Added Windows-specific dependencies and features
+
+### Technical
+- **Windows Features** in Cargo.toml:
+  - Win32_Graphics_Gdi (screen capture)
+  - Win32_Graphics_Dwm (Desktop Window Manager)
+  - Win32_System_Com (COM for SAPI)
+  - Win32_Media_Speech (Windows TTS)
+  - Win32_System_Threading (process management)
+  - Win32_UI_Shell (shell operations)
+- **Tauri Config**: Added Windows bundle configuration (WiX + NSIS)
+- **GitHub Actions**: Automated builds for both platforms
+
 ### Week 2 Complete - Persistent Suggestions & Organization
 
 ### Added

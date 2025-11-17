@@ -4,9 +4,9 @@
 
 ### **Your Private AI Assistant That Never Leaves Your Computer**
 
-[![Version](https://img.shields.io/badge/version-3.0.4-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)](#-system-requirements)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![Tauri](https://img.shields.io/badge/Tauri-2.9-24C8DB.svg)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://reactjs.org/)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
@@ -63,7 +63,7 @@ Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama*
 
 ---
 
-## ✨ Current Features (v3.0.4)
+## ✨ Current Features (v3.1.0)
 
 ### 🤖 AI Intelligence
 - **Local LLM**: qwen2.5:7b (4.7GB) via Ollama - fast, multilingual, excellent reasoning
@@ -317,17 +317,31 @@ The onboarding wizard will guide you through:
 
 ## 🔧 System Requirements
 
-### Minimum
+### macOS
+**Minimum:**
 - macOS 11 Big Sur or later
 - 16GB RAM
 - 20GB free disk space (for models)
 - Intel or Apple Silicon processor
 
-### Recommended
+**Recommended:**
 - macOS 13 Ventura or later
 - 24GB+ RAM
 - 50GB free disk space
 - Apple Silicon (M1/M2/M3) for Metal acceleration
+
+### Windows
+**Minimum:**
+- Windows 10 (64-bit) or Windows 11
+- 16GB RAM
+- 20GB free disk space (for models)
+- Intel or AMD processor (x86_64)
+
+**Recommended:**
+- Windows 11
+- 24GB+ RAM
+- 50GB free disk space
+- Modern CPU with AVX2 support for optimal performance
 
 ---
 
