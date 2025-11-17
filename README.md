@@ -4,7 +4,7 @@
 
 ### **Your Private AI Assistant That Never Leaves Your Computer**
 
-[![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
+[![Version](https://img.shields.io/badge/version-3.8.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![Tauri](https://img.shields.io/badge/Tauri-2.9-24C8DB.svg)](https://tauri.app/)
@@ -26,7 +26,7 @@
 
 Garden of Eden V3 is a **production-quality, privacy-first desktop AI assistant** inspired by Tony Stark's JARVIS. Unlike cloud-based AI services, **every single byte of your data stays on your machine**. No subscriptions, no tracking, no compromises.
 
-Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama**, and designed for **maximum privacy and performance**.
+Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollama**, and designed for **maximum privacy and performance**.
 
 ### Why Choose Garden of Eden?
 
@@ -38,11 +38,11 @@ Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama*
 </td>
 <td width="33%" align="center">
 <h3>⚡ Ultra-Fast</h3>
-<p>qwen2.5:7b delivers responses in 2-4 seconds. Optimized for speed with Metal (macOS) acceleration.</p>
+<p>Qwen 2.5 14B delivers responses in 2-4 seconds. Optimized with 4-bit quantization and Metal/CUDA acceleration.</p>
 </td>
 <td width="33%" align="center">
 <h3>🧠 Learns Your Style</h3>
-<p>10 customizable personality parameters. AI learns from your feedback and optimizes its behavior automatically.</p>
+<p>10 customizable personality parameters. Automatic personality detection (Big Five + MBTI). LoRA fine-tuning for deep personalization.</p>
 </td>
 </tr>
 <tr>
@@ -63,10 +63,10 @@ Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama*
 
 ---
 
-## ✨ Current Features (v3.6.0)
+## ✨ Current Features (v3.8.0)
 
 ### 🤖 AI Intelligence
-- **Local LLM**: qwen2.5:7b (4.7GB) via Ollama - fast, multilingual, excellent reasoning
+- **Local LLM**: Qwen 2.5 14B (9.0GB Q4_K_M) via Ollama - excellent reasoning, Korean support, fast inference
 - **Tool Calling System** ✨ NEW: AI can use 6 production tools (web search, file ops, system info, calculator)
 - **Internet Access** ✨ NEW: Privacy-preserving web search (DuckDuckGo/SearX) and URL fetching
 - **Plugin System**: V8 JavaScript runtime for extensible plugins
@@ -74,10 +74,26 @@ Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama*
 - **Markdown Support**: Code highlighting with rehype-highlight
 - **RAG Memory**: Episodic memory with RAFT hallucination reduction
 - **Learning System**: AI optimizes personality based on user feedback
+- **Personality Detection** ✨ NEW (v3.8.0): Automatic Big Five + MBTI analysis from conversation patterns
+- **LoRA Fine-tuning** ✨ NEW (v3.8.0): Deep personalization with parameter-efficient training
 
-### 🎛️ Persona Customization
-- **10 Adjustable Parameters**: Formality, Verbosity, Humor, Emoji Usage, Proactiveness, Technical Depth, Empathy, Code Examples, Questioning, Suggestions
-- **Learning Optimization**: Gradient-based learning from thumbs up/down feedback
+### 🎛️ Persona Customization & Learning (v3.8.0 Major Upgrade)
+- **10 Adjustable Parameters**: Formality, Verbosity, Humor, Emoji Usage, Empathy, Creativity, Proactiveness, Technical Depth, Code Examples, Questioning
+- **Automatic Personality Detection** ✨ NEW:
+  - Linguistic pattern analysis (11 metrics)
+  - Big Five personality traits (OCEAN model)
+  - MBTI type indicators (I/E, S/N, T/F, J/P)
+  - Confidence scoring (sample size + statistical validation)
+- **Automatic Persona Adjustment** ✨ NEW:
+  - 3 strategies: Conservative (20% max), Moderate (40%), Aggressive (60%)
+  - Learning rate control (default: 0.3)
+  - Human-readable explanation generation
+- **LoRA Fine-tuning System** ✨ NEW:
+  - Export high-quality training data (Alpaca, ShareGPT, JSONL formats)
+  - Train adapters with LLaMA-Factory (1-3 hours on GPU)
+  - Manage multiple adapter versions (semantic versioning)
+  - A/B testing framework for adapter comparison
+  - **1인 1모델 비용**: Base model 공유 + adapter만 per-user (**100배 비용 절감**)
 - **System Prompt Preview**: See how persona affects AI behavior
 - **Cloud Backup**: Save/restore persona to Google Drive
 - **Local Storage**: All settings saved to SQLite (works offline)
@@ -140,6 +156,10 @@ Built with **Tauri 2.9** (Rust + React), powered by **qwen2.5:7b** via **Ollama*
 ### Backend (Rust/Tauri)
 - `src-tauri/src/services/ollama.rs` - Ollama integration with streaming
 - `src-tauri/src/services/learning.rs` - Persona optimization engine
+- `src-tauri/src/services/personality_detector.rs` - **v3.8.0**: Big Five + MBTI detection
+- `src-tauri/src/services/persona_adjuster.rs` - **v3.8.0**: Automatic persona adjustment
+- `src-tauri/src/services/lora_data_collector.rs` - **v3.8.0**: Training data export
+- `src-tauri/src/services/lora_adapter_manager.rs` - **v3.8.0**: LoRA adapter management
 - `src-tauri/src/services/rag.rs` - RAG episodic memory
 - `src-tauri/src/services/llava.rs` - Vision model integration
 - `src-tauri/src/services/screen.rs` - Screen capture & context
@@ -239,11 +259,12 @@ The onboarding wizard will guide you through:
 - **State**: Zustand (lightweight, persistent)
 
 ### AI & ML
-- **LLM**: qwen2.5:7b (14.8B params, Q4_K_M quantization)
-- **Runtime**: Ollama (Metal acceleration on macOS)
+- **LLM**: Qwen 2.5 14B (14.8B params, Q4_K_M quantization, 9.0GB)
+- **Runtime**: Ollama (Metal/CUDA acceleration)
 - **Speech**: Xenova/transformers (Whisper-small)
 - **Embeddings**: TF-IDF (128-dim vectors)
 - **Vision**: LLaVA 7B (planned)
+- **Fine-tuning** (v3.8.0): LLaMA-Factory + LoRA (rank 16, alpha 32)
 
 ### Backend (Rust)
 - **Database**: SQLite via rusqlite (AES-256 encrypted)
@@ -277,13 +298,14 @@ The onboarding wizard will guide you through:
 - **[Building & Deployment](docs/BUILDING.md)** - Build from source, create releases
 - **[API Reference](docs/API.md)** - Tauri IPC commands documentation
 - **[Testing Guide](docs/TESTING.md)** - Running tests, adding new tests
-- **[Tool Calling Testing](TESTING_v3.6.0.md)** - v3.6.0 tool system testing guide ✨ NEW
+- **[Tool Calling Testing](TESTING_v3.6.0.md)** - v3.6.0 tool system testing guide
+- **[LoRA Fine-tuning Guide](docs/LORA_FINE_TUNING_GUIDE.md)** - **v3.8.0**: Complete fine-tuning workflow ✨ NEW
 - **[Claude Development](docs/CLAUDE.md)** - Using Claude Code for development
 - **[Contributing](CONTRIBUTING.md)** - How to contribute
 
 ### Additional Resources
-- **[Changelog](CHANGELOG.md)** - Version history
-- **[Progress Log](PROGRESS.md)** - Development progress and technical details
+- **[Changelog](CHANGELOG.md)** - Version history (v3.8.0 updates)
+- **[Progress Log](PROGRESS.md)** - Development progress (79+ tests passing)
 - **[Master Specification](docs/archive/MASTER_SPEC.md)** - Complete original design (12,000 lines)
 
 ---
@@ -320,41 +342,67 @@ The onboarding wizard will guide you through:
 
 ## 📊 Performance
 
-- **Response Time**: 2-4 seconds (qwen2.5:7b on M1/M2)
-- **Memory Usage**: ~12GB RAM (Ollama + App)
-- **Startup Time**: <2s warm start, ~6s cold start
-- **Model Size**: 4.7GB (qwen2.5:7b Q4_K_M)
+- **Response Time**: 2-4 seconds (Qwen 2.5 14B Q4_K_M on M2/RTX 4090)
+- **GPU VRAM Usage (Inference)**: **12-13GB** (model 9GB + KV cache 3-4GB)
+- **GPU VRAM Usage (LoRA Training)**: **15-19GB** (model 9GB + adapters 0.5GB + optimizer 2-3GB + batch 4GB)
+- **System RAM Usage**: ~4-6GB (app + database + OS overhead)
+- **Startup Time**: <2s warm start, ~6s cold start (model loading)
+- **Model Size**: 9.0GB (Qwen 2.5 14B Q4_K_M) + 50-200MB per LoRA adapter
 - **Database**: <10MB typical (grows with conversations)
+- **LoRA Training Time**: 1-3 hours for 1000 examples (RTX 4090 / M2 Max)
 
 ---
 
 ## 🔧 System Requirements
 
-### macOS
+### For Inference (추론/대화)
+
+#### macOS
 **Minimum:**
 - macOS 11 Big Sur or later
-- 16GB RAM
+- **GPU VRAM**: 16GB (M1 Pro/Max, M2 Pro/Max, M3)
+- **System RAM**: 16GB total
 - 20GB free disk space (for models)
-- Intel or Apple Silicon processor
 
 **Recommended:**
 - macOS 13 Ventura or later
-- 24GB+ RAM
+- **GPU VRAM**: 24GB+ (M1 Max/Ultra, M2 Max/Ultra, M3 Max)
+- **System RAM**: 24GB+ total
 - 50GB free disk space
 - Apple Silicon (M1/M2/M3) for Metal acceleration
 
-### Windows
+#### Windows
 **Minimum:**
 - Windows 10 (64-bit) or Windows 11
-- 16GB RAM
+- **GPU**: NVIDIA RTX 3060 12GB or RTX 4060 Ti 16GB
+- **System RAM**: 16GB
 - 20GB free disk space (for models)
-- Intel or AMD processor (x86_64)
 
 **Recommended:**
 - Windows 11
-- 24GB+ RAM
+- **GPU**: NVIDIA RTX 4090 24GB or RTX 4080 16GB
+- **System RAM**: 24GB+
 - 50GB free disk space
-- Modern CPU with AVX2 support for optimal performance
+- CUDA 11.8+ for optimal performance
+
+---
+
+### For LoRA Fine-tuning (추가 학습)
+
+#### GPU Requirements
+**Minimum:**
+- **GPU VRAM**: 16GB (RTX 3090, RTX 4060 Ti 16GB, M1 Max 64GB, M2 Max 96GB)
+- **System RAM**: 24GB
+- 50GB free disk space
+
+**Recommended:**
+- **GPU VRAM**: 24GB+ (RTX 4090, M1 Ultra, M2 Ultra, M3 Max)
+- **System RAM**: 32GB+
+- 100GB free disk space (for multiple adapter versions)
+
+**Training Time**: 1-3 hours for 1000 examples
+**Batch Size**: 4-8 (adjust based on VRAM)
+**LoRA Adapter Size**: 50-200MB per version
 
 ---
 

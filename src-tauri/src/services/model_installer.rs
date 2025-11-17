@@ -181,6 +181,8 @@ impl ModelInstallerService {
             // Try starting Ollama directly in background
             let _ = TokioCommand::new("ollama")
                 .arg("serve")
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
                 .spawn();
 
             // Give it a moment to start
@@ -190,7 +192,10 @@ impl ModelInstallerService {
             tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
         }
 
-        info!("Ollama service started!");
+        // Wait for Ollama to be ready
+        self.wait_for_ollama_ready().await?;
+
+        info!("Ollama service started and ready!");
         Ok(())
     }
 
@@ -241,7 +246,116 @@ impl ModelInstallerService {
         let _ = std::fs::remove_file(&installer_path);
 
         info!("Ollama installed successfully on Windows!");
+
+        // Start Ollama service
+        info!("Starting Ollama service on Windows...");
+        self.start_ollama_service_windows().await?;
+
+        // Wait for Ollama to be ready
+        self.wait_for_ollama_ready().await?;
+
+        info!("Ollama service started and ready!");
         Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn start_ollama_service_windows(&self) -> Result<()> {
+        info!("Attempting to start Ollama service on Windows");
+
+        // Try 1: Windows Service (if installed as a service)
+        info!("Trying to start Ollama via Windows Service...");
+        let service_result = TokioCommand::new("sc")
+            .args(&["start", "OllamaService"])
+            .output()
+            .await;
+
+        if let Ok(output) = service_result {
+            if output.status.success() {
+                info!("Started Ollama via Windows Service");
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                return Ok(());
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                warn!("Windows Service start failed: {}", stderr);
+            }
+        }
+
+        // Try 2: Direct spawn (like macOS fallback)
+        info!("Windows Service not available, spawning 'ollama serve' directly");
+
+        let spawn_result = TokioCommand::new("ollama")
+            .arg("serve")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+
+        match spawn_result {
+            Ok(_) => {
+                info!("Spawned 'ollama serve' in background");
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                Ok(())
+            }
+            Err(e) => {
+                // Try 3: PowerShell Start-Process
+                warn!("Direct spawn failed: {}. Trying PowerShell...", e);
+
+                let ps_result = TokioCommand::new("powershell")
+                    .args(&[
+                        "-Command",
+                        "Start-Process",
+                        "-FilePath",
+                        "ollama",
+                        "-ArgumentList",
+                        "serve",
+                        "-WindowStyle",
+                        "Hidden",
+                    ])
+                    .output()
+                    .await;
+
+                if let Ok(output) = ps_result {
+                    if output.status.success() {
+                        info!("Started Ollama via PowerShell");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                        return Ok(());
+                    }
+                }
+
+                Err(anyhow!("Failed to start Ollama service. Please run 'ollama serve' manually."))
+            }
+        }
+    }
+
+    /// Wait for Ollama to be ready (health check)
+    async fn wait_for_ollama_ready(&self) -> Result<()> {
+        info!("Waiting for Ollama to be ready (health check)...");
+
+        for attempt in 1..=10 {
+            info!("Health check attempt {}/10", attempt);
+
+            // Try to connect to Ollama API
+            let client = reqwest::Client::builder()
+                .timeout(tokio::time::Duration::from_secs(5))
+                .build()?;
+
+            match client.get("http://localhost:11434/api/tags").send().await {
+                Ok(response) if response.status().is_success() => {
+                    info!("Ollama is ready! (attempt {})", attempt);
+                    return Ok(());
+                }
+                Ok(response) => {
+                    warn!("Ollama responded but not ready (status: {})", response.status());
+                }
+                Err(e) => {
+                    warn!("Health check failed (attempt {}): {}", attempt, e);
+                }
+            }
+
+            // Wait before retrying
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        }
+
+        Err(anyhow!("Ollama failed to start after 20 seconds. Please check if the service is running."))
     }
 
     /// Check if a specific model exists locally
