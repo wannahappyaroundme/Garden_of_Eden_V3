@@ -62,7 +62,7 @@ pub async fn learning_save_persona(
     conn.execute(
         "INSERT INTO persona_parameters (
             formality, verbosity, humor, emoji_usage, proactiveness,
-            technical_depth, empathy, code_examples, questioning, suggestions,
+            technical_depth, empathy, code_examples, questioning, creativity,
             created_at
         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         rusqlite::params![
@@ -75,7 +75,7 @@ pub async fn learning_save_persona(
             persona.empathy,
             persona.code_examples,
             persona.questioning,
-            persona.suggestions,
+            persona.creativity,
             now,
         ],
     )
@@ -98,7 +98,7 @@ pub async fn learning_load_persona(
     let persona = conn
         .query_row(
             "SELECT formality, verbosity, humor, emoji_usage, proactiveness,
-                    technical_depth, empathy, code_examples, questioning, suggestions
+                    technical_depth, empathy, code_examples, questioning, creativity
              FROM persona_parameters
              ORDER BY id DESC
              LIMIT 1",
@@ -114,7 +114,7 @@ pub async fn learning_load_persona(
                     empathy: row.get(6)?,
                     code_examples: row.get(7)?,
                     questioning: row.get(8)?,
-                    suggestions: row.get(9)?,
+                    creativity: row.get(9)?,
                 })
             },
         )
@@ -130,7 +130,7 @@ pub async fn learning_load_persona(
                 empathy: 0.5,
                 code_examples: 0.7,
                 questioning: 0.5,
-                suggestions: 0.4,
+                creativity: 0.4,
             }
         });
 

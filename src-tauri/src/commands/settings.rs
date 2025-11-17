@@ -20,14 +20,12 @@ pub async fn get_settings(state: State<'_, AppState>) -> Result<Settings, String
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.conn();
 
-    // Get persona settings (get the latest one)
+    // Get persona settings (v3.8.0: 10 standardized parameters)
     let persona: PersonaSettings = conn
         .query_row(
-            "SELECT id, formality, humor, verbosity, emoji_usage, enthusiasm,
-                    empathy, directness, technicality, creativity, proactivity,
-                    language_preference, code_language_preference,
-                    patience, encouragement, formality_honorifics,
-                    reasoning_depth, context_awareness,
+            "SELECT id, formality, verbosity, humor, emoji_usage,
+                    empathy, creativity, proactiveness,
+                    technical_depth, code_examples, questioning,
                     created_at, updated_at
              FROM persona_settings
              ORDER BY id DESC
@@ -37,24 +35,17 @@ pub async fn get_settings(state: State<'_, AppState>) -> Result<Settings, String
                 Ok(PersonaSettings {
                     id: Some(row.get(0)?),
                     formality: row.get(1)?,
-                    humor: row.get(2)?,
-                    verbosity: row.get(3)?,
+                    verbosity: row.get(2)?,
+                    humor: row.get(3)?,
                     emoji_usage: row.get(4)?,
-                    enthusiasm: row.get(5)?,
-                    empathy: row.get(6)?,
-                    directness: row.get(7)?,
-                    technicality: row.get(8)?,
-                    creativity: row.get(9)?,
-                    proactivity: row.get(10)?,
-                    language_preference: row.get(11)?,
-                    code_language_preference: row.get(12)?,
-                    patience: row.get(13)?,
-                    encouragement: row.get(14)?,
-                    formality_honorifics: row.get(15)?,
-                    reasoning_depth: row.get(16)?,
-                    context_awareness: row.get(17)?,
-                    created_at: row.get(18)?,
-                    updated_at: row.get(19)?,
+                    empathy: row.get(5)?,
+                    creativity: row.get(6)?,
+                    proactiveness: row.get(7)?,
+                    technical_depth: row.get(8)?,
+                    code_examples: row.get(9)?,
+                    questioning: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -97,39 +88,32 @@ pub async fn update_settings(
     let conn = db.conn();
     let now = chrono::Utc::now().timestamp_millis();
 
-    // Update persona settings
-    if let Some(id) = settings.persona.id {
+    // Update persona settings (v3.8.0: 10 standardized parameters)
+    if let Some(_id) = settings.persona.id {
         conn.execute(
             "UPDATE persona_settings SET
-                formality = ?1, humor = ?2, verbosity = ?3, emoji_usage = ?4, enthusiasm = ?5,
-                empathy = ?6, directness = ?7, technicality = ?8, creativity = ?9, proactivity = ?10,
-                language_preference = ?11, code_language_preference = ?12,
-                patience = ?13, encouragement = ?14, formality_honorifics = ?15,
-                reasoning_depth = ?16, context_awareness = ?17, updated_at = ?18
-             WHERE id = ?19",
+                formality = ?1, verbosity = ?2, humor = ?3, emoji_usage = ?4,
+                empathy = ?5, creativity = ?6, proactiveness = ?7,
+                technical_depth = ?8, code_examples = ?9, questioning = ?10,
+                updated_at = ?11
+             WHERE id = (SELECT id FROM persona_settings ORDER BY id DESC LIMIT 1)",
             rusqlite::params![
                 settings.persona.formality,
-                settings.persona.humor,
                 settings.persona.verbosity,
+                settings.persona.humor,
                 settings.persona.emoji_usage,
-                settings.persona.enthusiasm,
                 settings.persona.empathy,
-                settings.persona.directness,
-                settings.persona.technicality,
                 settings.persona.creativity,
-                settings.persona.proactivity,
-                settings.persona.language_preference,
-                settings.persona.code_language_preference,
-                settings.persona.patience,
-                settings.persona.encouragement,
-                settings.persona.formality_honorifics,
-                settings.persona.reasoning_depth,
-                settings.persona.context_awareness,
+                settings.persona.proactiveness,
+                settings.persona.technical_depth,
+                settings.persona.code_examples,
+                settings.persona.questioning,
                 now,
-                id,
             ],
         )
         .map_err(|e| e.to_string())?;
+
+        log::info!("Persona settings updated via settings panel");
     }
 
     // Update theme

@@ -23,6 +23,11 @@ pub mod proactive_manager;
 
 // Phase 5: Learning System
 pub mod learning;
+pub mod personality_detector;  // v3.8.0 Phase 2.1: Conversation pattern analysis
+pub mod persona_adjuster;      // v3.8.0 Phase 2.3: Automatic persona adjustment
+
+#[cfg(test)]
+mod personality_tests;  // v3.8.0 Phase 2: Comprehensive personality tests (30+ tests)
 
 // Phase 6: Webhooks & External Integrations
 pub mod webhook;

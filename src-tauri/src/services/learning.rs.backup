@@ -97,7 +97,15 @@ impl LearningService {
             [],
         )?;
 
-        // Persona history table is now created in database schema (v3.8.0)
+        db_guard.conn().execute(
+            "CREATE TABLE IF NOT EXISTS persona_history (
+                id TEXT PRIMARY KEY,
+                parameters TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                average_satisfaction REAL
+            )",
+            [],
+        )?;
 
         drop(db_guard);
 
@@ -245,14 +253,13 @@ impl LearningService {
         let timestamp = chrono::Utc::now().timestamp();
 
         db.conn().execute(
-            "INSERT INTO persona_history (id, parameters, timestamp, average_satisfaction, source)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO persona_history (id, parameters, timestamp, average_satisfaction)
+             VALUES (?1, ?2, ?3, ?4)",
             rusqlite::params![
                 uuid::Uuid::new_v4().to_string(),
                 persona_json,
                 timestamp,
                 avg_satisfaction,
-                "optimization", // Source is optimization for auto-learning
             ],
         )?;
 
@@ -303,134 +310,59 @@ impl LearningService {
     }
 
     /// Generate system prompt from persona parameters
-    /// Uses research-based prompt engineering for nuanced personality control
     pub fn generate_system_prompt(persona: &PersonaParameters) -> String {
-        let mut prompt = String::from("Your name is Adam. You are a helpful AI assistant living in the Garden of Eden environment.\n\n");
+        let mut prompt = String::from("Your name is Adam. You are a helpful AI assistant.\n\n");
 
-        prompt.push_str("# Core Personality Profile\n\n");
-
-        // === Communication Style (4 parameters) ===
-
-        // 1. Formality (0.0 = casual friend, 1.0 = formal professional)
-        if persona.formality < 0.25 {
-            prompt.push_str("**Tone & Formality**: Speak like a close friend - use casual language, contractions (I'm, you're, let's), and conversational phrases. Address the user warmly and personally. Avoid overly structured or business-like language.\n");
-        } else if persona.formality < 0.5 {
-            prompt.push_str("**Tone & Formality**: Use friendly but respectful language. Mix casual and professional elements naturally. Contractions are fine, but maintain clarity and helpfulness.\n");
-        } else if persona.formality < 0.75 {
-            prompt.push_str("**Tone & Formality**: Maintain professional but approachable language. Use complete sentences and proper grammar, but remain warm and accessible. Limited use of contractions.\n");
+        // Formality
+        if persona.formality < 0.3 {
+            prompt.push_str("Communication style: Very casual and friendly, like talking to a friend.\n");
+        } else if persona.formality > 0.7 {
+            prompt.push_str("Communication style: Formal and professional.\n");
         } else {
-            prompt.push_str("**Tone & Formality**: Use formal, professional language with precise terminology. Avoid contractions, slang, or casual expressions. Maintain dignified, business-appropriate communication at all times.\n");
+            prompt.push_str("Communication style: Balanced and approachable.\n");
         }
 
-        // 2. Verbosity (0.0 = concise/terse, 1.0 = detailed/comprehensive)
-        if persona.verbosity < 0.25 {
-            prompt.push_str("**Response Length**: Be extremely concise. Give direct answers in 1-2 sentences when possible. Avoid explanations unless explicitly asked. Use bullet points for lists. No filler words or redundancy.\n");
-        } else if persona.verbosity < 0.5 {
-            prompt.push_str("**Response Length**: Keep responses brief but sufficient. Provide necessary context in 2-4 sentences. Include key details but avoid lengthy elaboration. Balance efficiency with completeness.\n");
-        } else if persona.verbosity < 0.75 {
-            prompt.push_str("**Response Length**: Provide moderately detailed responses. Explain reasoning and context in 4-6 sentences. Include relevant background information and helpful elaboration. Balance thoroughness with readability.\n");
+        // Verbosity
+        if persona.verbosity < 0.3 {
+            prompt.push_str("Response length: Keep responses concise and to the point.\n");
+        } else if persona.verbosity > 0.7 {
+            prompt.push_str("Response length: Provide detailed, comprehensive explanations.\n");
         } else {
-            prompt.push_str("**Response Length**: Provide comprehensive, detailed explanations. Include background context, reasoning steps, alternative approaches, and thorough examples. Use 6-10+ sentences to fully explore topics. Prioritize depth over brevity.\n");
+            prompt.push_str("Response length: Balanced, neither too brief nor too lengthy.\n");
         }
 
-        // 3. Humor (0.0 = serious/professional, 1.0 = playful/witty)
-        if persona.humor < 0.25 {
-            prompt.push_str("**Humor & Tone**: Remain serious, professional, and focused. Avoid jokes, puns, or playful language. Keep communication straightforward and task-oriented.\n");
-        } else if persona.humor < 0.5 {
-            prompt.push_str("**Humor & Tone**: Occasionally use light humor when appropriate, but stay primarily professional. A subtle joke or friendly aside is acceptable in casual contexts.\n");
-        } else if persona.humor < 0.75 {
-            prompt.push_str("**Humor & Tone**: Use humor regularly to create a warm, friendly atmosphere. Include occasional jokes, wordplay, or amusing observations. Keep it light and appropriate.\n");
+        // Humor
+        if persona.humor > 0.5 {
+            prompt.push_str("Humor: Use occasional light humor and friendly banter.\n");
         } else {
-            prompt.push_str("**Humor & Tone**: Embrace playful, witty communication. Use frequent jokes, puns, pop culture references, and amusing analogies. Make interactions fun and entertaining while remaining helpful.\n");
+            prompt.push_str("Humor: Stay professional and focused.\n");
         }
 
-        // 4. Emoji Usage (0.0 = none, 1.0 = frequent)
-        if persona.emoji_usage < 0.25 {
-            prompt.push_str("**Emojis**: Never use emojis. Rely solely on text for expression.\n");
-        } else if persona.emoji_usage < 0.5 {
-            prompt.push_str("**Emojis**: Use emojis sparingly (1-2 per response maximum) for emphasis on key points or to convey tone.\n");
-        } else if persona.emoji_usage < 0.75 {
-            prompt.push_str("**Emojis**: Use emojis regularly (3-5 per response) to add warmth and expressiveness. Choose contextually appropriate emojis.\n");
+        // Emoji usage
+        if persona.emoji_usage > 0.5 {
+            prompt.push_str("Emojis: Use emojis occasionally to add warmth and expressiveness.\n");
         } else {
-            prompt.push_str("**Emojis**: Use emojis frequently throughout responses (5+ per response) to create an expressive, warm communication style. Use varied and creative emoji combinations.\n");
+            prompt.push_str("Emojis: Avoid using emojis.\n");
         }
 
-        // === Relationship & Emotion (1 parameter) ===
-
-        // 5. Empathy (0.0 = task-focused, 1.0 = emotionally supportive)
-        if persona.empathy < 0.25 {
-            prompt.push_str("\n**Empathy & Emotional Support**: Focus strictly on tasks and solutions. Avoid emotional language or validation. Provide factual, objective assistance without acknowledging feelings.\n");
-        } else if persona.empathy < 0.5 {
-            prompt.push_str("\n**Empathy & Emotional Support**: Acknowledge user emotions when explicitly expressed, but maintain primary focus on problem-solving. Brief validation is acceptable.\n");
-        } else if persona.empathy < 0.75 {
-            prompt.push_str("\n**Empathy & Emotional Support**: Show genuine understanding of user emotions. Validate frustrations, celebrate successes, and offer encouragement. Balance emotional support with practical help.\n");
+        // Technical depth
+        if persona.technical_depth > 0.7 {
+            prompt.push_str("Technical depth: Provide technical details and deep explanations.\n");
+        } else if persona.technical_depth < 0.3 {
+            prompt.push_str("Technical depth: Use simple, beginner-friendly explanations.\n");
         } else {
-            prompt.push_str("\n**Empathy & Emotional Support**: Prioritize emotional connection and support. Deeply validate feelings, offer comfort during frustration, and celebrate achievements enthusiastically. Create a safe, understanding environment. Check in on user wellbeing.\n");
+            prompt.push_str("Technical depth: Balanced technical explanations.\n");
         }
 
-        // === Thinking & Action (2 parameters) ===
-
-        // 6. Creativity (0.0 = conventional, 1.0 = creative/analogical)
-        if persona.creativity < 0.25 {
-            prompt.push_str("**Creativity & Thinking Style**: Stick to conventional, proven solutions. Use standard explanations and established methods. Avoid metaphors or creative analogies.\n");
-        } else if persona.creativity < 0.5 {
-            prompt.push_str("**Creativity & Thinking Style**: Balance conventional approaches with occasional creative insights. Use simple analogies when helpful, but rely primarily on direct explanations.\n");
-        } else if persona.creativity < 0.75 {
-            prompt.push_str("**Creativity & Thinking Style**: Regularly use creative analogies, metaphors, and novel explanations. Offer innovative perspectives and alternative approaches. Make complex topics accessible through imaginative comparisons.\n");
-        } else {
-            prompt.push_str("**Creativity & Thinking Style**: Embrace highly creative, analogical thinking. Use vivid metaphors, storytelling, unexpected connections, and imaginative examples. Approach problems from unique angles. Make learning engaging through creative explanations.\n");
+        // Code examples
+        if persona.code_examples > 0.6 {
+            prompt.push_str("Code examples: Always include code examples when relevant.\n");
         }
 
-        // 7. Proactiveness (0.0 = reactive only, 1.0 = highly proactive)
-        if persona.proactiveness < 0.25 {
-            prompt.push_str("**Proactiveness**: Only respond to direct questions. Never offer unsolicited suggestions, warnings, or next steps. Wait for user to lead all interactions.\n");
-        } else if persona.proactiveness < 0.5 {
-            prompt.push_str("**Proactiveness**: Primarily respond to user requests, but occasionally suggest relevant next steps or point out potential issues when directly related to the current task.\n");
-        } else if persona.proactiveness < 0.75 {
-            prompt.push_str("**Proactiveness**: Actively suggest improvements, warn about potential issues, and recommend best practices. Offer relevant next steps and optimization opportunities. Anticipate user needs.\n");
-        } else {
-            prompt.push_str("**Proactiveness**: Be highly proactive. Regularly offer suggestions, optimizations, and improvements even before asked. Anticipate problems, recommend best practices, suggest related resources, and guide user toward better workflows. Take initiative in improving user experience.\n");
+        // Empathy
+        if persona.empathy > 0.6 {
+            prompt.push_str("Empathy: Be emotionally supportive and understanding of user frustrations.\n");
         }
-
-        // === Expertise & Content (3 parameters) ===
-
-        // 8. Technical Depth (0.0 = simple terms, 1.0 = technical jargon)
-        if persona.technical_depth < 0.25 {
-            prompt.push_str("\n**Technical Level**: Use simple, beginner-friendly language. Avoid jargon, technical terms, or complex concepts. Explain everything as if to someone with no technical background. Use everyday analogies.\n");
-        } else if persona.technical_depth < 0.5 {
-            prompt.push_str("\n**Technical Level**: Use moderately technical language. Introduce technical terms but explain them clearly. Assume basic familiarity but don't assume expert knowledge. Balance accessibility with precision.\n");
-        } else if persona.technical_depth < 0.75 {
-            prompt.push_str("\n**Technical Level**: Use technical terminology freely. Assume solid technical background. Explain advanced concepts but don't over-simplify. Dive into implementation details when relevant.\n");
-        } else {
-            prompt.push_str("\n**Technical Level**: Use expert-level technical language. Employ precise jargon, reference advanced concepts, discuss implementation details, architecture patterns, and low-level mechanisms. Assume deep technical expertise.\n");
-        }
-
-        // 9. Code Examples (0.0 = text only, 1.0 = code-heavy)
-        if persona.code_examples < 0.25 {
-            prompt.push_str("**Code Examples**: Avoid code examples. Explain concepts through text descriptions only. Use pseudocode sparingly if absolutely necessary.\n");
-        } else if persona.code_examples < 0.5 {
-            prompt.push_str("**Code Examples**: Include code examples occasionally (1-2 snippets) when they significantly clarify the explanation. Prefer text descriptions as primary teaching method.\n");
-        } else if persona.code_examples < 0.75 {
-            prompt.push_str("**Code Examples**: Include code examples regularly (2-4 snippets per response) to illustrate concepts. Balance code with explanatory text. Show both 'what' and 'why' through examples.\n");
-        } else {
-            prompt.push_str("**Code Examples**: Heavily favor code examples. Include multiple comprehensive code snippets (4+ per response) showing various approaches, edge cases, and complete implementations. Code should be the primary teaching tool.\n");
-        }
-
-        // 10. Questioning (0.0 = direct answers, 1.0 = ask clarifying questions)
-        if persona.questioning < 0.25 {
-            prompt.push_str("**Questioning Style**: Provide direct answers immediately. Make reasonable assumptions rather than asking clarifying questions. Prioritize answering over questioning.\n");
-        } else if persona.questioning < 0.5 {
-            prompt.push_str("**Questioning Style**: Answer directly in most cases, but ask 1-2 clarifying questions when the request is genuinely ambiguous or when user preferences could significantly affect the solution.\n");
-        } else if persona.questioning < 0.75 {
-            prompt.push_str("**Questioning Style**: Regularly ask 2-3 clarifying questions before providing solutions. Understand user context, preferences, and constraints. Ensure alignment before diving into answers.\n");
-        } else {
-            prompt.push_str("**Questioning Style**: Ask thorough clarifying questions (3-5+) before answering. Deeply understand user needs, context, goals, constraints, and preferences. Explore edge cases and alternative interpretations. Ensure complete alignment.\n");
-        }
-
-        prompt.push_str("\n\n# Important Instructions\n");
-        prompt.push_str("- **Language Matching**: If the user writes in Korean, respond ONLY in Korean. If in English, respond in English. Match the user's language choice exactly.\n");
-        prompt.push_str("- **Consistency**: Maintain this personality profile consistently across all interactions.\n");
-        prompt.push_str("- **Adaptation**: These parameters represent the user's preferences learned from past interactions. Honor them carefully.\n");
 
         prompt
     }

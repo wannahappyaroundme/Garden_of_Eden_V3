@@ -32,27 +32,20 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    // Persona settings table
+    // Persona settings table (v3.8.0: Standardized to 10 core parameters)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS persona_settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             formality INTEGER NOT NULL DEFAULT 50,
-            humor INTEGER NOT NULL DEFAULT 40,
             verbosity INTEGER NOT NULL DEFAULT 50,
-            emoji_usage INTEGER NOT NULL DEFAULT 30,
-            enthusiasm INTEGER NOT NULL DEFAULT 60,
-            empathy INTEGER NOT NULL DEFAULT 70,
-            directness INTEGER NOT NULL DEFAULT 60,
-            technicality INTEGER NOT NULL DEFAULT 50,
+            humor INTEGER NOT NULL DEFAULT 30,
+            emoji_usage INTEGER NOT NULL DEFAULT 20,
+            empathy INTEGER NOT NULL DEFAULT 60,
             creativity INTEGER NOT NULL DEFAULT 50,
-            proactivity INTEGER NOT NULL DEFAULT 40,
-            language_preference TEXT NOT NULL DEFAULT 'auto',
-            code_language_preference TEXT NOT NULL DEFAULT '[\"typescript\",\"javascript\",\"python\"]',
-            patience INTEGER NOT NULL DEFAULT 80,
-            encouragement INTEGER NOT NULL DEFAULT 70,
-            formality_honorifics INTEGER NOT NULL DEFAULT 1,
-            reasoning_depth INTEGER NOT NULL DEFAULT 60,
-            context_awareness INTEGER NOT NULL DEFAULT 70,
+            proactiveness INTEGER NOT NULL DEFAULT 40,
+            technical_depth INTEGER NOT NULL DEFAULT 50,
+            code_examples INTEGER NOT NULL DEFAULT 70,
+            questioning INTEGER NOT NULL DEFAULT 40,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL
         )",
@@ -112,6 +105,32 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
             persona_snapshot TEXT NOT NULL,
             timestamp INTEGER NOT NULL,
             FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // Persona history table (learning system - v3.8.0)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS persona_history (
+            id TEXT PRIMARY KEY,
+            parameters TEXT NOT NULL,
+            timestamp INTEGER NOT NULL,
+            average_satisfaction REAL,
+            source TEXT NOT NULL CHECK(source IN ('optimization', 'manual', 'preset')) DEFAULT 'optimization'
+        )",
+        [],
+    )?;
+
+    // Persona changes table (v3.8.0 - Track manual user changes)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS persona_changes (
+            id TEXT PRIMARY KEY,
+            previous_params TEXT NOT NULL,
+            new_params TEXT NOT NULL,
+            changed_parameters TEXT NOT NULL,
+            change_magnitude REAL NOT NULL,
+            timestamp INTEGER NOT NULL,
+            reason TEXT CHECK(reason IN ('manual', 'preset', 'optimization', 'reset')) NOT NULL
         )",
         [],
     )?;
@@ -217,6 +236,48 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Personality insights table (v3.8.0 Phase 2.4)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS personality_insights (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+
+            -- Conversation patterns (0.0-1.0 scale)
+            avg_message_length REAL NOT NULL,
+            formality REAL NOT NULL,
+            verbosity REAL NOT NULL,
+            humor REAL NOT NULL,
+            emoji_usage REAL NOT NULL,
+            empathy REAL NOT NULL,
+            creativity REAL NOT NULL,
+            proactiveness REAL NOT NULL,
+            technical_depth REAL NOT NULL,
+            code_examples REAL NOT NULL,
+            questioning REAL NOT NULL,
+
+            -- Big Five personality traits (0.0-1.0 scale)
+            openness REAL NOT NULL,
+            conscientiousness REAL NOT NULL,
+            extraversion REAL NOT NULL,
+            agreeableness REAL NOT NULL,
+            neuroticism REAL NOT NULL,
+
+            -- MBTI indicators (0.0-1.0 scale)
+            ie_score REAL NOT NULL,
+            sn_score REAL NOT NULL,
+            tf_score REAL NOT NULL,
+            jp_score REAL NOT NULL,
+
+            -- Metadata
+            confidence REAL NOT NULL,
+            sample_size INTEGER NOT NULL,
+            timestamp INTEGER NOT NULL,
+
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 
@@ -240,11 +301,12 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_episodic_memory_category
-         ON episodic_memory(category)",
-        [],
-    )?;
+    // TODO: episodic_memory table doesn't have a category column yet
+    // conn.execute(
+    //     "CREATE INDEX IF NOT EXISTS idx_episodic_memory_category
+    //      ON episodic_memory(category)",
+    //     [],
+    // )?;
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_episodic_memory_importance
@@ -287,6 +349,119 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
          ON oauth_tokens(expires_at DESC)",
         [],
     )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_persona_history_timestamp
+         ON persona_history(timestamp DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_persona_history_source
+         ON persona_history(source)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_persona_changes_timestamp
+         ON persona_changes(timestamp DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_persona_changes_reason
+         ON persona_changes(reason)",
+        [],
+    )?;
+
+    // Personality insights indexes (v3.8.0 Phase 2.4)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_personality_insights_conversation_id
+         ON personality_insights(conversation_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_personality_insights_timestamp
+         ON personality_insights(timestamp DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_personality_insights_confidence
+         ON personality_insights(confidence DESC)",
+        [],
+    )?;
+
+    Ok(())
+}
+
+/// Migrate persona_settings table from old schema to v3.8.0 (10 parameters)
+pub fn migrate_persona_settings(conn: &Connection) -> Result<()> {
+    // Check if migration is needed by checking column count
+    let column_check: Result<i32, _> = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('persona_settings') WHERE name IN ('enthusiasm', 'directness', 'patience', 'encouragement', 'formality_honorifics', 'reasoning_depth', 'context_awareness')",
+        [],
+        |row| row.get(0),
+    );
+
+    match column_check {
+        Ok(count) if count > 0 => {
+            log::info!("Migrating persona_settings table from old schema to v3.8.0 (10 parameters)");
+
+            // Create new table with correct schema
+            conn.execute("DROP TABLE IF EXISTS persona_settings_old", [])?;
+            conn.execute("ALTER TABLE persona_settings RENAME TO persona_settings_old", [])?;
+
+            // Create new table
+            conn.execute(
+                "CREATE TABLE persona_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    formality INTEGER NOT NULL DEFAULT 50,
+                    verbosity INTEGER NOT NULL DEFAULT 50,
+                    humor INTEGER NOT NULL DEFAULT 30,
+                    emoji_usage INTEGER NOT NULL DEFAULT 20,
+                    empathy INTEGER NOT NULL DEFAULT 60,
+                    creativity INTEGER NOT NULL DEFAULT 50,
+                    proactiveness INTEGER NOT NULL DEFAULT 40,
+                    technical_depth INTEGER NOT NULL DEFAULT 50,
+                    code_examples INTEGER NOT NULL DEFAULT 70,
+                    questioning INTEGER NOT NULL DEFAULT 40,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )",
+                [],
+            )?;
+
+            // Migrate data (map old columns to new)
+            conn.execute(
+                "INSERT INTO persona_settings (id, formality, verbosity, humor, emoji_usage, empathy, creativity, proactiveness, technical_depth, code_examples, questioning, created_at, updated_at)
+                 SELECT id,
+                        formality,
+                        verbosity,
+                        humor,
+                        emoji_usage,
+                        empathy,
+                        creativity,
+                        COALESCE(proactivity, 40),
+                        COALESCE(technicality, 50),
+                        70, -- code_examples (new parameter, default to 70)
+                        40, -- questioning (new parameter, default to 40)
+                        created_at,
+                        updated_at
+                 FROM persona_settings_old",
+                [],
+            )?;
+
+            // Drop old table
+            conn.execute("DROP TABLE persona_settings_old", [])?;
+
+            log::info!("Persona settings migration completed successfully");
+        }
+        _ => {
+            log::debug!("Persona settings table already on v3.8.0 schema, no migration needed");
+        }
+    }
 
     Ok(())
 }

@@ -6,6 +6,8 @@ use tauri::Manager;  // v3.7.0: For emit() method
 
 use super::rag::{RagService, format_episodes_for_context};
 use super::tool_calling::{ToolService, ToolCall, ToolDefinition};
+use super::learning::LearningService;
+use crate::database::Database;
 
 const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
 const OLLAMA_CHAT_API_URL: &str = "http://localhost:11434/api/chat";
@@ -36,7 +38,7 @@ struct OllamaResponse {
 
 /// Generate a response from Ollama (without RAG - fallback mode)
 pub async fn generate_response(user_message: &str) -> Result<String, String> {
-    generate_response_with_rag(user_message, None).await
+    generate_response_with_rag_and_persona_ref(user_message, None, None).await
 }
 
 /// Generate a response from Ollama with RAG context
@@ -44,28 +46,60 @@ pub async fn generate_response_with_rag(
     user_message: &str,
     rag_service: Option<Arc<RagService>>,
 ) -> Result<String, String> {
+    generate_response_with_rag_and_persona_ref(user_message, rag_service, None).await
+}
+
+/// Generate a response from Ollama with RAG context and persona (v3.8.0: Full personalization)
+pub async fn generate_response_with_rag_and_persona_ref(
+    user_message: &str,
+    rag_service: Option<Arc<RagService>>,
+    db: Option<&std::sync::Mutex<Database>>,
+) -> Result<String, String> {
     log::info!("Generating AI response for message: {}", user_message);
 
-    // Build system prompt (Korean-first AI assistant)
-    let mut system_prompt = "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
-                         ⚠️ IMPORTANT: If the user asks in Korean, you MUST respond only in Korean!\n\
-                         - If the user message contains Hangul (Korean characters) → Respond 100% in Korean\n\
-                         - Only respond in English when the question is in English\n\
-                         - Never respond in English to Korean questions\n\n\
-                         Response format:\n\
-                         - Emphasize important parts with **bold**\n\
-                         - Use *italics* for parts that need emphasis\n\
-                         - Use - or 1. for lists\n\
-                         - Wrap code with ```\n\
-                         - Use emojis appropriately for a friendly tone".to_string();
+    // 🎯 STEP 1: Load persona from database (v3.8.0 - Critical connection!)
+    let mut system_prompt = String::new();
 
-    // RAG: Retrieve relevant past conversations
+    if let Some(database) = &db {
+        match database.lock() {
+            Ok(db_guard) => {
+                match db_guard.load_persona() {
+                    Ok(persona_params) => {
+                        log::info!("Loaded persona from database: formality={}, verbosity={}, humor={}, emoji_usage={}, empathy={}, creativity={}, proactiveness={}, technical_depth={}, code_examples={}, questioning={}",
+                                 persona_params.formality, persona_params.verbosity, persona_params.humor, persona_params.emoji_usage,
+                                 persona_params.empathy, persona_params.creativity, persona_params.proactiveness,
+                                 persona_params.technical_depth, persona_params.code_examples, persona_params.questioning);
+
+                        // Convert to learning service parameters and generate personalized prompt
+                        let learning_params = persona_params.to_learning_params();
+                        system_prompt = LearningService::generate_system_prompt(&learning_params);
+
+                        log::debug!("Generated personalized system prompt ({} chars)", system_prompt.len());
+                    }
+                    Err(e) => {
+                        log::warn!("Failed to load persona from database: {} - Using default prompt", e);
+                        system_prompt = get_default_system_prompt();
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to acquire database lock: {} - Using default prompt", e);
+                system_prompt = get_default_system_prompt();
+            }
+        }
+    } else {
+        log::debug!("No database provided - Using default prompt");
+        system_prompt = get_default_system_prompt();
+    }
+
+    // 🎯 STEP 2: RAG - Retrieve relevant past conversations
     if let Some(rag) = &rag_service {
         match rag.retrieve_relevant(user_message, RAG_TOP_K).await {
             Ok(episodes) => {
                 if !episodes.is_empty() {
                     log::info!("Retrieved {} relevant memories from RAG", episodes.len());
                     let memory_context = format_episodes_for_context(&episodes);
+                    system_prompt.push_str("\n\n# Relevant Past Conversations\n");
                     system_prompt.push_str(&memory_context);
                     system_prompt.push_str("\n💡 Use the above memories to provide more contextual and personalized responses. Reference past conversations when relevant.\n");
                 } else {
@@ -704,4 +738,19 @@ mod tests {
             }
         });
     }
+}
+
+/// Get default system prompt (fallback when persona loading fails)
+fn get_default_system_prompt() -> String {
+    "Your name is Adam. You are a friendly and helpful AI assistant living in the Garden of Eden environment.\n\n\
+     ⚠️ IMPORTANT: If the user asks in Korean, you MUST respond only in Korean!\n\
+     - If the user message contains Hangul (Korean characters) → Respond 100% in Korean\n\
+     - Only respond in English when the question is in English\n\
+     - Never respond in English to Korean questions\n\n\
+     Response format:\n\
+     - Emphasize important parts with **bold**\n\
+     - Use *italics* for parts that need emphasis\n\
+     - Use - or 1. for lists\n\
+     - Wrap code with ```\n\
+     - Use emojis appropriately for a friendly tone".to_string()
 }

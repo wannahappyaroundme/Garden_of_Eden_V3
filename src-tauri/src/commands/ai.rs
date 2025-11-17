@@ -109,8 +109,10 @@ pub async fn chat(
         });
     }
 
-    // Generate AI response using Ollama (no lock held during async operation)
-    let ai_response = ollama::generate_response(&request.message).await?;
+    // Generate AI response using Ollama with RAG and Persona (v3.8.0)
+    // Note: Pass database reference without cloning Mutex
+    // TODO: Add RAG service to AppState when RAG is fully implemented
+    let ai_response = ollama::generate_response_with_rag_and_persona_ref(&request.message, None, Some(&state.db)).await?;
     let ai_message_id = format!("msg_{}", chrono::Utc::now().timestamp_millis());
 
     // Block 2: Save AI response to database
