@@ -44,3 +44,7 @@ pub mod url_fetch;
 // Phase 10: Plugin System (v3.4.0)
 pub mod plugin;
 pub mod plugin_runtime;
+
+// Phase 11: Tool Calling System (v3.5.0)
+pub mod tool_calling;
+pub mod tool_implementations;
