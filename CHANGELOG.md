@@ -4,6 +4,55 @@ All notable changes to Garden of Eden V3 will be documented in this file.
 
 ## [Unreleased]
 
+## [3.2.0] - 2025-01-XX
+
+### Added - 🧠 Advanced RAG (Retrieval Augmented Generation)
+- **BGE-M3 Embeddings**: Production-grade multilingual embeddings (1024 dimensions)
+  - Supports 100+ languages including Korean and English
+  - ONNX Runtime for efficient inference
+  - Superior semantic understanding over TF-IDF
+  - Automatic model download on first run (~2GB)
+- **RAFT Hallucination Reduction**: Advanced technique to reduce AI hallucinations
+  - Relevance threshold filtering (configurable 0.0-1.0)
+  - Distractor documents for training model discrimination
+  - Confidence-based "I don't know" responses
+  - Chain-of-thought prompting for better reasoning
+  - Hallucination detection heuristics
+- **Memory Visualization UI**: Interactive episodic memory browser
+  - Timeline view of all conversations
+  - Satisfaction ratings and relevance scores
+  - Search and filter capabilities
+  - Access count tracking
+  - Importance ranking
+  - Export/Import functionality (JSON format)
+  - Delete individual memories
+  - Beautiful dark mode support
+
+### Changed
+- **RAG System**: TF-IDF → BGE-M3 embeddings (major upgrade)
+- **Memory Storage**: Enhanced with relevance scoring
+- **Version**: 3.1.0 → 3.2.0
+- **NSIS installMode**: `perUser` → `currentUser` (Tauri 2.x compliance)
+
+### Technical
+- **New Services**:
+  - `services/raft.rs`: RAFT hallucination reduction (340 lines)
+  - `services/embedding.rs`: BGE-M3 ONNX integration (already existed, now fully utilized)
+  - `pages/MemoryVisualization.tsx`: React UI for memory browser (370 lines)
+- **LanceDB Migration**: Postponed to future release
+  - LanceDB 0.22 API changed significantly
+  - Current SQLite + BGE-M3 provides sufficient performance
+  - Will revisit for v3.3.0 or later
+- **Dependencies**:
+  - `ort` 2.0.0-rc.10: ONNX Runtime for BGE-M3
+  - `tokenizers` 0.15: HuggingFace tokenizers
+  - `ndarray` 0.16: N-dimensional arrays for ML
+
+### Testing
+- All 67 existing tests still passing
+- RAFT service includes comprehensive unit tests
+- Memory visualization includes mock data for testing
+
 ## [3.1.0] - 2025-01-XX
 
 ### Added - 🪟 Windows Support

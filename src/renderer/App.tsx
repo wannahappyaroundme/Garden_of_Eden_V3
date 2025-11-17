@@ -6,12 +6,13 @@ import { useState, useEffect } from 'react';
 import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
 import { Integrations } from './pages/Integrations';
+import MemoryVisualization from './pages/MemoryVisualization';
 import SmartOnboarding from './pages/SmartOnboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
 import './i18n/config'; // Initialize i18n
 
-type Page = 'onboarding' | 'chat' | 'settings' | 'integrations';
+type Page = 'onboarding' | 'chat' | 'settings' | 'integrations' | 'memory';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('chat');
@@ -90,6 +91,7 @@ function App() {
         <Chat
           onOpenSettings={() => setCurrentPage('settings')}
           onOpenIntegrations={() => setCurrentPage('integrations')}
+          onOpenMemory={() => setCurrentPage('memory')}
         />
       )}
       {currentPage === 'settings' && (
@@ -97,6 +99,9 @@ function App() {
       )}
       {currentPage === 'integrations' && (
         <Integrations onClose={() => setCurrentPage('chat')} />
+      )}
+      {currentPage === 'memory' && (
+        <MemoryVisualization onClose={() => setCurrentPage('chat')} />
       )}
       <ToastContainer />
     </ErrorBoundary>

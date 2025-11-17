@@ -11,6 +11,9 @@ pub mod prompt_customizer;
 // Phase 1: RAG & Episodic Memory
 pub mod embedding;
 pub mod rag;
+pub mod raft;  // v3.2.0: RAFT hallucination reduction
+// rag_lancedb postponed - LanceDB 0.22 API migration complex
+// Using SQLite + BGE-M3 embeddings instead (sufficient for v3.2.0)
 
 // Phase 2: Screen Context & Vision
 pub mod active_window;

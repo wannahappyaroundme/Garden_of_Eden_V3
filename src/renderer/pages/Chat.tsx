@@ -41,9 +41,10 @@ interface Message {
 interface ChatProps {
   onOpenSettings: () => void;
   onOpenIntegrations?: () => void;
+  onOpenMemory?: () => void;
 }
 
-export function Chat({ onOpenSettings, onOpenIntegrations }: ChatProps) {
+export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatProps) {
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
@@ -627,6 +628,32 @@ export function Chat({ onOpenSettings, onOpenIntegrations }: ChatProps) {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                  />
+                </svg>
+              </Button>
+            )}
+
+            {/* Memory Visualization Button */}
+            {onOpenMemory && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenMemory}
+                className="h-8 w-8 p-0"
+                aria-label="메모리 시각화"
+                title="Memory Visualization"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="text-muted-foreground"
+                >
+                  <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
+                    fill="currentColor"
                   />
                 </svg>
               </Button>

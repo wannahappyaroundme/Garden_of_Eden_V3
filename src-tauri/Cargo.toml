@@ -39,11 +39,11 @@ tts = "0.26"            # Text-to-speech
 ort = { version = "2.0.0-rc.10", features = ["download-binaries", "ndarray"] }  # ONNX Runtime for BGE-M3 (includes std by default)
 tokenizers = "0.15"     # Tokenization for embedding model
 ndarray = "0.16"        # N-dimensional arrays for ML
-# LanceDB temporarily disabled - API changed significantly in 0.22
-# Will implement simpler SQLite-based vector search for now
-# lancedb = "0.22"        # Vector database for fast similarity search (latest)
-# arrow-array = "53"      # Apache Arrow arrays for LanceDB
-# arrow-schema = "53"     # Apache Arrow schema for LanceDB
+# LanceDB postponed - API changed significantly in 0.22, complex migration
+# Using SQLite with BGE-M3 embeddings (sufficient performance for v3.2.0)
+# lancedb = "0.22"        # Vector database for fast similarity search
+# arrow-array = "56"      # Apache Arrow arrays for LanceDB
+# arrow-schema = "56"     # Apache Arrow schema for LanceDB
 
 # Voice Activity Detection (Phase 3)
 webrtc-vad = "0.4"      # Voice activity detection
