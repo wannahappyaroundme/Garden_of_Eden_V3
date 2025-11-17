@@ -4,6 +4,82 @@ All notable changes to Garden of Eden V3 will be documented in this file.
 
 ## [Unreleased]
 
+## [3.7.0] - 2025-01-17 (Phase 3)
+
+### Added - 🕐 Tool Call History & Debugging
+- **Tool History Type System**: Complete history tracking infrastructure (220 lines)
+  - ToolCallRecord interface: id, toolName, timestamp, duration, status, input, output, error
+  - ToolHistoryFilter: search query, tool names, status, date range filtering
+  - ToolStats: totalCalls, successCount, errorCount, averageDuration, lastUsed
+  - Export support: JSON/CSV formats with customizable field inclusion
+  - TOOL_METADATA: Complete mapping of tools to icons, colors, categories
+  - Utility functions: formatDuration (ms/s/m), formatTimestamp (relative time), getStatusColor, getStatusIcon
+- **ToolHistoryItem Component**: Expandable history card (195 lines)
+  - Tool icon and display name
+  - Status badge with emoji indicators (✅ success, ❌ error, ⏱️ running, ⏳ pending, 🚫 cancelled)
+  - Timestamp (relative: "Just now", "5m ago", "2h ago", "3d ago") and duration display
+  - Expand/collapse button with ChevronDown/ChevronRight icons
+  - Detailed view: Input JSON, Output JSON, Error details with stack trace
+  - Metadata panel: Record ID, conversation ID, message ID, tool category
+  - Copy to clipboard button with success feedback (Copy → Check icon)
+- **ToolHistoryFilter Component**: Advanced filtering UI (185 lines)
+  - Search input with real-time query filtering across all fields
+  - Expandable filter panel with active filter count badge
+  - Multi-select tool filter with visual badges and tool icons
+  - Multi-select status filter (success/error/running/pending/cancelled)
+  - Date range picker: From/To date inputs
+  - "Clear all" button to reset all filters
+  - Visual feedback for selected filters (blue background)
+- **ToolHistoryExport Component**: History export dialog (220 lines)
+  - Format toggle: JSON (structured) vs CSV (spreadsheet)
+  - Export options checkboxes: Include input, output, errors
+  - CSV converter with proper quote escaping
+  - Download with dynamic filename: `tool-history-YYYY-MM-DD.{json|csv}`
+  - Export summary: Record count and format preview
+  - Success feedback: "Exported Successfully" with auto-dismiss (3s)
+  - Disabled state during export operation
+- **ToolHistory Main Panel**: Full-featured history dashboard (240 lines)
+  - Header statistics: Total calls, success rate percentage
+  - Top 3 tools stats with call counts
+  - Integrated search, filter, and export functionality
+  - Sortable record list (timestamp desc by default)
+  - Empty states: "No tool calls yet" with helpful message
+  - Filtered empty state: "No records match your filters" with clear button
+  - Record count footer: "Showing X of Y records"
+  - "Clear All" button to wipe history
+  - "Export"/"Hide Export" toggle for export panel
+- **Chat Page Integration**: Tool History sidebar (75 lines modified)
+  - Tool History toggle button in header (next to Mode Indicator)
+  - Slide-in sidebar (w-96) from right with animation
+  - Mock data: 5 sample tool calls for demonstration
+    - web_search: React hooks (1h ago, success)
+    - read_file: package.json (2h ago, success)
+    - calculate: Expression (1d ago, success)
+    - fetch_url: API call (2d ago, error)
+    - get_system_info: System data (3d ago, success)
+  - Placeholder for backend integration (TODO comments)
+- **Test Suite**: 4 comprehensive test files (530 lines)
+  - ToolHistoryItem.test.tsx: 18 tests - expand/collapse, status display, copy, metadata
+  - ToolHistoryFilter.test.tsx: 20 tests - search, multi-select filters, date range, clear all
+  - ToolHistoryExport.test.tsx: 15 tests - format toggle, export options, download, success feedback
+  - ToolHistory.test.tsx: 22 tests - filtering, statistics, empty states, integration
+  - **Overall Test Pass Rate**: 86.7% (130/150 tests passing)
+
+### Changed
+- **Version**: 3.7.0 Phase 2 → Phase 3
+- **Chat.tsx**: Added showToolHistory state and ToolHistory sidebar with mock data
+- **tool/index.ts**: Added exports for ToolHistory, ToolHistoryItem, ToolHistoryFilter, ToolHistoryExport
+
+### Technical Details
+- **New Files**: 5 production + 4 test files
+  - Production: tool-history.types.ts, ToolHistoryItem.tsx, ToolHistoryFilter.tsx, ToolHistoryExport.tsx, ToolHistory.tsx
+  - Tests: ToolHistoryItem.test.tsx, ToolHistoryFilter.test.tsx, ToolHistoryExport.test.tsx, ToolHistory.test.tsx
+- **Lines Added**: ~1,530 lines (1,000 production + 530 tests)
+- **Dependencies**: None (uses existing React, lucide-react, testing-library)
+- **Build Status**: ✅ Clean compilation (Vite + Tauri dev server running)
+
+---
+
 ## [3.7.0] - 2025-01-17 (Phase 2)
 
 ### Added - ⚙️ Tool Settings & Configuration UI

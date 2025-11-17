@@ -30,7 +30,8 @@ import ModeIndicator from '../components/ModeIndicator';
 import ShortcutHelp from '../components/ShortcutHelp';
 import SuggestionsPanel from '../components/SuggestionsPanel';
 import { ToolCall } from '../../shared/types/tool.types';
-import { ToolCallIndicator, ToolResultCard } from '../components/tool';
+import { ToolCallIndicator, ToolResultCard, ToolHistory } from '../components/tool';
+import type { ToolCallRecord } from '../../shared/types/tool-history.types';
 
 interface Message {
   id: string;
@@ -56,7 +57,9 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [suggestionsPanelCollapsed, setSuggestionsPanelCollapsed] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false); // Hidden by default
+  const [showToolHistory, setShowToolHistory] = useState(false); // v3.7.0 Phase 3: Tool history sidebar
   const [activeToolCalls, setActiveToolCalls] = useState<Map<string, ToolCall[]>>(new Map()); // v3.7.0: Track tool calls by message ID
+  const [toolCallHistory, setToolCallHistory] = useState<ToolCallRecord[]>([]); // v3.7.0 Phase 3: Tool call history
   const [trackingStatus, setTrackingStatus] = useState({
     isTracking: false,
     lastCaptureTime: 0,
@@ -72,6 +75,78 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
 
   // Proactive notifications
   const { currentSuggestion, dismissSuggestion } = useProactiveNotifications();
+
+  // Load mock tool history data (v3.7.0 Phase 3 demo)
+  useEffect(() => {
+    // TODO: Replace with actual backend call
+    const mockHistory: ToolCallRecord[] = [
+      {
+        id: 'tc-001',
+        toolName: 'web_search',
+        displayName: 'Web Search',
+        timestamp: Date.now() - 3600000, // 1 hour ago
+        duration: 1240,
+        status: 'success',
+        input: { query: 'React hooks best practices', maxResults: 5 },
+        output: {
+          results: [
+            { title: 'React Hooks Guide', url: 'https://react.dev/hooks' },
+            { title: 'Best Practices', url: 'https://example.com/hooks' },
+          ],
+        },
+      },
+      {
+        id: 'tc-002',
+        toolName: 'read_file',
+        displayName: 'Read File',
+        timestamp: Date.now() - 7200000, // 2 hours ago
+        duration: 45,
+        status: 'success',
+        input: { path: '/Users/kyungsbook/Desktop/Eden_Project_V3/package.json' },
+        output: '{\n  "name": "garden-of-eden-v3",\n  ...\n}',
+      },
+      {
+        id: 'tc-003',
+        toolName: 'calculate',
+        displayName: 'Calculator',
+        timestamp: Date.now() - 86400000, // 1 day ago
+        duration: 12,
+        status: 'success',
+        input: { expression: '(1234 + 5678) * 0.15' },
+        output: { result: 1036.8 },
+      },
+      {
+        id: 'tc-004',
+        toolName: 'fetch_url',
+        displayName: 'URL Fetch',
+        timestamp: Date.now() - 172800000, // 2 days ago
+        duration: 3420,
+        status: 'error',
+        input: { url: 'https://api.example.com/data' },
+        output: null,
+        error: {
+          message: 'Connection timeout',
+          code: 'ETIMEDOUT',
+        },
+      },
+      {
+        id: 'tc-005',
+        toolName: 'get_system_info',
+        displayName: 'System Info',
+        timestamp: Date.now() - 259200000, // 3 days ago
+        duration: 105,
+        status: 'success',
+        input: { privacyLevel: 'standard' },
+        output: {
+          os: 'Darwin',
+          arch: 'arm64',
+          cpuCores: 10,
+          totalMemory: 16384,
+        },
+      },
+    ];
+    setToolCallHistory(mockHistory);
+  }, []);
 
   // Toggle screen tracking
   const handleToggleTracking = useCallback(async () => {
@@ -670,6 +745,30 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
             {/* Mode Indicator - Shows user-led vs AI-led mode */}
             <ModeIndicator isTracking={trackingStatus.isTracking} onToggle={handleToggleTracking} />
 
+            {/* Tool History Toggle Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowToolHistory(!showToolHistory)}
+              className="h-8 w-8 p-0"
+              aria-label={showToolHistory ? '도구 히스토리 숨기기' : '도구 히스토리 보기'}
+              title={showToolHistory ? '도구 히스토리 숨기기' : '도구 히스토리 보기'}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={showToolHistory ? 'text-blue-600' : 'text-muted-foreground'}
+              >
+                <path
+                  d="M14.7 6.3C15.1 5.9 15.1 5.3 14.7 4.9 14.3 4.5 13.7 4.5 13.3 4.9L8.7 9.3C8.3 9.7 8.3 10.3 8.7 10.7L13.3 15.1C13.7 15.5 14.3 15.5 14.7 15.1 15.1 14.7 15.1 14.1 14.7 13.7L11.4 10.5 20 10.5C20.6 10.5 21 10.1 21 9.5 21 8.9 20.6 8.5 20 8.5L11.4 8.5 14.7 6.3Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </Button>
+
             {/* Keyboard Shortcuts Help Button */}
             <Button
               variant="ghost"
@@ -935,6 +1034,22 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
           placeholder="메시지를 입력하세요..."
         />
       </main>
+
+      {/* Tool History Sidebar - Conditionally rendered with slide animation */}
+      {showToolHistory && (
+        <div className="w-96 border-l border-border bg-card animate-slide-in-right">
+          <ToolHistory
+            records={toolCallHistory}
+            onRefresh={() => {
+              // TODO: Refresh tool history from backend
+              console.log('Refresh tool history');
+            }}
+            onClearHistory={() => {
+              setToolCallHistory([]);
+            }}
+          />
+        </div>
+      )}
 
       {/* Suggestions Panel */}
       <SuggestionsPanel
