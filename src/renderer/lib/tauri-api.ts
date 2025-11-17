@@ -209,6 +209,14 @@ export const api = {
   },
 
   /**
+   * Chat with AI using tool calling (v3.6.0)
+   * Enables the AI to use tools like web search, file operations, etc.
+   */
+  chatWithTools: async (args: ChatRequest): Promise<ChatResponse> => {
+    return await invoke<ChatResponse>('chat_with_tools', { request: args });
+  },
+
+  /**
    * Chat with AI using streaming
    * @param args ChatRequest
    * @param onChunk Callback for each chunk of text

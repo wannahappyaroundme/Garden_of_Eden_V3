@@ -341,13 +341,13 @@ struct OllamaChatRequest {
 }
 
 /// Ollama tool definition (OpenAI-compatible)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct OllamaTool {
     r#type: String, // "function"
     function: OllamaToolFunction,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct OllamaToolFunction {
     name: String,
     description: String,

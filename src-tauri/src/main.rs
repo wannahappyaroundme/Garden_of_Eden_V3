@@ -14,6 +14,11 @@ use services::model_installer::ModelInstallerService;
 use services::learning::LearningService;
 use services::webhook_triggers::WebhookTriggerManager;
 use services::crash_reporter::CrashReporterService;
+use services::tool_calling::ToolService;
+use services::tool_implementations::{
+    WebSearchTool, UrlFetchTool, FileReadTool, FileWriteTool,
+    SystemInfoTool, CalculatorTool,
+};
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
@@ -29,6 +34,7 @@ pub struct AppState {
     learning_service: LearningService,
     webhook_trigger_manager: Arc<WebhookTriggerManager>,
     calendar_service: CalendarServiceWrapper,
+    tool_service: Arc<ToolService>,  // v3.6.0: Tool calling system
 }
 
 fn main() {
@@ -72,6 +78,44 @@ fn main() {
     // Initialize Calendar Service Wrapper
     let calendar_service = CalendarServiceWrapper::new();
 
+    // Initialize Tool Service with all 6 production tools (v3.6.0)
+    log::info!("Initializing Tool Service with 6 production tools...");
+    let mut tool_service = ToolService::new();
+
+    // Register web tools
+    match WebSearchTool::new() {
+        Ok(tool) => {
+            tool_service.register_tool(Box::new(tool));
+            log::info!("✓ Registered WebSearchTool");
+        }
+        Err(e) => log::warn!("Failed to initialize WebSearchTool: {}", e),
+    }
+
+    match UrlFetchTool::new() {
+        Ok(tool) => {
+            tool_service.register_tool(Box::new(tool));
+            log::info!("✓ Registered UrlFetchTool");
+        }
+        Err(e) => log::warn!("Failed to initialize UrlFetchTool: {}", e),
+    }
+
+    // Register file system tools
+    tool_service.register_tool(Box::new(FileReadTool));
+    log::info!("✓ Registered FileReadTool");
+
+    tool_service.register_tool(Box::new(FileWriteTool));
+    log::info!("✓ Registered FileWriteTool");
+
+    // Register system tools
+    tool_service.register_tool(Box::new(SystemInfoTool));
+    log::info!("✓ Registered SystemInfoTool");
+
+    tool_service.register_tool(Box::new(CalculatorTool));
+    log::info!("✓ Registered CalculatorTool");
+
+    let tool_service = Arc::new(tool_service);
+    log::info!("Tool Service initialized with {} tools", tool_service.list_tools().len());
+
     // Initialize Crash Reporter Service
     let crash_reporter_service = CrashReporterService::new();
     let crash_reporter_state = CrashReporterState {
@@ -90,6 +134,7 @@ fn main() {
         learning_service,
         webhook_trigger_manager,
         calendar_service,
+        tool_service,  // v3.6.0: Tool calling system
     };
 
     tauri::Builder::default()
@@ -98,6 +143,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
             commands::ai::chat_stream,
+            commands::ai::chat_with_tools,  // v3.6.0: Tool-enabled chat
             commands::ai::voice_input_start,
             commands::ai::voice_input_stop,
             commands::audio::whisper_start_recording,

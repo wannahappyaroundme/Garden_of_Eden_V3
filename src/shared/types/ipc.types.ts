@@ -17,6 +17,18 @@ export interface AIChannels {
       response: string;
     };
   };
+  'ai:chat-with-tools': {  // v3.6.0: Tool-enabled chat
+    request: {
+      message: string;
+      conversationId?: string;
+      contextLevel?: 1 | 2 | 3;
+    };
+    response: {
+      conversationId: string;
+      messageId: string;
+      response: string;
+    };
+  };
   'ai:stream-token': {
     payload: {
       token: string;

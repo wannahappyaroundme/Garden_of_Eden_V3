@@ -1,8 +1,8 @@
 # Garden of Eden V3 - Development Progress
 
 **Last Updated**: 2025-01-17
-**Current Version**: 3.5.2
-**Status**: Production-Ready Tool Calling with Full Web Integration
+**Current Version**: 3.6.0
+**Status**: Production-Ready Tool Calling with Frontend Integration
 
 ---
 
@@ -105,6 +105,35 @@
   - Disabled-by-default privacy protection
 - **Status**: Production-ready web tools with full service integration
 
+#### **v3.6.0 - Tool Service Initialization & Frontend Integration** ✅
+- **Global ToolService Initialization** (~50 lines)
+  - Added ToolService to AppState in main.rs
+  - Initialized with all 6 production tools on startup
+  - Arc<> wrapper for thread-safe sharing across commands
+  - Graceful error handling for tool initialization
+- **Tool Registration** (6 tools registered)
+  - ✅ WebSearchTool (DuckDuckGo/SearX)
+  - ✅ UrlFetchTool (HTML parsing)
+  - ✅ FileReadTool (FileService integration)
+  - ✅ FileWriteTool (FileService integration)
+  - ✅ SystemInfoTool (SystemInfoService integration)
+  - ✅ CalculatorTool (math expressions)
+- **Tauri Command Integration** (~140 lines)
+  - New `chat_with_tools` command in commands/ai.rs
+  - Full integration with generate_response_with_tools()
+  - Database persistence for tool-enabled conversations
+  - Webhook triggers for tool usage tracking
+  - Max 5 iterations for multi-turn tool calling
+- **Frontend API Integration** (~10 lines)
+  - Added chatWithTools() to tauri-api.ts
+  - Type-safe invoke() wrapper
+  - Same request/response structure as regular chat
+- **IPC Types** (~15 lines)
+  - Added 'ai:chat-with-tools' channel to ipc.types.ts
+  - Matching request/response types
+- **Compilation**: ✅ Clean build (0 errors, warnings only)
+- **Status**: Backend tool calling fully integrated, ready for UI integration
+
 ---
 
 ## 🔧 Technical Stack
@@ -132,8 +161,9 @@ async-trait = "0.1"
 ```
 
 ### Code Statistics
-- **Total Lines Added**: ~2,950+ lines (v3.2.0 - v3.5.2)
+- **Total Lines Added**: ~3,165+ lines (v3.2.0 - v3.6.0)
 - **New Services**: 7 (raft, web_search, url_fetch, plugin, plugin_runtime, tool_calling, tool_implementations)
+- **New Commands**: 1 (chat_with_tools)
 - **New UI Components**: 1 (MemoryVisualization.tsx)
 - **Compilation Status**: ✅ 0 errors, warnings only (unused imports in foundation code)
 
@@ -194,30 +224,26 @@ async-trait = "0.1"
 ## ⏳ Pending Integration
 
 ### High Priority
-1. **Plugin-Tool Integration** (v3.6.0)
+1. **Frontend Tool UI** (v3.7.0)
+   - Tool usage visualization in chat
+   - Loading indicators for tool execution
+   - Tool call history and debugging
+   - Web search results display
+   - "Tools enabled" toggle in chat settings
+
+2. **Plugin-Tool Integration** (v3.7.0)
    - Execute plugins as tools via ToolExecutor
    - Plugin discovery in ToolService
    - Plugin parameter mapping to ToolParameter
    - Thread-safety for PluginService in tool context
 
-2. **Frontend Tool UI** (v3.6.0)
-   - Tool usage visualization in chat
-   - Loading indicators for tool execution
-   - Tool call history and debugging
-   - Web search results display
-
-3. **Tool Service Initialization** (v3.6.0)
-   - Register all tools in main.rs or commands
-   - Expose ToolService via Tauri commands
-   - Frontend integration with tool execution
-
 ### Medium Priority
-4. **UI Integration** (v3.6.0)
+3. **UI Integration** (v3.7.0)
    - Plugin management UI (React)
    - Tool usage analytics dashboard
    - Memory visualization enhancements
 
-5. **Testing & QA** (v3.7.0)
+4. **Testing & QA** (v3.8.0)
    - Integration tests for plugin system
    - E2E tests for tool calling
    - Performance benchmarks
@@ -251,27 +277,29 @@ async-trait = "0.1"
 
 ## 🚀 Next Steps (Recommendations)
 
-### Immediate (v3.6.0)
-1. **Plugin-Tool Integration**
+### Immediate (v3.7.0)
+1. **Frontend Tool UI**
+   - Add "Tools Enabled" toggle to chat settings
+   - Show tool call indicators in chat bubbles
+   - Display web search results inline
+   - Loading states for tool execution
+
+2. **Plugin-Tool Integration**
    - Make PluginService thread-safe or use Arc<Mutex<>>
    - Create PluginExecutionTool
    - Test plugin execution via tool calling
 
-2. **Tool Service Initialization**
-   - Create ToolService initialization in main.rs
-   - Register all 6 tools
-   - Expose via Tauri commands
-
-### Short-term (v3.6.0)
+### Short-term (v3.7.0)
 3. **Plugin Management UI**
    - Create React component for plugin list
    - Add install/uninstall buttons
    - Show plugin permissions
 
 4. **Tool Analytics**
-   - Track tool usage frequency
+   - Track tool usage frequency in database
    - Monitor execution times
    - Log errors and failures
+   - Tool usage dashboard
 
 ### Long-term (v4.0.0)
 5. **Production Hardening**
@@ -284,8 +312,8 @@ async-trait = "0.1"
 
 ## 🎉 Achievement Summary
 
-**Total Development Sessions**: 3.2.0 → 3.5.2
-**Lines of Code**: 2,950+ lines (Rust + TypeScript)
+**Total Development Sessions**: 3.2.0 → 3.6.0
+**Lines of Code**: 3,165+ lines (Rust + TypeScript)
 **New Capabilities**:
 - ✅ Internet access (privacy-preserving)
 - ✅ Extensible plugin system
@@ -293,7 +321,9 @@ async-trait = "0.1"
 - ✅ Function calling framework
 - ✅ Ollama tool integration (end-to-end)
 - ✅ Async tool execution
-- ✅ **Full web tool integration (DuckDuckGo, SearX, HTML parsing)**
+- ✅ Full web tool integration (DuckDuckGo, SearX, HTML parsing)
+- ✅ **Global ToolService initialization (v3.6.0)**
+- ✅ **Frontend API integration for tool calling (v3.6.0)**
 - ✅ Hallucination reduction (RAFT)
 - ✅ Memory visualization
 
@@ -303,6 +333,7 @@ async-trait = "0.1"
 - ✅ Privacy-first design
 - ✅ Modular architecture
 - ✅ Production-ready tool calling with real services
+- ✅ **Complete backend-to-frontend integration (v3.6.0)**
 - ✅ Extensive documentation
 
 ---
@@ -314,4 +345,54 @@ async-trait = "0.1"
 - **Performance**: Designed for local execution, no cloud dependencies
 - **Extensibility**: Clean trait-based architecture for tools and plugins
 
-**Garden of Eden V3 is now a production-quality foundation for an AI assistant with plugin support, tool calling, and internet access capabilities.**
+**Garden of Eden V3 is now a production-quality foundation for an AI assistant with plugin support, tool calling, internet access, and complete backend-to-frontend integration.**
+
+---
+
+## 📋 Version History
+
+### v3.6.0 (2025-01-17) - Tool Service Initialization & Frontend Integration
+- Global ToolService initialization in main.rs
+- 6 production tools registered on startup
+- New `chat_with_tools` Tauri command
+- Frontend API integration (chatWithTools)
+- IPC type definitions
+- Clean compilation (0 errors)
+
+### v3.5.2 (2025-01-17) - Full Web Tool Integration
+- WebSearchTool with DuckDuckGo/SearX
+- UrlFetchTool with HTML parsing
+- Thread-safe service integration
+- Production-ready web tools
+
+### v3.5.1 (2025-01-17) - Ollama Tool Integration & Async Execution
+- Ollama Chat API integration
+- Async ToolExecutor trait
+- Multi-turn tool execution loop
+- End-to-end tool calling functional
+
+### v3.5.0 (2025-01-17) - Tool Calling System
+- ToolDefinition schema
+- ToolExecutor trait
+- ToolService registry
+- 6 tool implementations
+
+### v3.4.1 (2025-01-16) - V8 JavaScript Runtime
+- deno_core integration
+- Isolated V8 runtime per plugin
+- Console API support
+
+### v3.4.0 (2025-01-16) - Plugin System Foundation
+- Plugin service with manifest.json
+- 7 permission types
+- Example plugins
+
+### v3.3.0 (2025-01-15) - Internet Access
+- WebSearchService (DuckDuckGo/SearX)
+- UrlFetchService (HTML parsing)
+- Privacy-first design
+
+### v3.2.0 (2025-01-14) - Advanced RAG & Memory
+- RAFT hallucination reduction
+- Memory visualization UI
+- Episodic memory system
