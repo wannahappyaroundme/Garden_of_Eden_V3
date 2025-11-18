@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
-import { RefreshCw, Download, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { RefreshCw, Download, CheckCircle, Info } from 'lucide-react';
 import { toast } from '../../stores/toast.store';
 
 interface UpdateCheckResult {
