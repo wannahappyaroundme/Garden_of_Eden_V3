@@ -6,7 +6,7 @@
 
 use crate::services::updater::{UpdateCheckResult, UpdaterService};
 use log::{error, info, warn};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 
 /// Get current application version
@@ -34,7 +34,7 @@ pub async fn updater_check_for_updates(app: AppHandle) -> Result<UpdateCheckResu
                         current_version: current_version.clone(),
                         latest_version: Some(update.version.clone()),
                         release_notes: update.body.clone(),
-                        download_url: Some(update.download_url.clone()),
+                        download_url: Some(update.download_url.to_string()),
                     })
                 }
                 Ok(None) => {

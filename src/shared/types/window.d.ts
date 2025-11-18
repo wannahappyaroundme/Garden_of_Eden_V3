@@ -1,18 +1,12 @@
 /**
  * Window API Type Definitions
- * Shared between preload and renderer for type-safe IPC
+ * Tauri-based IPC interface for type-safe communication
  */
 
-import type { IpcRendererEvent } from 'electron';
-import type { IPCChannelName, FileInfo, GitStatus, GitCommit, GitBranch } from './ipc.types';
+import type { FileInfo, GitStatus, GitCommit, GitBranch } from './ipc.types';
 
 export interface WindowAPI {
-  // Base IPC methods
-  invoke: <T extends IPCChannelName>(channel: T, data: unknown) => Promise<unknown>;
-  send: (channel: string, data: unknown) => void;
-  on: (channel: string, callback: (event: IpcRendererEvent, ...args: unknown[]) => void) => void;
-  off: (channel: string, callback: (event: IpcRendererEvent, ...args: unknown[]) => void) => void;
-  removeAllListeners: (channel: string) => void;
+  // Note: Tauri uses @tauri-apps/api for IPC - these are wrapper methods
 
   // Chat operations
   chat: (args: { message: string; conversationId?: string; contextLevel?: 1 | 2 | 3 }) => Promise<{ conversationId: string; messageId: string; response: string }>;
@@ -237,11 +231,10 @@ export interface WindowAPI {
   onDownloadProgress: (callback: (status: any) => void) => () => void;
 
   // Platform info
-  platform: NodeJS.Platform;
+  platform: string;
   versions: {
-    node: string;
-    chrome: string;
-    electron: string;
+    app: string;
+    tauri: string;
   };
 }
 

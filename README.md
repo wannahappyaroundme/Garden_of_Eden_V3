@@ -4,7 +4,7 @@
 
 ### **Your Private AI Assistant That Never Leaves Your Computer**
 
-[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
+[![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![Tauri](https://img.shields.io/badge/Tauri-2.9-24C8DB.svg)](https://tauri.app/)
@@ -51,8 +51,8 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 <p>No subscription fees. No API costs. Just open-source software that respects you.</p>
 </td>
 <td width="33%" align="center">
-<h3>☁️ Cloud Backup</h3>
-<p>Optional Google Drive backup for persona settings. Encrypted end-to-end. Never required.</p>
+<h3>📁 Local Storage</h3>
+<p>All data stored locally in encrypted SQLite. No cloud dependencies. Complete privacy.</p>
 </td>
 <td width="33%" align="center">
 <h3>🎨 Fully Customizable</h3>
@@ -95,8 +95,7 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
   - A/B testing framework for adapter comparison
   - **1인 1모델 비용**: Base model 공유 + adapter만 per-user (**100배 비용 절감**)
 - **System Prompt Preview**: See how persona affects AI behavior
-- **Cloud Backup**: Save/restore persona to Google Drive
-- **Local Storage**: All settings saved to SQLite (works offline)
+- **Local Storage**: All settings saved to encrypted SQLite (100% offline)
 
 ### 📸 Screen Context Analysis
 - **LLaVA Vision Integration**: AI can see and understand your screen

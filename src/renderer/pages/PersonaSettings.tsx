@@ -7,9 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Brain, TrendingUp, RotateCcw, Save, Cloud, CloudOff, Download, Upload } from 'lucide-react';
-import { CloudSyncService, CloudBackupData } from '../services/cloudSync';
-import { useAuthStore } from '../stores/authStore';
+import { ArrowLeft, Brain, TrendingUp, RotateCcw, Save, Download, Upload } from 'lucide-react';
 
 interface PersonaSettingsProps {
   onClose: () => void;

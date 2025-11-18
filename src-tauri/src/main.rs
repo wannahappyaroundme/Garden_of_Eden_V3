@@ -136,7 +136,7 @@ fn main() {
 
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
-    let crash_log_dir = app_data_dir.join("crashes");
+    let crash_log_dir = data_dir.join("crashes");
     let crash_reporter_service = CrashReporterService::new(crash_log_dir);
     let crash_reporter_arc = Arc::new(Mutex::new(crash_reporter_service));
 
