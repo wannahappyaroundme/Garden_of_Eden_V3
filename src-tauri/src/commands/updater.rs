@@ -4,9 +4,10 @@
  * Exposes update checking and installation to the frontend using tauri-plugin-updater
  */
 
-use crate::services::updater::{UpdateCheckResult, UpdaterService};
+use crate::services::updater::{UpdateChannel, UpdateCheckResult, UpdaterService};
+use crate::AppState;
 use log::{error, info, warn};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
 
 /// Get current application version
@@ -146,4 +147,234 @@ pub async fn updater_is_newer_version(current: String, latest: String) -> Result
             error!("Failed to compare versions: {}", e);
             format!("Failed to compare versions: {}", e)
         })
+}
+
+/// Get current update channel (v3.5.0)
+#[tauri::command]
+pub async fn updater_get_channel(state: State<'_, AppState>) -> Result<String, String> {
+    info!("Command: updater_get_channel");
+
+    let db = state.db.lock().map_err(|e| {
+        error!("Failed to lock database: {}", e);
+        format!("Database lock error: {}", e)
+    })?;
+    let conn = db.conn();
+
+    // Get channel from database (default to 'stable' if not found)
+    let channel: String = conn
+        .query_row(
+            "SELECT channel FROM update_settings WHERE id = 1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or_else(|_| {
+            // Initialize default settings if not exists
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO update_settings (id, channel) VALUES (1, 'stable')",
+                [],
+            );
+            "stable".to_string()
+        });
+
+    info!("Current update channel: {}", channel);
+    Ok(channel)
+}
+
+/// Set update channel (v3.5.0)
+#[tauri::command]
+pub async fn updater_set_channel(state: State<'_, AppState>, channel: String) -> Result<(), String> {
+    info!("Command: updater_set_channel - {}", channel);
+
+    // Validate channel
+    let update_channel = UpdateChannel::from_str(&channel)
+        .map_err(|e| {
+            error!("Invalid channel: {}", e);
+            format!("Invalid channel: {}", e)
+        })?;
+
+    let db = state.db.lock().map_err(|e| {
+        error!("Failed to lock database: {}", e);
+        format!("Database lock error: {}", e)
+    })?;
+    let conn = db.conn();
+
+    // Initialize settings row if not exists
+    conn.execute(
+        "INSERT OR IGNORE INTO update_settings (id, channel) VALUES (1, 'stable')",
+        [],
+    )
+    .map_err(|e| {
+        error!("Failed to initialize update settings: {}", e);
+        format!("Database error: {}", e)
+    })?;
+
+    // Update channel
+    conn.execute(
+        "UPDATE update_settings SET channel = ?1 WHERE id = 1",
+        [update_channel.as_str()],
+    )
+    .map_err(|e| {
+        error!("Failed to update channel: {}", e);
+        format!("Failed to set update channel: {}", e)
+    })?;
+
+    info!("Update channel set to: {}", update_channel.as_str());
+    Ok(())
+}
+
+/// Get update scheduling settings (v3.5.0)
+#[tauri::command]
+pub async fn updater_get_schedule_settings(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    info!("Command: updater_get_schedule_settings");
+
+    let db = state.db.lock().map_err(|e| {
+        error!("Failed to lock database: {}", e);
+        format!("Database lock error: {}", e)
+    })?;
+    let conn = db.conn();
+
+    // Get settings from database
+    let settings = conn
+        .query_row(
+            "SELECT auto_check, check_interval, download_in_background, bandwidth_limit, last_check
+             FROM update_settings WHERE id = 1",
+            [],
+            |row| {
+                Ok(serde_json::json!({
+                    "auto_check": row.get::<_, bool>(0)?,
+                    "check_interval": row.get::<_, i64>(1)?,
+                    "download_in_background": row.get::<_, bool>(2)?,
+                    "bandwidth_limit": row.get::<_, Option<i64>>(3)?,
+                    "last_check": row.get::<_, Option<i64>>(4)?
+                }))
+            },
+        )
+        .unwrap_or_else(|_| {
+            // Return defaults if not found
+            serde_json::json!({
+                "auto_check": true,
+                "check_interval": 3600,
+                "download_in_background": false,
+                "bandwidth_limit": null,
+                "last_check": null
+            })
+        });
+
+    info!("Update schedule settings retrieved");
+    Ok(settings)
+}
+
+/// Update scheduling settings (v3.5.0)
+#[tauri::command]
+pub async fn updater_update_schedule_settings(
+    state: State<'_, AppState>,
+    auto_check: Option<bool>,
+    check_interval: Option<i64>,
+    download_in_background: Option<bool>,
+    bandwidth_limit: Option<i64>,
+) -> Result<(), String> {
+    info!("Command: updater_update_schedule_settings");
+
+    // Validate check_interval if provided
+    if let Some(interval) = check_interval {
+        if interval < 60 || interval > 604800 {
+            // Min 1 minute, Max 1 week
+            return Err("Invalid interval: must be between 60 and 604800 seconds".to_string());
+        }
+    }
+
+    // Validate bandwidth_limit if provided
+    if let Some(limit) = bandwidth_limit {
+        if limit < 0 {
+            return Err("Bandwidth limit must be non-negative".to_string());
+        }
+    }
+
+    let db = state.db.lock().map_err(|e| {
+        error!("Failed to lock database: {}", e);
+        format!("Database lock error: {}", e)
+    })?;
+    let conn = db.conn();
+
+    // Initialize settings row if not exists
+    conn.execute(
+        "INSERT OR IGNORE INTO update_settings (id, channel) VALUES (1, 'stable')",
+        [],
+    )
+    .map_err(|e| {
+        error!("Failed to initialize update settings: {}", e);
+        format!("Database error: {}", e)
+    })?;
+
+    // Update each field if provided
+    if let Some(enabled) = auto_check {
+        conn.execute(
+            "UPDATE update_settings SET auto_check = ?1 WHERE id = 1",
+            [enabled],
+        )
+        .map_err(|e| format!("Failed to update auto_check: {}", e))?;
+        info!("Auto-check set to: {}", enabled);
+    }
+
+    if let Some(interval) = check_interval {
+        conn.execute(
+            "UPDATE update_settings SET check_interval = ?1 WHERE id = 1",
+            [interval],
+        )
+        .map_err(|e| format!("Failed to update check_interval: {}", e))?;
+        info!("Check interval set to: {} seconds", interval);
+    }
+
+    if let Some(background) = download_in_background {
+        conn.execute(
+            "UPDATE update_settings SET download_in_background = ?1 WHERE id = 1",
+            [background],
+        )
+        .map_err(|e| format!("Failed to update download_in_background: {}", e))?;
+        info!("Download in background set to: {}", background);
+    }
+
+    if let Some(limit) = bandwidth_limit {
+        conn.execute(
+            "UPDATE update_settings SET bandwidth_limit = ?1 WHERE id = 1",
+            [limit],
+        )
+        .map_err(|e| format!("Failed to update bandwidth_limit: {}", e))?;
+        info!("Bandwidth limit set to: {} KB/s", limit);
+    }
+
+    info!("Update schedule settings updated successfully");
+    Ok(())
+}
+
+/// Mark last update check timestamp (v3.5.0)
+#[tauri::command]
+pub async fn updater_mark_last_check(state: State<'_, AppState>) -> Result<(), String> {
+    info!("Command: updater_mark_last_check");
+
+    let db = state.db.lock().map_err(|e| {
+        error!("Failed to lock database: {}", e);
+        format!("Database lock error: {}", e)
+    })?;
+    let conn = db.conn();
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    conn.execute(
+        "INSERT OR IGNORE INTO update_settings (id, channel) VALUES (1, 'stable')",
+        [],
+    )
+    .map_err(|e| format!("Database error: {}", e))?;
+
+    conn.execute(
+        "UPDATE update_settings SET last_check = ?1 WHERE id = 1",
+        [now],
+    )
+    .map_err(|e| format!("Failed to update last_check: {}", e))?;
+
+    info!("Last check timestamp updated to: {}", now);
+    Ok(())
 }

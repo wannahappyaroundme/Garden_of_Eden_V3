@@ -41,10 +41,42 @@ pub enum UpdateStatus {
     },
 }
 
+/// Update channel (v3.5.0)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UpdateChannel {
+    Stable,
+    Beta,
+}
+
+impl Default for UpdateChannel {
+    fn default() -> Self {
+        Self::Stable
+    }
+}
+
+impl UpdateChannel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Stable => "stable",
+            Self::Beta => "beta",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "stable" => Ok(Self::Stable),
+            "beta" => Ok(Self::Beta),
+            _ => Err(anyhow!("Invalid update channel: {}", s)),
+        }
+    }
+}
+
 /// Auto-Updater Service
 pub struct UpdaterService {
     last_check: Option<SystemTime>,
     check_interval_hours: u64,
+    channel: UpdateChannel,
 }
 
 impl UpdaterService {
@@ -53,7 +85,19 @@ impl UpdaterService {
         Self {
             last_check: None,
             check_interval_hours: 24, // Check once per day by default
+            channel: UpdateChannel::Stable,
         }
+    }
+
+    /// Get current update channel (v3.5.0)
+    pub fn get_channel(&self) -> UpdateChannel {
+        self.channel
+    }
+
+    /// Set update channel (v3.5.0)
+    pub fn set_channel(&mut self, channel: UpdateChannel) {
+        info!("Updating channel from {:?} to {:?}", self.channel, channel);
+        self.channel = channel;
     }
 
     /// Get current app version

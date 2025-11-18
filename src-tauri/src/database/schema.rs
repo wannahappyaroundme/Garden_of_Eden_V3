@@ -325,6 +325,36 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Update settings table (v3.5.0 - Enhanced Update Management)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS update_settings (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            channel TEXT NOT NULL DEFAULT 'stable' CHECK(channel IN ('stable', 'beta')),
+            auto_check BOOLEAN NOT NULL DEFAULT 1,
+            check_interval INTEGER NOT NULL DEFAULT 3600,
+            download_in_background BOOLEAN NOT NULL DEFAULT 0,
+            bandwidth_limit INTEGER,
+            last_check INTEGER
+        )",
+        [],
+    )?;
+
+    // Update history table (v3.5.0 - Track update installations)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS update_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            from_version TEXT NOT NULL,
+            to_version TEXT NOT NULL,
+            update_date INTEGER NOT NULL,
+            success BOOLEAN NOT NULL DEFAULT 1,
+            error_message TEXT,
+            download_size INTEGER,
+            install_duration INTEGER,
+            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 
@@ -462,6 +492,19 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_tool_call_history_status
          ON tool_call_history(status)",
+        [],
+    )?;
+
+    // Update history indexes (v3.5.0)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_update_history_update_date
+         ON update_history(update_date DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_update_history_success
+         ON update_history(success)",
         [],
     )?;
 
