@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
-import { AlertTriangle, Download, Trash2, RefreshCw, FileText, Send } from 'lucide-react';
+import { AlertTriangle, Download, Trash2, RefreshCw, FileText, Send, BarChart3, TrendingDown, Bug } from 'lucide-react';
 import { CrashReportDialog, useCrashReportDialog, CrashReport } from '../CrashReportDialog';
 import { toast } from '../../stores/toast.store';
 
@@ -103,6 +103,20 @@ export function CrashReportsPanel() {
     toast.success(`Exported ${reports.length} crash reports`);
   };
 
+  const handleTestCrashReport = async () => {
+    if (!confirm('This will create a test crash report. Continue?')) return;
+
+    try {
+      await invoke('crash_reporter_test');
+      toast.success('Test crash report created!');
+      // Reload reports after a short delay to allow file write
+      setTimeout(loadCrashReports, 500);
+    } catch (error) {
+      console.error('Failed to create test crash report:', error);
+      toast.error('Failed to create test crash report', error as string);
+    }
+  };
+
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
     const now = new Date();
@@ -130,6 +144,58 @@ export function CrashReportsPanel() {
         return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
   };
+
+  // Calculate crash statistics
+  const getCrashStatistics = () => {
+    if (reports.length === 0) {
+      return {
+        totalCrashes: 0,
+        crashesByType: {},
+        crashesLast7Days: 0,
+        crashesLast30Days: 0,
+        mostCommonError: null,
+      };
+    }
+
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+    const crashesByType: Record<string, number> = {};
+    let crashesLast7Days = 0;
+    let crashesLast30Days = 0;
+
+    reports.forEach((report) => {
+      const reportTime = report.timestamp * 1000;
+
+      // Count by type
+      crashesByType[report.error_type] = (crashesByType[report.error_type] || 0) + 1;
+
+      // Count by time period
+      if (reportTime >= sevenDaysAgo) {
+        crashesLast7Days++;
+      }
+      if (reportTime >= thirtyDaysAgo) {
+        crashesLast30Days++;
+      }
+    });
+
+    // Find most common error type
+    const mostCommonError = Object.entries(crashesByType).reduce((max, [type, count]) =>
+      count > (max[1] || 0) ? [type, count] : max,
+      ['', 0] as [string, number]
+    );
+
+    return {
+      totalCrashes: reports.length,
+      crashesByType,
+      crashesLast7Days,
+      crashesLast30Days,
+      mostCommonError: mostCommonError[0] || null,
+    };
+  };
+
+  const stats = getCrashStatistics();
 
   return (
     <div className="space-y-6">
@@ -184,7 +250,137 @@ export function CrashReportsPanel() {
           <strong>Privacy:</strong> All crash reports are sanitized to remove personal information
           (file paths, usernames, API keys) before being saved or sent.
         </div>
+
+        {/* Developer Tools (v3.4.0) */}
+        <div className="p-4 bg-muted/30 border border-dashed border-muted-foreground/30 rounded-lg">
+          <div className="flex items-center gap-2 mb-3">
+            <Bug className="w-4 h-4 text-muted-foreground" />
+            <div className="font-medium text-sm text-muted-foreground">Developer Tools</div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTestCrashReport}
+            disabled={!settings.enabled}
+            className="w-full"
+          >
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            Create Test Crash Report
+          </Button>
+          {!settings.enabled && (
+            <div className="text-xs text-muted-foreground mt-2">
+              Enable crash reporting to test
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Crash Statistics Dashboard (v3.4.0) */}
+      {reports.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            <h3 className="text-lg font-semibold">Crash Statistics</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Total Crashes */}
+            <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-red-700 dark:text-red-400">
+                  Total Crashes
+                </div>
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+              </div>
+              <div className="text-3xl font-bold text-red-900 dark:text-red-300">
+                {stats.totalCrashes}
+              </div>
+              <div className="text-xs text-red-600 dark:text-red-500 mt-1">
+                All time
+              </div>
+            </div>
+
+            {/* Last 7 Days */}
+            <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                  Last 7 Days
+                </div>
+                <TrendingDown className="w-4 h-4 text-orange-500" />
+              </div>
+              <div className="text-3xl font-bold text-orange-900 dark:text-orange-300">
+                {stats.crashesLast7Days}
+              </div>
+              <div className="text-xs text-orange-600 dark:text-orange-500 mt-1">
+                Recent activity
+              </div>
+            </div>
+
+            {/* Last 30 Days */}
+            <div className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
+                  Last 30 Days
+                </div>
+                <BarChart3 className="w-4 h-4 text-yellow-500" />
+              </div>
+              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300">
+                {stats.crashesLast30Days}
+              </div>
+              <div className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
+                Monthly trend
+              </div>
+            </div>
+          </div>
+
+          {/* Crashes by Type */}
+          <div className="p-4 bg-muted/50 rounded-lg border border-border">
+            <div className="font-medium mb-3">Crashes by Type</div>
+            <div className="space-y-2">
+              {Object.entries(stats.crashesByType).map(([type, count]) => {
+                const percentage = ((count / stats.totalCrashes) * 100).toFixed(1);
+                return (
+                  <div key={type} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getCrashTypeColor(type)}`}>
+                          {type}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground">
+                        {count} ({percentage}%)
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          type === 'Panic'
+                            ? 'bg-red-500'
+                            : type === 'RuntimeError'
+                            ? 'bg-orange-500'
+                            : 'bg-gray-500'
+                        }`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {stats.mostCommonError && (
+              <div className="mt-4 p-3 bg-background rounded border border-border">
+                <div className="text-xs text-muted-foreground mb-1">
+                  Most Common Error Type
+                </div>
+                <div className={`inline-flex px-2 py-1 rounded text-sm font-medium ${getCrashTypeColor(stats.mostCommonError)}`}>
+                  {stats.mostCommonError}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Crash Reports List */}
       <div className="space-y-4">
