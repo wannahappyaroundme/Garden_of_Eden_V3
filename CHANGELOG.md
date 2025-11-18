@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.4.0] - 2025-11-18
+
+### ✨ Features
+
+#### Auto-Updater System
+- **Automatic update checking** on app startup (configurable interval: 30 min - 24 hours)
+- **Manual update checks** from Settings → Updates panel
+- **Download progress tracking** with real-time progress bar
+- **Release notes preview** before installing updates
+- **One-click installation** with automatic app restart
+- **Smart notifications** with non-intrusive top-right corner popups
+- **GitHub releases integration** with SHA-256 checksum verification
+
+#### Crash Reporting System
+- **Automatic crash detection** with full error capture
+- **Detailed crash reports** including:
+  - Error message and stack trace
+  - Timestamp and platform information
+  - Application state at crash time
+- **Statistics dashboard** tracking crashes by period:
+  - Total crashes (all-time)
+  - Last 7 days
+  - Last 30 days
+  - Crashes by error type with percentage breakdown
+- **Report management**: View, export (JSON), delete individual or all reports
+- **Test mode** for developers to generate test crashes
+- **Privacy-first**: All reports stored locally with AES-256 encryption
+
+### ♿ Improvements
+
+#### Accessibility
+- Added comprehensive **ARIA labels** for screen readers across all new components
+- Added **keyboard navigation** support (full keyboard accessibility)
+- Added **role="alert"** and **aria-live="polite"** for update notifications
+- Added **aria-valuenow/min/max** for progress bars
+- Added **screen reader text** (sr-only) for icon-only buttons
+- All new components meet **WCAG AA** accessibility standards
+
+#### User Experience
+- Added **animated loading skeletons** for better loading states
+- Implemented **skeleton cards** matching final layout (no layout shift)
+- Updated **toast notifications** for consistent user feedback
+- Improved **dark mode support** for all new panels
+- Enhanced **responsive layout** for different window sizes
+- Smooth **60fps animations** and transitions throughout
+
+### 🐛 Bug Fixes
+- Fixed `useEffect` dependency array in `UpdateNotification` component
+- Removed unused imports causing TypeScript warnings (`Send`, `AlertCircle`)
+- Fixed type safety issues in crash report handling
+- Improved error boundary coverage
+
+### 🔧 Technical
+
+#### Backend (Rust/Tauri)
+- Added `updater_check_for_updates` command (GitHub API integration)
+- Added `updater_install_update` command (download + install)
+- Added `updater_get_version` command
+- Added `crash_get_all_reports` command
+- Added `crash_delete_report` command
+- Added `crash_export_report` command (JSON export)
+- Added `crash_cleanup_old_reports` command (cleanup by age)
+- Added `crash_get_statistics` command (statistics calculation)
+
+#### Frontend (React/TypeScript)
+- Added `UpdateNotification` component (floating update notification)
+- Added `UpdateSettingsPanel` component (update configuration)
+- Added `CrashReportsPanel` component (crash report dashboard)
+- Added `Skeleton` component (reusable loading skeleton)
+- Integrated Tauri event streaming for download progress
+- Added real-time crash statistics calculation
+
+### 📝 Documentation
+- Added comprehensive `TESTING_GUIDE_V3.4.0.md` (400+ lines)
+  - 6 test suites with 40+ test scenarios
+  - Step-by-step testing instructions
+  - Accessibility testing procedures
+  - Bug report template
+- Added detailed `RELEASE_NOTES_V3.4.0.md` (400+ lines)
+  - Feature descriptions and usage guide
+  - Technical details and API reference
+  - Installation instructions
+  - Privacy & security information
+
+### 🔒 Security & Privacy
+- All crash reports encrypted with **AES-256**
+- **SHA-256 checksum verification** for downloaded updates
+- **Code signing** for macOS and Windows builds
+- **No telemetry** - all data stays local
+- **Personal information sanitization** from crash reports
+
+---
+
 ## [3.3.0] - 2025-11-17
 
 ### ✨ Features
