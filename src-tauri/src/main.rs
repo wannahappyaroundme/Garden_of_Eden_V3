@@ -134,10 +134,18 @@ fn main() {
     let tool_settings_service = Arc::new(TokioMutex::new(tool_settings_service));
     log::info!("✓ Tool Settings Service initialized");
 
-    // Initialize Crash Reporter Service
-    let crash_reporter_service = CrashReporterService::new();
+    // Initialize Crash Reporter Service (v3.4.0)
+    log::info!("Initializing Crash Reporter Service...");
+    let crash_log_dir = app_data_dir.join("crashes");
+    let crash_reporter_service = CrashReporterService::new(crash_log_dir);
+    let crash_reporter_arc = Arc::new(Mutex::new(crash_reporter_service));
+
+    // Setup panic handler to capture crashes (v3.4.0)
+    CrashReporterService::setup_panic_handler(Arc::clone(&crash_reporter_arc));
+    log::info!("✓ Crash Reporter Service initialized with panic handler");
+
     let crash_reporter_state = CrashReporterState {
-        service: Mutex::new(crash_reporter_service),
+        service: crash_reporter_arc,
     };
 
     let app_state = AppState {
@@ -284,6 +292,8 @@ fn main() {
             commands::crash_reporter::crash_reporter_update_settings,
             commands::crash_reporter::crash_reporter_report_error,
             commands::crash_reporter::crash_reporter_test,
+            commands::crash_reporter::crash_reporter_get_local_reports,  // v3.4.0
+            commands::crash_reporter::crash_reporter_cleanup_old_reports,  // v3.4.0
             // Tool History Commands (v3.3.0)
             commands::tool_history::get_tool_history,
             commands::tool_history::get_tool_statistics,

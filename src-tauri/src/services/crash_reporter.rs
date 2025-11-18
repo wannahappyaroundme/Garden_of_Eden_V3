@@ -1,9 +1,10 @@
 /**
- * Crash Reporting Service (Sentry Integration)
+ * Crash Reporting Service (v3.4.0 - Enhanced)
  *
  * Privacy-first error reporting with user opt-in
- * - Captures panics and errors
- * - Sends crash reports to Sentry (opt-in only)
+ * - Captures panics and errors with backtrace
+ * - Local crash log storage (always enabled)
+ * - Optional Sentry reporting (opt-in only)
  * - Provides user control over crash reporting
  * - Sanitizes sensitive data before sending
  */
@@ -11,7 +12,10 @@
 use anyhow::{anyhow, Result};
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::fs;
+use std::panic;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 /// Crash report data (sanitized)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,17 +51,85 @@ impl Default for CrashReportingSettings {
 pub struct CrashReporterService {
     settings: Mutex<CrashReportingSettings>,
     sentry_dsn: Option<String>,
+    crash_log_dir: PathBuf,
     initialized: bool,
 }
 
 impl CrashReporterService {
     /// Create new crash reporter service
-    pub fn new() -> Self {
+    pub fn new(crash_log_dir: PathBuf) -> Self {
+        // Create crash log directory if it doesn't exist
+        if let Err(e) = fs::create_dir_all(&crash_log_dir) {
+            error!("Failed to create crash log directory: {}", e);
+        }
+
         Self {
             settings: Mutex::new(CrashReportingSettings::default()),
             sentry_dsn: None,
+            crash_log_dir,
             initialized: false,
         }
+    }
+
+    /// Setup panic handler to capture crashes (v3.4.0)
+    ///
+    /// This should be called early in the application startup
+    pub fn setup_panic_handler(service: Arc<Mutex<Self>>) {
+        let default_hook = panic::take_hook();
+
+        panic::set_hook(Box::new(move |panic_info| {
+            // Call the default hook first (prints to stderr)
+            default_hook(panic_info);
+
+            // Extract panic information
+            let message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+                s.to_string()
+            } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "Unknown panic".to_string()
+            };
+
+            let location = if let Some(loc) = panic_info.location() {
+                format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
+            } else {
+                "Unknown location".to_string()
+            };
+
+            // Get backtrace (requires RUST_BACKTRACE=1)
+            let backtrace = std::backtrace::Backtrace::force_capture();
+            let backtrace_str = format!("{:?}", backtrace);
+
+            error!("🔥 PANIC DETECTED: {} at {}", message, location);
+            error!("Backtrace:\n{}", backtrace_str);
+
+            // Save crash report to local file
+            if let Ok(service_lock) = service.lock() {
+                let crash_report = Self::create_crash_report(
+                    &message,
+                    "Panic",
+                    Some(backtrace_str.clone()),
+                    Some(location.clone()),
+                );
+
+                // Save to local file (always, regardless of user settings)
+                if let Err(e) = service_lock.save_crash_report_to_file(&crash_report) {
+                    error!("Failed to save crash report: {}", e);
+                }
+
+                // Send to Sentry if enabled (opt-in)
+                if service_lock.is_enabled() {
+                    if let Err(e) = service_lock.report_error(&message, Some(&location)) {
+                        error!("Failed to send crash report to Sentry: {}", e);
+                    }
+                }
+            }
+
+            // Note: The application will still terminate after this hook
+            // Tauri will attempt to restart the app if configured to do so
+        }));
+
+        info!("✓ Panic handler installed successfully");
     }
 
     /// Initialize Sentry (only if user opted in)
@@ -187,6 +259,75 @@ impl CrashReporterService {
         std::env::consts::OS.to_string()
     }
 
+    /// Save crash report to local file (v3.4.0)
+    ///
+    /// Always saves locally, regardless of user opt-in settings
+    pub fn save_crash_report_to_file(&self, report: &CrashReport) -> Result<()> {
+        // Create filename with timestamp
+        let filename = format!("crash_{}_{}.json", report.timestamp, report.error_type);
+        let file_path = self.crash_log_dir.join(filename);
+
+        // Serialize to JSON
+        let json = serde_json::to_string_pretty(report)?;
+
+        // Write to file
+        fs::write(&file_path, json)?;
+
+        info!("Crash report saved to: {:?}", file_path);
+        Ok(())
+    }
+
+    /// Get list of all local crash reports (v3.4.0)
+    pub fn get_local_crash_reports(&self) -> Result<Vec<CrashReport>> {
+        let mut reports = Vec::new();
+
+        // Read all JSON files from crash log directory
+        if let Ok(entries) = fs::read_dir(&self.crash_log_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if let Ok(report) = serde_json::from_str::<CrashReport>(&content) {
+                            reports.push(report);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort by timestamp (newest first)
+        reports.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+        Ok(reports)
+    }
+
+    /// Delete old crash reports (older than retention_days) (v3.4.0)
+    pub fn cleanup_old_crash_reports(&self, retention_days: i64) -> Result<usize> {
+        let cutoff_timestamp = chrono::Utc::now().timestamp() - (retention_days * 86400);
+        let mut deleted_count = 0;
+
+        if let Ok(entries) = fs::read_dir(&self.crash_log_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if let Ok(report) = serde_json::from_str::<CrashReport>(&content) {
+                            if report.timestamp < cutoff_timestamp {
+                                if fs::remove_file(&path).is_ok() {
+                                    deleted_count += 1;
+                                    info!("Deleted old crash report: {:?}", path);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        info!("Cleaned up {} old crash reports", deleted_count);
+        Ok(deleted_count)
+    }
+
     /// Test crash reporting (for debugging)
     pub fn test_crash_report(&self) -> Result<()> {
         if !self.is_enabled() {
@@ -200,7 +341,12 @@ impl CrashReporterService {
 
 impl Default for CrashReporterService {
     fn default() -> Self {
-        Self::new()
+        // Use a default crash log directory (~/Library/Logs/garden-of-eden-v3/crashes or similar)
+        let crash_log_dir = dirs::data_local_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("garden-of-eden-v3")
+            .join("crashes");
+        Self::new(crash_log_dir)
     }
 }
 

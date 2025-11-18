@@ -1,17 +1,17 @@
 /**
- * Crash Reporter Commands for Tauri
+ * Crash Reporter Commands for Tauri (v3.4.0 - Enhanced)
  *
  * Exposes crash reporting controls to the frontend
  */
 
-use crate::services::crash_reporter::{CrashReporterService, CrashReportingSettings};
+use crate::services::crash_reporter::{CrashReport, CrashReporterService, CrashReportingSettings};
 use log::{error, info};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 
-/// Global crash reporter service state
+/// Global crash reporter service state (v3.4.0 - Updated with Arc)
 pub struct CrashReporterState {
-    pub service: Mutex<CrashReporterService>,
+    pub service: Arc<Mutex<CrashReporterService>>,
 }
 
 /// Check if crash reporting is enabled
@@ -108,5 +108,34 @@ pub async fn crash_reporter_test(
     service.test_crash_report().map_err(|e| {
         error!("Failed to test crash reporting: {}", e);
         format!("Failed to test crash reporting: {}", e)
+    })
+}
+
+/// Get all local crash reports (v3.4.0)
+#[tauri::command]
+pub async fn crash_reporter_get_local_reports(
+    state: State<'_, CrashReporterState>,
+) -> Result<Vec<CrashReport>, String> {
+    info!("Command: crash_reporter_get_local_reports");
+
+    let service = state.service.lock().unwrap();
+    service.get_local_crash_reports().map_err(|e| {
+        error!("Failed to get local crash reports: {}", e);
+        format!("Failed to get crash reports: {}", e)
+    })
+}
+
+/// Cleanup old crash reports (v3.4.0)
+#[tauri::command]
+pub async fn crash_reporter_cleanup_old_reports(
+    state: State<'_, CrashReporterState>,
+    retention_days: i64,
+) -> Result<usize, String> {
+    info!("Command: crash_reporter_cleanup_old_reports - retention: {} days", retention_days);
+
+    let service = state.service.lock().unwrap();
+    service.cleanup_old_crash_reports(retention_days).map_err(|e| {
+        error!("Failed to cleanup old crash reports: {}", e);
+        format!("Failed to cleanup crash reports: {}", e)
     })
 }
