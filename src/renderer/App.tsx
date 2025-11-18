@@ -10,6 +10,7 @@ import MemoryVisualization from './pages/MemoryVisualization';
 import SmartOnboarding from './pages/SmartOnboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
+import { UpdateNotification } from './components/UpdateNotification'; // v3.4.0
 import './i18n/config'; // Initialize i18n
 
 type Page = 'onboarding' | 'chat' | 'settings' | 'integrations' | 'memory';
@@ -104,6 +105,13 @@ function App() {
         <MemoryVisualization onClose={() => setCurrentPage('chat')} />
       )}
       <ToastContainer />
+      {/* v3.4.0: Auto-update notification - only show after onboarding */}
+      {currentPage !== 'onboarding' && (
+        <UpdateNotification
+          checkOnMount={true}
+          autoCheckInterval={60} // Check every hour
+        />
+      )}
     </ErrorBoundary>
   );
 }
