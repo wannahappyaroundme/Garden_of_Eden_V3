@@ -58,7 +58,7 @@ export function UpdateNotification({
     }, autoCheckInterval * 60 * 1000);
 
     return () => clearInterval(intervalId);
-  }, [checkOnMount, autoCheckInterval]);
+  }, [checkOnMount, autoCheckInterval, status]); // Fixed: Added status to dependencies
 
   // Listen for download progress events
   useEffect(() => {
@@ -173,12 +173,18 @@ export function UpdateNotification({
 
   return (
     <div
+      role="alert"
+      aria-live="polite"
+      aria-atomic="true"
       className={cn(
         'fixed top-20 right-4 z-50 w-96 transition-all duration-300',
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
       )}
     >
-      <div className="rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-2xl backdrop-blur-sm p-4">
+      <div
+        className="rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-2xl backdrop-blur-sm p-4"
+        aria-label="Update notification"
+      >
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -188,7 +194,7 @@ export function UpdateNotification({
                 {status === 'available' ? 'Update Available' : 'App Updater'}
               </h3>
               <p className="text-xs text-muted-foreground">
-                Current: v{updateInfo?.current_version || '3.3.1'}
+                Current: v{updateInfo?.current_version || '3.4.0'}
               </p>
             </div>
           </div>
@@ -198,8 +204,10 @@ export function UpdateNotification({
               size="icon"
               onClick={handleDismiss}
               className="h-6 w-6 rounded-full"
+              aria-label="Dismiss update notification"
             >
               <X className="w-4 h-4" />
+              <span className="sr-only">Close</span>
             </Button>
           )}
         </div>
@@ -211,8 +219,11 @@ export function UpdateNotification({
 
         {/* Download Progress */}
         {(status === 'downloading' || status === 'installing') && (
-          <div className="mb-4">
+          <div className="mb-4" role="progressbar" aria-valuenow={status === 'installing' ? 100 : downloadProgress} aria-valuemin={0} aria-valuemax={100}>
             <Progress value={status === 'installing' ? 100 : downloadProgress} />
+            <span className="sr-only">
+              {status === 'installing' ? 'Installing' : `Downloading ${downloadProgress.toFixed(0)}%`}
+            </span>
           </div>
         )}
 

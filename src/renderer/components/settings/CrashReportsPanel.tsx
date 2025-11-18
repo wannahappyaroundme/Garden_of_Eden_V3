@@ -7,9 +7,10 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
-import { AlertTriangle, Download, Trash2, RefreshCw, FileText, Send, BarChart3, TrendingDown, Bug } from 'lucide-react';
+import { AlertTriangle, Download, Trash2, RefreshCw, FileText, BarChart3, TrendingDown, Bug } from 'lucide-react';
 import { CrashReportDialog, useCrashReportDialog, CrashReport } from '../CrashReportDialog';
 import { toast } from '../../stores/toast.store';
+import { Skeleton } from '../ui/skeleton';
 
 interface CrashReportingSettings {
   enabled: boolean;
@@ -423,8 +424,22 @@ export function CrashReportsPanel() {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">
-            Loading crash reports...
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 border rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : reports.length === 0 ? (
           <div className="text-center py-12 space-y-2">

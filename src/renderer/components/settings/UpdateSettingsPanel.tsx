@@ -19,7 +19,7 @@ interface UpdateCheckResult {
 }
 
 export function UpdateSettingsPanel() {
-  const [currentVersion, setCurrentVersion] = useState('3.3.1');
+  const [currentVersion, setCurrentVersion] = useState('3.4.0');
   const [isChecking, setIsChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
   const [lastCheckTime, setLastCheckTime] = useState<number | null>(null);

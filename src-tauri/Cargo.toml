@@ -1,6 +1,6 @@
 [package]
 name = "garden-of-eden-v3"
-version = "3.3.0"
+version = "3.4.0"
 description = "100% Local AI Assistant - Privacy-first desktop companion inspired by JARVIS"
 authors = ["Garden of Eden Team"]
 license = "MIT"
