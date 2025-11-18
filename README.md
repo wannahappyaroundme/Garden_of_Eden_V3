@@ -4,7 +4,7 @@
 
 ### **Your Private AI Assistant That Never Leaves Your Computer**
 
-[![Version](https://img.shields.io/badge/version-3.8.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://github.com/wannahappyaroundme/Garden_of_Eden_V3/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](#-system-requirements)
 [![Tauri](https://img.shields.io/badge/Tauri-2.9-24C8DB.svg)](https://tauri.app/)
@@ -63,7 +63,7 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 
 ---
 
-## ✨ Current Features (v3.8.0)
+## ✨ Current Features (v3.3.0)
 
 ### 🤖 AI Intelligence
 - **Local LLM**: Qwen 2.5 14B (9.0GB Q4_K_M) via Ollama - excellent reasoning, Korean support, fast inference
@@ -74,10 +74,10 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 - **Markdown Support**: Code highlighting with rehype-highlight
 - **RAG Memory**: Episodic memory with RAFT hallucination reduction
 - **Learning System**: AI optimizes personality based on user feedback
-- **Personality Detection** ✨ NEW (v3.8.0): Automatic Big Five + MBTI analysis from conversation patterns
-- **LoRA Fine-tuning** ✨ NEW (v3.8.0): Deep personalization with parameter-efficient training
+- **Personality Detection** ✨ NEW (v3.3.0): Automatic Big Five + MBTI analysis from conversation patterns
+- **LoRA Fine-tuning** ✨ NEW (v3.3.0): Deep personalization with parameter-efficient training
 
-### 🎛️ Persona Customization & Learning (v3.8.0 Major Upgrade)
+### 🎛️ Persona Customization & Learning (v3.3.0 Upgrade)
 - **10 Adjustable Parameters**: Formality, Verbosity, Humor, Emoji Usage, Empathy, Creativity, Proactiveness, Technical Depth, Code Examples, Questioning
 - **Automatic Personality Detection** ✨ NEW:
   - Linguistic pattern analysis (11 metrics)
@@ -156,10 +156,10 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 ### Backend (Rust/Tauri)
 - `src-tauri/src/services/ollama.rs` - Ollama integration with streaming
 - `src-tauri/src/services/learning.rs` - Persona optimization engine
-- `src-tauri/src/services/personality_detector.rs` - **v3.8.0**: Big Five + MBTI detection
-- `src-tauri/src/services/persona_adjuster.rs` - **v3.8.0**: Automatic persona adjustment
-- `src-tauri/src/services/lora_data_collector.rs` - **v3.8.0**: Training data export
-- `src-tauri/src/services/lora_adapter_manager.rs` - **v3.8.0**: LoRA adapter management
+- `src-tauri/src/services/personality_detector.rs` - **v3.3.0**: Big Five + MBTI detection
+- `src-tauri/src/services/persona_adjuster.rs` - **v3.3.0**: Automatic persona adjustment
+- `src-tauri/src/services/lora_data_collector.rs` - **v3.3.0**: Training data export
+- `src-tauri/src/services/lora_adapter_manager.rs` - **v3.3.0**: LoRA adapter management
 - `src-tauri/src/services/rag.rs` - RAG episodic memory
 - `src-tauri/src/services/llava.rs` - Vision model integration
 - `src-tauri/src/services/screen.rs` - Screen capture & context
@@ -218,35 +218,56 @@ The onboarding wizard will guide you through:
 
 ## 🛣️ Roadmap
 
-### Planned Features (Not Yet Implemented)
+### ✅ Completed (v3.3.0)
+- [x] **Tool Calling System** with 6 production tools
+- [x] **Internet Access** (privacy-preserving web search + URL fetching)
+- [x] **Plugin System Architecture** (V8 JavaScript runtime)
+- [x] **Personality Detection** (Big Five + MBTI from conversation patterns)
+- [x] **Automatic Persona Adjustment** (3 strategies: Conservative/Moderate/Aggressive)
+- [x] **LoRA Fine-tuning System** (training data export, adapter management, A/B testing)
+- [x] **Model Upgrade** (qwen2.5:7b → Qwen 2.5 14B Q4_K_M 9.0GB)
+- [x] **Cross-platform Ollama Installation** (macOS + Windows auto-install)
+- [x] **Tool UI Components** (ToolCallIndicator, ToolResultCard, ToolHistory panels)
+- [x] **Real-time Tool Event Emission** (v3.3.1 - tool execution start/success/error events)
+- [x] **Tool History & Settings IPC** (v3.3.1 - frontend can manage tool history and settings)
 
-#### 🔮 Vision & Advanced AI
+### 🚧 In Progress (v3.4.0 - Planned Q4 2025)
+- [ ] **Advanced RAG** - BGE-M3 embeddings + LanceDB vector database
+- [ ] **RAFT Hallucination Reduction** - Full integration
+- [ ] **Windows Build** - MSI installer with code signing
+- [ ] **Plugin Tool Discovery** - Auto-discover tools from loaded plugins
+- [ ] **Plugin Tool Execution** - Full V8 runtime integration
+
+### 📋 Planned Features (Not Yet Implemented)
+
+#### 🔮 Vision & Advanced AI (v3.5.0+)
 - [ ] LLaVA 7B full integration for deep screen analysis
-- [ ] Advanced RAG with BGE-M3 embeddings + LanceDB
-- [ ] RAFT hallucination reduction
+- [ ] Multi-image conversations
+- [ ] Screenshot annotation and UI/UX analysis
 - [ ] Synthetic data generation for training
 - [ ] Whisper Large V3 upgrade (currently using small model)
 
-#### 🤖 Proactive AI Mode
+#### 🤖 Proactive AI Mode (v3.6.0+)
 - [ ] AI-led conversation mode (fully autonomous)
 - [ ] Advanced screen monitoring with Level 2/3 context
-- [ ] Calendar auto-scheduling
-- [ ] Email reading/composition
+- [ ] Calendar auto-scheduling (Google Calendar + iCal)
+- [ ] Email reading/composition (Gmail API)
 
-#### 🔌 Extensibility
-- [x] Plugin system architecture ✅ (v3.6.0 - V8 runtime)
-- [ ] Plugin marketplace
+#### 🔌 Extensibility (v3.7.0+)
+- [ ] Plugin marketplace (GitHub-based discovery)
+- [ ] Community plugin signing and verification
 - [ ] Persona import/export marketplace
-- [ ] Custom model support (beyond qwen2.5:7b)
+- [ ] Custom model support (beyond Qwen 2.5 14B)
 
-#### 📦 Distribution & Polish
-- [ ] Windows build (currently macOS only)
-- [ ] Code signing (macOS, Windows)
-- [ ] Auto-updater
-- [ ] Crash reporting (Sentry)
-- [ ] Comprehensive test coverage (>80%)
+#### 📦 Distribution & Polish (v3.8.0+)
+- [ ] Linux build (Debian, Ubuntu, Fedora)
+- [ ] Auto-updater (in-app update notifications)
+- [ ] Crash reporting (Sentry integration, opt-in)
+- [ ] Comprehensive test coverage (target: 80%, current: ~40%)
+- [ ] E2E testing with Playwright
 
 **Full specification**: See [docs/archive/MASTER_SPEC.md](docs/archive/MASTER_SPEC.md) for the original 12,000-line vision document.
+**Detailed roadmap**: See [docs/ROADMAP.md](docs/ROADMAP.md) for version-by-version plans.
 
 ---
 
@@ -299,13 +320,13 @@ The onboarding wizard will guide you through:
 - **[API Reference](docs/API.md)** - Tauri IPC commands documentation
 - **[Testing Guide](docs/TESTING.md)** - Running tests, adding new tests
 - **[Tool Calling Testing](TESTING_v3.6.0.md)** - v3.6.0 tool system testing guide
-- **[LoRA Fine-tuning Guide](docs/LORA_FINE_TUNING_GUIDE.md)** - **v3.8.0**: Complete fine-tuning workflow ✨ NEW
+- **[LoRA Fine-tuning Guide](docs/LORA_FINE_TUNING_GUIDE.md)** - **v3.3.0**: Complete fine-tuning workflow ✨ NEW
 - **[Claude Development](docs/CLAUDE.md)** - Using Claude Code for development
 - **[Contributing](CONTRIBUTING.md)** - How to contribute
 
 ### Additional Resources
-- **[Changelog](CHANGELOG.md)** - Version history (v3.8.0 updates)
-- **[Progress Log](PROGRESS.md)** - Development progress (79+ tests passing)
+- **[Changelog](CHANGELOG.md)** - Version history (v3.3.0 updates)
+- **[Progress Log](PROGRESS.md)** - Development progress (69+ tests passing)
 - **[Master Specification](docs/archive/MASTER_SPEC.md)** - Complete original design (12,000 lines)
 
 ---

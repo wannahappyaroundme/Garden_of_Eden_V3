@@ -19,9 +19,12 @@ use services::tool_implementations::{
     WebSearchTool, UrlFetchTool, FileReadTool, FileWriteTool,
     SystemInfoTool, CalculatorTool,
 };
+use services::tool_history::ToolHistoryService;
+use services::tool_settings::ToolSettingsService;
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
+use tokio::sync::Mutex as TokioMutex;
 
 /// Application state shared across Tauri commands
 pub struct AppState {
@@ -35,6 +38,8 @@ pub struct AppState {
     webhook_trigger_manager: Arc<WebhookTriggerManager>,
     calendar_service: CalendarServiceWrapper,
     tool_service: Arc<ToolService>,  // v3.6.0: Tool calling system
+    tool_history_service: Arc<TokioMutex<ToolHistoryService>>,  // v3.3.0: Tool execution tracking
+    tool_settings_service: Arc<TokioMutex<ToolSettingsService>>,  // v3.3.0: Tool configuration
 }
 
 fn main() {
@@ -116,6 +121,19 @@ fn main() {
     let tool_service = Arc::new(tool_service);
     log::info!("Tool Service initialized with {} tools", tool_service.list_tools().len());
 
+    // Initialize Tool History Service (v3.3.0)
+    log::info!("Initializing Tool History Service...");
+    let tool_history_service = ToolHistoryService::new(Arc::clone(&db_arc))
+        .expect("Failed to initialize Tool History Service");
+    let tool_history_service = Arc::new(TokioMutex::new(tool_history_service));
+    log::info!("✓ Tool History Service initialized");
+
+    // Initialize Tool Settings Service (v3.3.0)
+    log::info!("Initializing Tool Settings Service...");
+    let tool_settings_service = ToolSettingsService::new(Arc::clone(&db_arc));
+    let tool_settings_service = Arc::new(TokioMutex::new(tool_settings_service));
+    log::info!("✓ Tool Settings Service initialized");
+
     // Initialize Crash Reporter Service
     let crash_reporter_service = CrashReporterService::new();
     let crash_reporter_state = CrashReporterState {
@@ -135,11 +153,14 @@ fn main() {
         webhook_trigger_manager,
         calendar_service,
         tool_service,  // v3.6.0: Tool calling system
+        tool_history_service,  // v3.3.0: Tool execution tracking
+        tool_settings_service,  // v3.3.0: Tool configuration
     };
 
     tauri::Builder::default()
         .manage(app_state)
         .manage(crash_reporter_state)
+        .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
             commands::ai::chat_stream,
@@ -263,6 +284,22 @@ fn main() {
             commands::crash_reporter::crash_reporter_update_settings,
             commands::crash_reporter::crash_reporter_report_error,
             commands::crash_reporter::crash_reporter_test,
+            // Tool History Commands (v3.3.0)
+            commands::tool_history::get_tool_history,
+            commands::tool_history::get_tool_statistics,
+            commands::tool_history::export_tool_history,
+            commands::tool_history::delete_tool_history,
+            commands::tool_history::get_recent_tools,
+            commands::tool_history::get_tool_error_rate,
+            // Tool Settings Commands (v3.3.0)
+            commands::tool_settings::get_all_tool_settings,
+            commands::tool_settings::get_tool_setting,
+            commands::tool_settings::update_tool_setting,
+            commands::tool_settings::update_all_tool_settings,
+            commands::tool_settings::enable_tool,
+            commands::tool_settings::disable_tool,
+            commands::tool_settings::reset_tool_settings,
+            commands::tool_settings::get_tool_default_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

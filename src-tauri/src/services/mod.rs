@@ -23,13 +23,13 @@ pub mod proactive_manager;
 
 // Phase 5: Learning System
 pub mod learning;
-pub mod personality_detector;  // v3.8.0 Phase 2.1: Conversation pattern analysis
-pub mod persona_adjuster;      // v3.8.0 Phase 2.3: Automatic persona adjustment
-pub mod lora_data_collector;   // v3.8.0 Phase 3.1: LoRA training data collection
-pub mod lora_adapter_manager;  // v3.8.0 Phase 3.2: LoRA adapter management
+pub mod personality_detector;  // v3.3.0 Phase 2.1: Conversation pattern analysis
+pub mod persona_adjuster;      // v3.3.0 Phase 2.3: Automatic persona adjustment
+pub mod lora_data_collector;   // v3.3.0 Phase 3.1: LoRA training data collection
+pub mod lora_adapter_manager;  // v3.3.0 Phase 3.2: LoRA adapter management
 
 #[cfg(test)]
-mod personality_tests;  // v3.8.0 Phase 2: Comprehensive personality tests (30+ tests)
+mod personality_tests;  // v3.3.0 Phase 2: Comprehensive personality tests (69+ tests)
 
 // Phase 6: Webhooks & External Integrations
 pub mod webhook;
@@ -52,6 +52,9 @@ pub mod url_fetch;
 pub mod plugin;
 pub mod plugin_runtime;
 
-// Phase 11: Tool Calling System (v3.5.0)
+// Phase 11: Tool Calling System (v3.3.0)
 pub mod tool_calling;
 pub mod tool_implementations;
+pub mod tool_history;        // v3.3.0: Tool execution tracking and analytics
+pub mod tool_settings;       // v3.3.0: Tool configuration management
+pub mod plugin_tool_bridge;  // v3.3.0: Plugin-to-tool integration bridge

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use futures_util::StreamExt;
 use std::sync::Arc;
-use tauri::Manager;  // v3.7.0: For emit() method
+use tauri::{Manager, Emitter};  // v3.3.0: For emit() method
 
 use super::rag::{RagService, format_episodes_for_context};
 use super::tool_calling::{ToolService, ToolCall, ToolDefinition};
@@ -562,12 +562,17 @@ pub async fn generate_response_with_tools(
 
                 log::info!("Executing tool: {} with args: {:?}", function_name, arguments);
 
-                // v3.7.0: TODO: Emit tool execution start event
-                // Event emission will be implemented after testing with Window handle
-                // if let (Some(app), Some(msg_id)) = (&app_handle, &message_id) {
-                //     app.emit_all("ai:tool-execution-start", ...);
-                // }
-                let _ = (&app_handle, &message_id); // Suppress unused warning
+                // v3.3.0: Emit tool execution start event
+                if let Some(app) = &app_handle {
+                    let event_payload = serde_json::json!({
+                        "tool_name": function_name,
+                        "arguments": arguments,
+                        "timestamp": chrono::Utc::now().timestamp_millis(),
+                    });
+                    if let Err(e) = app.emit("ai:tool-execution-start", event_payload) {
+                        log::warn!("Failed to emit tool-execution-start event: {}", e);
+                    }
+                }
 
                 let tool_call_request = ToolCall {
                     tool_name: function_name.clone(),
@@ -578,8 +583,35 @@ pub async fn generate_response_with_tools(
                 let tool_result = tool_service.execute_tool(&tool_call_request).await;
                 let execution_time_ms = start_time.elapsed().as_millis() as u64;
 
-                // v3.7.0: TODO: Emit tool execution complete/error event
-                // Event emission will be implemented after testing with Window handle
+                // v3.3.0: Emit tool execution complete/error event
+                if let Some(app) = &app_handle {
+                    let event_payload = if tool_result.success {
+                        serde_json::json!({
+                            "tool_name": function_name,
+                            "status": "success",
+                            "result": tool_result.result,
+                            "execution_time_ms": execution_time_ms,
+                            "timestamp": chrono::Utc::now().timestamp_millis(),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "tool_name": function_name,
+                            "status": "error",
+                            "error": tool_result.error.clone().unwrap_or_default(),
+                            "execution_time_ms": execution_time_ms,
+                            "timestamp": chrono::Utc::now().timestamp_millis(),
+                        })
+                    };
+                    let event_name = if tool_result.success {
+                        "ai:tool-execution-success"
+                    } else {
+                        "ai:tool-execution-error"
+                    };
+                    if let Err(e) = app.emit(event_name, event_payload) {
+                        log::warn!("Failed to emit {} event: {}", event_name, e);
+                    }
+                }
+
                 log::info!("Tool {} execution completed in {}ms (success: {})",
                     function_name, execution_time_ms, tool_result.success);
 

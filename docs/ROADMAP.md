@@ -16,11 +16,11 @@ Build the world's best **privacy-first, local-first AI assistant** that matches 
 
 ---
 
-## Current Status (v3.0.4)
+## Current Status (v3.3.0)
 
 ### ✅ Completed Phases
 
-#### Phase 1: Foundation (Weeks 1-2) - COMPLETE
+#### Phase 1: Foundation (Weeks 1-2) - COMPLETE ✅
 - ✅ Tauri 2.9 + React + TypeScript setup
 - ✅ SQLite database with migrations
 - ✅ IPC communication (type-safe)
@@ -79,125 +79,150 @@ Build the world's best **privacy-first, local-first AI assistant** that matches 
 - ✅ Launch announcement
 - ✅ Community setup (Issues, Discussions)
 
-#### Phase 9: Cloud Backup & Docs (v3.0.4) - COMPLETE
+#### Phase 9: Cloud Backup & Docs (v3.0.4) - COMPLETE ✅
 - ✅ Google OAuth integration
 - ✅ Google Drive backup (persona settings only)
 - ✅ Complete documentation overhaul
 - ✅ SERVICE.md, DEPLOYMENT.md, MARKETING.md
 - ✅ 15,000+ words of user docs
 
+#### Phase 10: Tool Calling & Internet Access (v3.2.0) - COMPLETE ✅
+**Released**: 2025-11-15
+
+**Features Implemented**:
+- ✅ Tool Calling System with 6 production tools
+  - `web_search` - DuckDuckGo/SearX integration
+  - `fetch_url` - Privacy-preserving URL fetching
+  - `read_file` / `write_file` - File operations
+  - `get_system_info` - System information
+  - `calculate` - Math calculations
+- ✅ Internet Access (privacy-first)
+- ✅ Plugin System infrastructure (V8 JavaScript runtime)
+- ✅ Google OAuth for cloud backup
+- ✅ Proactive AI notifications
+- ✅ Enhanced KakaoTalk-style chat interface
+- ✅ Tool execution streaming to UI
+
+**Backend Services**:
+- `/src-tauri/src/services/tool_calling.rs`
+- `/src-tauri/src/services/tool_implementations.rs`
+- `/src-tauri/src/services/web_search.rs`
+- `/src-tauri/src/services/url_fetch.rs`
+- `/src-tauri/src/services/plugin.rs`
+- `/src-tauri/src/services/plugin_runtime.rs`
+
+**Frontend Integration**:
+- Tool execution visualization in chat
+- Streaming tool results
+- Error handling for tool failures
+
+---
+
+#### Phase 11: Personality Detection & LoRA Fine-tuning (v3.3.0) - COMPLETE ✅
+**Released**: 2025-11-17
+
+**Features Implemented**:
+- ✅ **Automatic Personality Detection**
+  - 11 linguistic metrics (formality, verbosity, humor, emoji usage, empathy, creativity, proactiveness, technical_depth, code_examples, questioning)
+  - Big Five personality traits (OCEAN model)
+  - MBTI type indicators (I/E, S/N, T/F, J/P)
+  - Confidence scoring with sample size validation
+
+- ✅ **Automatic Persona Adjustment**
+  - 3 strategies: Conservative (20%), Moderate (40%), Aggressive (60%)
+  - Learning rate control (default: 0.3)
+  - Human-readable explanation generation
+  - Database tracking of all adjustments
+
+- ✅ **LoRA Fine-tuning System**
+  - Training data export (Alpaca, ShareGPT, JSONL formats)
+  - Quality filtering (satisfaction ≥ 0.7)
+  - LoRA adapter management with semantic versioning
+  - A/B testing framework for adapter comparison
+  - Modelfile generation for Ollama integration
+  - **100x cost reduction** (shared base model + per-user adapters)
+
+- ✅ **Model Upgrade**: qwen2.5:7b → Qwen 2.5 14B Q4_K_M (9.0GB)
+- ✅ **Cross-platform Ollama installation** (macOS + Windows)
+- ✅ **Tool UI Components** (ToolCallIndicator, ToolResultCard, ToolHistory)
+
+**Backend Services**:
+- `/src-tauri/src/services/personality_detector.rs` (671 lines)
+- `/src-tauri/src/services/persona_adjuster.rs` (557 lines)
+- `/src-tauri/src/services/lora_data_collector.rs` (731 lines)
+- `/src-tauri/src/services/lora_adapter_manager.rs` (664 lines)
+- `/src-tauri/src/services/model_installer.rs` (Windows support)
+
+**Database Schema**:
+- `personality_insights` table (24 fields)
+- `persona_changes` table (tracking)
+- `persona_settings` migrated to 10 core parameters
+- 6 new indexes for performance
+
+**Test Coverage**:
+- 69+ tests passing (95% pass rate)
+- Persona Standardization: 15+ tests
+- Personality Detection: 34 tests
+- LoRA System: 20 tests
+
+**Documentation**:
+- [LORA_FINE_TUNING_GUIDE.md](../LORA_FINE_TUNING_GUIDE.md) (complete fine-tuning workflow)
+- [PROGRESS.md](../PROGRESS.md) (detailed development progress)
+- [CHANGELOG.md](../CHANGELOG.md) (v3.3.0 release notes)
+
+**Performance Metrics**:
+- Response Time: 2-4 seconds (Qwen 2.5 14B Q4_K_M)
+- GPU VRAM (Inference): 12-13GB
+- GPU VRAM (LoRA Training): 15-19GB
+- LoRA Training Time: 1-3 hours for 1000 examples
+- LoRA Adapter Size: 50-200MB per version
+
 ---
 
 ## Timeline
 
 ```
-2024 Q4  ████████████████████ Phases 1-8 Complete (v3.0.0)
-2025 Q1  ████░░░░░░░░░░░░░░░░ Phase 9 Complete (v3.0.4)
-2025 Q2  ░░░░░░░░░░░░░░░░░░░░ Phase 10: Windows Build
-2025 Q3  ░░░░░░░░░░░░░░░░░░░░ Phase 11: Advanced Features
-2025 Q4  ░░░░░░░░░░░░░░░░░░░░ Phase 12: Plugin System
-2026 Q1  ░░░░░░░░░░░░░░░░░░░░ Phase 13: AI Enhancements
+2025-11-12  ████████████████████ v3.0.0 Foundation Complete
+2025-11-15  ████████████████████ v3.2.0 Tool Calling & Internet Access
+2025-11-17  ████████████████████ v3.3.0 Personality & LoRA CURRENT
+2025-12     ░░░░░░░░░░░░░░░░░░░░ v3.4.0 Advanced RAG (Planned)
+2026 Q1     ░░░░░░░░░░░░░░░░░░░░ v3.5.0 LLaVA Full Integration
+2026 Q2     ░░░░░░░░░░░░░░░░░░░░ v4.0.0 Multiple Personas
 ```
 
 ---
 
 ## Upcoming Releases
 
-### v3.1.0 - Windows Support (Q2 2025)
+### v3.4.0 - Advanced RAG & Windows Support (Q4 2025)
 
-**Goal**: Bring Garden of Eden V3 to Windows users
-
-**Features**:
-- [ ] Windows 10/11 build (MSI installer)
-- [ ] Windows-specific screen capture
-- [ ] Windows TTS integration
-- [ ] Ollama Windows support
-- [ ] Code signing (Windows Authenticode)
-- [ ] SmartScreen handling
-- [ ] Installation guide for Windows
-- [ ] Chocolatey package (future)
-
-**Technical**:
-- Tauri Windows build
-- Windows API integration
-- Path resolution (Windows vs Unix)
-- Registry settings (optional)
-
-**Timeline**: April-June 2025
-
----
-
-### v3.2.0 - Advanced RAG (Q2 2025)
-
-**Goal**: Upgrade memory system with better embeddings
+**Goal**: Upgrade memory system and expand platform support
 
 **Features**:
 - [ ] BGE-M3 embeddings (replace TF-IDF)
 - [ ] LanceDB vector database (replace SQLite for vectors)
-- [ ] RAFT hallucination reduction
+- [ ] RAFT hallucination reduction (full integration)
 - [ ] Improved context retrieval
 - [ ] Memory visualization UI
 - [ ] Export/import memory database
+- [ ] Windows 10/11 build (MSI installer)
+- [ ] Windows-specific optimizations
+- [ ] Code signing (macOS + Windows)
 
 **Technical**:
 - BGE-M3 model integration (~2GB)
 - LanceDB setup
 - Vector similarity search
-- RAFT fine-tuning pipeline
+- Tauri Windows build
+- Windows API integration
 
-**Timeline**: May-July 2025
-
----
-
-### v3.3.0 - Internet Access (Q3 2025)
-
-**Goal**: Enable AI to search web and fetch URLs
-
-**Features**:
-- [ ] Web search integration (DuckDuckGo, SearX)
-- [ ] URL fetching (privacy-preserving)
-- [ ] Website summarization
-- [ ] News aggregation
-- [ ] Privacy controls (opt-in)
-- [ ] Content filtering
-
-**Technical**:
-- HTTP client with user-agent rotation
-- HTML parsing and cleaning
-- Content extraction
-- Rate limiting
-- Privacy-first implementation (no tracking)
-
-**Timeline**: July-September 2025
+**Timeline**: December 2025
 
 ---
 
-### v3.4.0 - Plugin System (Q3-Q4 2025)
+### v3.5.0 - LLaVA Full Integration & Plugin Marketplace (Q1 2026)
 
-**Goal**: Allow users to extend functionality
-
-**Features**:
-- [ ] Plugin API architecture
-- [ ] JavaScript/TypeScript plugin support
-- [ ] Plugin marketplace (GitHub-based)
-- [ ] Sandboxed execution
-- [ ] Permission system
-- [ ] Plugin discovery UI
-- [ ] Example plugins (weather, calculator, etc.)
-
-**Technical**:
-- V8 isolate for plugins
-- IPC for plugin communication
-- Permission manifest
-- Plugin signing (optional)
-
-**Timeline**: August-December 2025
-
----
-
-### v3.5.0 - LLaVA Full Integration (Q4 2025)
-
-**Goal**: Deep screen analysis and image understanding
+**Goal**: Deep screen analysis, image understanding, and plugin ecosystem
 
 **Features**:
 - [ ] LLaVA 7B full integration
@@ -206,18 +231,23 @@ Build the world's best **privacy-first, local-first AI assistant** that matches 
 - [ ] UI/UX analysis
 - [ ] Diagram understanding
 - [ ] Screenshot annotation
+- [ ] Plugin marketplace (GitHub-based)
+- [ ] Plugin discovery UI
+- [ ] Example community plugins
+- [ ] Plugin signing and verification
 
 **Technical**:
 - LLaVA 7B model (~4.4GB)
 - Image preprocessing pipeline
 - Multi-modal conversation history
-- Optimized inference
+- Plugin marketplace API
+- Plugin signing infrastructure
 
-**Timeline**: October-December 2025
+**Timeline**: January-March 2026
 
 ---
 
-### v4.0.0 - Multiple Personas (2026 Q1)
+### v4.0.0 - Multiple Personas (2026 Q2)
 
 **Goal**: Save and switch between persona profiles
 
@@ -235,7 +265,7 @@ Build the world's best **privacy-first, local-first AI assistant** that matches 
 - Marketplace API design
 - Persona validation
 
-**Timeline**: January-March 2026
+**Timeline**: April-June 2026
 
 ---
 
@@ -331,13 +361,17 @@ Vote on features in [GitHub Discussions](https://github.com/wannahappyaroundme/G
 
 ## Success Metrics
 
-### v3.0.4 (Current)
+### v3.3.0 (Current)
 - ✅ 100% local processing
 - ✅ <10MB binary size (Tauri: 7.1MB)
-- ✅ 2-4s response time
-- ✅ 10 persona parameters
+- ✅ 2-4s response time (Qwen 2.5 14B)
+- ✅ 10 persona parameters + automatic detection
 - ✅ Voice + screen context
 - ✅ Korean + English support
+- ✅ 6 production tools (web search, file ops, calculator)
+- ✅ LoRA fine-tuning system
+- ✅ 69+ tests passing (95% pass rate)
+- ✅ Plugin system infrastructure
 
 ### v4.0.0 (2026 Goal)
 - [ ] 10,000+ downloads
@@ -428,9 +462,9 @@ A: Test, report bugs, suggest features, contribute code, share with others, writ
 
 ---
 
-**Roadmap Version**: 1.0
-**Last Updated**: 2025-01-16
-**Next Review**: 2025-02-16
+**Roadmap Version**: 2.0
+**Last Updated**: 2025-11-17
+**Next Review**: 2025-12-17
 
 ---
 

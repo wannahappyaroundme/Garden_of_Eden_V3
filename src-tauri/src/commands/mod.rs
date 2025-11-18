@@ -12,3 +12,5 @@ pub mod file;
 pub mod git;
 pub mod updater;
 pub mod crash_reporter;
+pub mod tool_history;
+pub mod tool_settings;

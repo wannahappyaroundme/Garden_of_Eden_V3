@@ -69,8 +69,11 @@ impl Database {
         schema::create_tables(&self.conn)?;
         schema::create_indexes(&self.conn)?;
 
-        // Migrate persona settings to v3.8.0 (10 parameters)
+        // Migrate persona settings to v3.3.0 (10 parameters)
         schema::migrate_persona_settings(&self.conn)?;
+
+        // Initialize tool settings (v3.3.0)
+        schema::initialize_tool_settings(&self.conn)?;
 
         // Insert default persona settings if none exist
         let count: i64 = self.conn.query_row(
@@ -87,7 +90,7 @@ impl Database {
         Ok(())
     }
 
-    /// Create default persona settings (v3.8.0: 10 core parameters)
+    /// Create default persona settings (v3.3.0: 10 core parameters)
     pub fn create_default_persona(&self) -> AnyhowResult<()> {
         let now = chrono::Utc::now().timestamp_millis();
 

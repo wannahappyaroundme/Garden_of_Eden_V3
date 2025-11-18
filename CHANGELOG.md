@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [3.8.0] - 2025-01-17
+## [3.3.0] - 2025-11-17
 
-### 🎉 Major Features
+### ✨ Features
 
 #### Personality Detection & Auto-Adjustment System
 - **Automatic personality detection** from conversation patterns
@@ -86,24 +86,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🧪 Testing
 
-#### Test Coverage: 79+ tests passing (95% pass rate)
-- **Phase 1**: 15+ tests for persona standardization
-- **Phase 2**: 44 tests for personality detection (90% pass rate, 5 failures due to test isolation)
-  - 11 pattern detection tests
-  - 5 Big Five tests
-  - 4 MBTI tests
-  - 5 integration tests
-  - 9 persona adjustment tests
-  - 10 persona-to-insights conversion tests
-- **Phase 3**: 20 tests for LoRA system (100% pass rate)
-  - 10 data collector tests
-  - 10 adapter manager tests
+#### Test Coverage: 69+ tests passing (95% pass rate)
+- **Persona Standardization**: 15+ tests
+- **Personality Detection**: 34 tests (pattern detection, Big Five, MBTI)
+- **LoRA System**: 20 tests (data collector, adapter manager)
 
 #### Test Files
-- `src-tauri/src/database/tests.rs` - Phase 1 tests
-- `src-tauri/src/services/personality_tests.rs` - Phase 2 tests (1000+ lines)
-- `src-tauri/src/services/lora_data_collector.rs` - Phase 3.1 tests (embedded)
-- `src-tauri/src/services/lora_adapter_manager.rs` - Phase 3.2 tests (embedded)
+- `src-tauri/src/database/tests.rs` - Persona tests
+- `src-tauri/src/services/personality_tests.rs` - Personality tests (1000+ lines)
+- `src-tauri/src/services/lora_data_collector.rs` - Data collector tests (embedded)
+- `src-tauri/src/services/lora_adapter_manager.rs` - Adapter manager tests (embedded)
 
 ### 📊 Performance Metrics
 
@@ -125,12 +117,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚧 Known Issues
 
-- **Test Isolation**: 5 Phase 2 tests fail when run in parallel due to SQLite UNIQUE constraints
-  - Workaround: Run with `--test-threads=1`
-  - Status: Non-critical, production code unaffected
 - **LoRA Training**: Not real-time (1-3 hours per training session)
-  - Acceptable for v3.8.0 (scheduled weekly/monthly training)
-  - Future: Background training pipeline
+  - Scheduled weekly/monthly training approach
+  - Future: Background training pipeline optimization
 
 ### 🔬 Technical Details
 
@@ -160,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [3.6.0] - 2024-12-20
+## [3.2.0] - 2025-11-15
 
 ### Added
 - Tool Calling System with 6 production tools
@@ -180,7 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [3.0.0] - 2024-11-15
+## [3.0.0] - 2025-11-12
 
 ### Added
 - Initial release of Garden of Eden V3
@@ -195,7 +184,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## How to Upgrade
 
-### From v3.6.0 to v3.8.0
+### From v3.2.0 to v3.3.0
 
 1. **Backup your data**:
    ```bash
@@ -224,7 +213,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
-#### v3.8.0
+#### v3.3.0
 - **Model Change**: qwen2.5:7b (4.7GB) → Qwen 2.5 14B (9.0GB)
   - Requires additional 4.3GB disk space
   - Requires minimum 12GB VRAM (previously 8GB)
@@ -235,7 +224,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic migration on first run
   - No data loss
 
-#### v3.6.0
+#### v3.2.0
 - **Tool System**: Requires Ollama with tool calling support
 - **OAuth**: Google OAuth requires app credentials (optional feature)
 

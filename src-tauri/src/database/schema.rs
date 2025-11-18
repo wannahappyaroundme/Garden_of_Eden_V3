@@ -236,7 +236,7 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    // Personality insights table (v3.8.0 Phase 2.4)
+    // Personality insights table (v3.3.0 Phase 2.4)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS personality_insights (
             id TEXT PRIMARY KEY,
@@ -274,6 +274,53 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
             timestamp INTEGER NOT NULL,
 
             FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // Tool call history table (v3.3.0 - Tool execution tracking)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tool_call_history (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            message_id TEXT NOT NULL,
+            tool_name TEXT NOT NULL,
+            tool_input TEXT NOT NULL,
+            tool_output TEXT NOT NULL,
+            execution_time_ms INTEGER NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('success', 'error')),
+            error_message TEXT,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+            FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // Tool settings table (v3.3.0 - Per-tool configuration)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tool_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tool_name TEXT NOT NULL UNIQUE,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            config TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        )",
+        [],
+    )?;
+
+    // Plugin tools table (v3.3.0 - User-created plugin tools)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS plugin_tools (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plugin_name TEXT NOT NULL,
+            tool_name TEXT NOT NULL UNIQUE,
+            tool_description TEXT NOT NULL,
+            parameters_schema TEXT NOT NULL,
+            permissions TEXT NOT NULL,
+            enabled BOOLEAN NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (plugin_name) REFERENCES plugins(name) ON DELETE CASCADE
         )",
         [],
     )?;
@@ -374,7 +421,7 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    // Personality insights indexes (v3.8.0 Phase 2.4)
+    // Personality insights indexes (v3.3.0 Phase 2.4)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_personality_insights_conversation_id
          ON personality_insights(conversation_id)",
@@ -393,10 +440,35 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Tool call history indexes (v3.3.0)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tool_call_history_conversation_id
+         ON tool_call_history(conversation_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tool_call_history_created_at
+         ON tool_call_history(created_at DESC)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tool_call_history_tool_name
+         ON tool_call_history(tool_name)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tool_call_history_status
+         ON tool_call_history(status)",
+        [],
+    )?;
+
     Ok(())
 }
 
-/// Migrate persona_settings table from old schema to v3.8.0 (10 parameters)
+/// Migrate persona_settings table from old schema to v3.3.0 (10 parameters)
 pub fn migrate_persona_settings(conn: &Connection) -> Result<()> {
     // Check if migration is needed by checking column count
     let column_check: Result<i32, _> = conn.query_row(
@@ -407,7 +479,7 @@ pub fn migrate_persona_settings(conn: &Connection) -> Result<()> {
 
     match column_check {
         Ok(count) if count > 0 => {
-            log::info!("Migrating persona_settings table from old schema to v3.8.0 (10 parameters)");
+            log::info!("Migrating persona_settings table from old schema to v3.3.0 (10 parameters)");
 
             // Create new table with correct schema
             conn.execute("DROP TABLE IF EXISTS persona_settings_old", [])?;
@@ -459,8 +531,48 @@ pub fn migrate_persona_settings(conn: &Connection) -> Result<()> {
             log::info!("Persona settings migration completed successfully");
         }
         _ => {
-            log::debug!("Persona settings table already on v3.8.0 schema, no migration needed");
+            log::debug!("Persona settings table already on v3.3.0 schema, no migration needed");
         }
+    }
+
+    Ok(())
+}
+
+/// Initialize default tool settings for all 6 production tools
+pub fn initialize_tool_settings(conn: &Connection) -> Result<()> {
+    let now = chrono::Utc::now().timestamp();
+
+    // Check if tool_settings table is empty
+    let count: i32 = conn.query_row(
+        "SELECT COUNT(*) FROM tool_settings",
+        [],
+        |row| row.get(0),
+    )?;
+
+    if count == 0 {
+        log::info!("Initializing default tool settings for 6 production tools");
+
+        // Default settings for each tool
+        let default_settings = vec![
+            ("web_search", r#"{"maxResults":5,"engine":"duckduckgo","rateLimit":2}"#),
+            ("fetch_url", r#"{"timeout":10000,"maxSize":5242880}"#),
+            ("read_file", r#"{"allowedPaths":[],"maxSize":10485760}"#),
+            ("write_file", r#"{"requireConfirmation":true,"allowedPaths":[]}"#),
+            ("get_system_info", r#"{"privacyLevel":"standard"}"#),
+            ("calculate", r#"{"precision":10}"#),
+        ];
+
+        for (tool_name, config) in default_settings {
+            conn.execute(
+                "INSERT INTO tool_settings (tool_name, enabled, config, updated_at)
+                 VALUES (?1, 1, ?2, ?3)",
+                &[tool_name, config, &now.to_string()],
+            )?;
+        }
+
+        log::info!("Default tool settings initialized successfully");
+    } else {
+        log::debug!("Tool settings already initialized");
     }
 
     Ok(())
