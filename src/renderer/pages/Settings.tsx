@@ -13,6 +13,8 @@ import { PERSONA_GROUPS } from '@shared/types/persona-groups.types';
 import type { PersonaSettings } from '../lib/tauri-api';
 import { toast } from '../stores/toast.store';
 import { ToolsSettings } from '../components/settings';
+import { CrashReportsPanel } from '../components/settings/CrashReportsPanel'; // v3.4.0
+import { UpdateSettingsPanel } from '../components/settings/UpdateSettingsPanel'; // v3.4.0
 
 interface SettingsProps {
   onClose: () => void;
@@ -21,7 +23,7 @@ interface SettingsProps {
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'app' | 'about'>('persona');
+  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'app' | 'updates' | 'crashes' | 'about'>('persona'); // v3.4.0: Added updates and crashes tabs
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -228,6 +230,28 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           >
             ⚙️ 앱 설정
           </button>
+          {/* v3.4.0: Updates Tab */}
+          <button
+            onClick={() => setActiveTab('updates')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'updates'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🔄 업데이트
+          </button>
+          {/* v3.4.0: Crash Reports Tab */}
+          <button
+            onClick={() => setActiveTab('crashes')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'crashes'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🐛 충돌 리포트
+          </button>
           <button
             onClick={() => setActiveTab('about')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -404,6 +428,20 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                   </div>
                 </section>
               </div>
+            </div>
+          )}
+
+          {/* Updates Tab (v3.4.0) */}
+          {activeTab === 'updates' && (
+            <div className="max-w-3xl">
+              <UpdateSettingsPanel />
+            </div>
+          )}
+
+          {/* Crash Reports Tab (v3.4.0) */}
+          {activeTab === 'crashes' && (
+            <div className="max-w-5xl">
+              <CrashReportsPanel />
             </div>
           )}
 
