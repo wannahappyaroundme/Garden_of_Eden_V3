@@ -575,6 +575,10 @@ fn main() {
             commands::temporal_memory::temporal_update_config,
             commands::temporal_memory::temporal_prune_memories,
             commands::temporal_memory::temporal_calculate_retention,
+            // Adaptive Decay (Phase 4)
+            commands::temporal_memory::temporal_set_memory_type,
+            commands::temporal_memory::temporal_get_memory_type,
+            commands::temporal_memory::temporal_classify_memory,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -21,6 +21,98 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Memory type classification for adaptive decay
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum MemoryType {
+    /// Factual knowledge: code, definitions, technical terms (S=40.0)
+    Factual,
+    /// Procedural: instructions, workflows, how-to (S=30.0)
+    Procedural,
+    /// Conversational: casual chat, preferences (S=20.0)
+    Conversational,
+    /// Ephemeral: temporary context, quick Q&A (S=10.0)
+    Ephemeral,
+}
+
+impl MemoryType {
+    /// Classify memory type based on content
+    pub fn classify(user_message: &str, ai_response: &str) -> Self {
+        let ai_lower = ai_response.to_lowercase();
+        let user_lower = user_message.to_lowercase();
+
+        // Factual: Contains code blocks, definitions, or technical documentation
+        if ai_response.contains("```") ||
+           ai_response.contains("fn ") ||
+           ai_response.contains("impl ") ||
+           ai_response.contains("struct ") ||
+           ai_lower.contains("define") ||
+           ai_lower.contains(" means ") ||
+           ai_lower.contains("definition") ||
+           ai_response.len() > 500 && ai_response.contains("//") {
+            return MemoryType::Factual;
+        }
+
+        // Procedural: Instructions, steps, how-to guides
+        if ai_lower.contains("step") ||
+           ai_lower.contains("first,") ||
+           ai_lower.contains("second,") ||
+           ai_response.contains("1.") ||
+           ai_response.contains("2.") ||
+           ai_lower.contains("how to") ||
+           ai_lower.contains("to do this") ||
+           user_lower.contains("how do i") ||
+           user_lower.contains("how can i") {
+            return MemoryType::Procedural;
+        }
+
+        // Ephemeral: Very short responses, confirmations, quick answers
+        if ai_response.len() < 100 &&
+           !ai_response.contains("```") &&
+           (ai_lower.starts_with("yes") ||
+            ai_lower.starts_with("no") ||
+            ai_lower.starts_with("ok") ||
+            ai_lower.starts_with("sure") ||
+            ai_lower.contains("got it") ||
+            ai_lower.contains("understood")) {
+            return MemoryType::Ephemeral;
+        }
+
+        // Default: Conversational
+        MemoryType::Conversational
+    }
+
+    /// Get decay strength (S parameter) for this memory type
+    pub fn decay_strength(&self) -> f64 {
+        match self {
+            MemoryType::Factual => 40.0,       // Very slow decay
+            MemoryType::Procedural => 30.0,    // Slow decay
+            MemoryType::Conversational => 20.0, // Moderate decay (default)
+            MemoryType::Ephemeral => 10.0,     // Fast decay
+        }
+    }
+
+    /// Convert to string for database storage
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            MemoryType::Factual => "factual",
+            MemoryType::Procedural => "procedural",
+            MemoryType::Conversational => "conversational",
+            MemoryType::Ephemeral => "ephemeral",
+        }
+    }
+
+    /// Parse from database string
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "factual" => MemoryType::Factual,
+            "procedural" => MemoryType::Procedural,
+            "ephemeral" => MemoryType::Ephemeral,
+            _ => MemoryType::Conversational,
+        }
+    }
+}
+
 /// Temporal memory configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecayConfig {
@@ -108,6 +200,10 @@ impl TemporalMemoryService {
             "ALTER TABLE episodic_memory ADD COLUMN decay_strength REAL DEFAULT 20.0",
             [],
         );
+        let _ = conn.execute(
+            "ALTER TABLE episodic_memory ADD COLUMN memory_type TEXT DEFAULT 'conversational'",
+            [],
+        );
 
         // Create indexes for performance
         let _ = conn.execute(
@@ -123,6 +219,11 @@ impl TemporalMemoryService {
         let _ = conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_episodic_pinned
              ON episodic_memory(is_pinned)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_episodic_memory_type
+             ON episodic_memory(memory_type)",
             [],
         );
 
@@ -442,5 +543,89 @@ impl TemporalMemoryService {
         let access_factor = ((access_count as f64) * 0.05).min(0.2);
 
         base + access_factor
+    }
+
+    /// Set memory type and update decay strength
+    pub fn set_memory_type(&self, memory_id: &str, memory_type: MemoryType) -> Result<()> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        let decay_strength = memory_type.decay_strength();
+        let memory_type_str = memory_type.as_str();
+
+        conn.execute(
+            "UPDATE episodic_memory
+             SET memory_type = ?1, decay_strength = ?2
+             WHERE id = ?3",
+            rusqlite::params![memory_type_str, decay_strength, memory_id],
+        )?;
+
+        log::info!(
+            "Set memory {} to type '{}' (S={})",
+            memory_id,
+            memory_type_str,
+            decay_strength
+        );
+
+        // Recalculate retention score with new decay strength
+        let (created_at, access_count, is_pinned): (i64, i32, bool) = conn.query_row(
+            "SELECT created_at,
+                    COALESCE(access_count, 0),
+                    COALESCE(is_pinned, 0)
+             FROM episodic_memory
+             WHERE id = ?1",
+            rusqlite::params![memory_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )?;
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)?
+            .as_secs() as i64;
+
+        let days_elapsed = (now - created_at) as f64 / 86400.0;
+        let retention = self.calculate_retention(
+            days_elapsed,
+            decay_strength,
+            access_count,
+            is_pinned,
+        );
+
+        conn.execute(
+            "UPDATE episodic_memory
+             SET retention_score = ?1
+             WHERE id = ?2",
+            rusqlite::params![retention, memory_id],
+        )?;
+
+        Ok(())
+    }
+
+    /// Get memory type for a specific memory
+    pub fn get_memory_type(&self, memory_id: &str) -> Result<MemoryType> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        let memory_type_str: String = conn.query_row(
+            "SELECT COALESCE(memory_type, 'conversational')
+             FROM episodic_memory
+             WHERE id = ?1",
+            rusqlite::params![memory_id],
+            |row| row.get(0),
+        )?;
+
+        Ok(MemoryType::from_str(&memory_type_str))
+    }
+
+    /// Classify and set memory type on creation
+    /// Called by episodic memory service when creating new memories
+    pub fn classify_and_set_memory_type(
+        &self,
+        memory_id: &str,
+        user_message: &str,
+        ai_response: &str,
+    ) -> Result<MemoryType> {
+        let memory_type = MemoryType::classify(user_message, ai_response);
+        self.set_memory_type(memory_id, memory_type)?;
+        Ok(memory_type)
     }
 }

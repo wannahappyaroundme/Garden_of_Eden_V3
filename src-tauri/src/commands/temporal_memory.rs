@@ -79,3 +79,40 @@ pub async fn temporal_calculate_retention(
 ) -> Result<f64, String> {
     Ok(service.calculate_retention(days_elapsed, decay_strength, access_count, is_pinned))
 }
+
+/// Set memory type (adaptive decay)
+#[tauri::command]
+pub async fn temporal_set_memory_type(
+    memory_id: String,
+    memory_type: String,
+    service: State<'_, Arc<TemporalMemoryService>>,
+) -> Result<(), String> {
+    use crate::services::temporal_memory::MemoryType;
+
+    let mem_type = MemoryType::from_str(&memory_type);
+    service.set_memory_type(&memory_id, mem_type).map_err(|e| e.to_string())
+}
+
+/// Get memory type
+#[tauri::command]
+pub async fn temporal_get_memory_type(
+    memory_id: String,
+    service: State<'_, Arc<TemporalMemoryService>>,
+) -> Result<String, String> {
+    let mem_type = service.get_memory_type(&memory_id).map_err(|e| e.to_string())?;
+    Ok(mem_type.as_str().to_string())
+}
+
+/// Classify and set memory type (called on memory creation)
+#[tauri::command]
+pub async fn temporal_classify_memory(
+    memory_id: String,
+    user_message: String,
+    ai_response: String,
+    service: State<'_, Arc<TemporalMemoryService>>,
+) -> Result<String, String> {
+    let mem_type = service
+        .classify_and_set_memory_type(&memory_id, &user_message, &ai_response)
+        .map_err(|e| e.to_string())?;
+    Ok(mem_type.as_str().to_string())
+}
