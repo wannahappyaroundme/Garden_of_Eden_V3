@@ -305,6 +305,7 @@ pub fn format_episodes_for_context(episodes: &[Episode]) -> String {
 mod tests {
     use super::*;
     use std::sync::Arc;
+    use rusqlite::Connection;
 
     fn create_test_db() -> Arc<Mutex<Connection>> {
         let conn = Connection::open_in_memory().unwrap();

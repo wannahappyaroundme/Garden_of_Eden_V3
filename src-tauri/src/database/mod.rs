@@ -53,7 +53,7 @@ impl Database {
     }
 
     /// Get database file path
-    fn get_db_path() -> AnyhowResult<PathBuf> {
+    pub fn get_db_path() -> AnyhowResult<PathBuf> {
         // Use dirs crate for cross-platform data directory
         let app_dir = dirs::data_dir()
             .context("Failed to get app data directory")?;

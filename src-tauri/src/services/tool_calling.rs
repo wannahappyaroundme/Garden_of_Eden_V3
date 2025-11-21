@@ -26,7 +26,7 @@ pub struct ToolParameter {
 }
 
 /// Parameter type for tool arguments
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ParameterType {
     String,

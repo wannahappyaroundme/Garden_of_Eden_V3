@@ -83,10 +83,17 @@ tauri-plugin-updater = "2"  # Auto-updater for Tauri 2.x
 sentry = { version = "0.34", default-features = false, features = ["backtrace", "contexts", "panic", "anyhow"] }  # Crash reporting
 tempfile = "3.23.0"
 
+# LAM (Large Action Model) dependencies (v3.8.0)
+enigo = "0.2"           # Cross-platform mouse/keyboard simulation
+rdev = "0.5"            # Event listening for keyboard/mouse
+image = "0.24"          # Image processing for vision-guided clicks
+imageproc = "0.23"      # Template matching and image analysis
+
 # Active window detection (Phase 2)
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"          # macOS NSWorkspace API
 objc = "0.2"            # Objective-C runtime
+accessibility = "0.2"   # macOS Accessibility API for LAM
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [

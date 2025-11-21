@@ -22,3 +22,4 @@ pub mod prompt_cache;
 pub mod graphrag;
 pub mod react;
 pub mod planner;
+pub mod computer_control;

@@ -30,11 +30,13 @@ use services::graph_storage::GraphStorage;
 use services::graph_retrieval::GraphRetrievalEngine;
 use services::react_agent::ReActAgent;
 use services::planner::{Planner, Plan};
+use services::computer_control::ComputerControlService;
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use tokio::sync::Mutex as TokioMutex;
+use rusqlite::Connection;
 
 /// Application state shared across Tauri commands
 pub struct AppState {
@@ -63,6 +65,7 @@ pub struct AppState {
     planner: Arc<Planner>,  // v3.7.0: Plan-and-Solve agent with user confirmation
     approved_plans: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: User-approved plans awaiting execution
     plan_history: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: Executed plan history
+    computer_control: Arc<ComputerControlService>,  // v3.8.0: LAM (Large Action Model) for computer use
 }
 
 fn main() {
@@ -243,6 +246,28 @@ fn main() {
     let plan_history = Arc::new(TokioMutex::new(HashMap::new()));
     log::info!("✓ Plan-and-Solve Planner initialized");
 
+    // Initialize Computer Control Service (v3.8.0)
+    log::info!("Initializing Computer Control Service (LAM)...");
+    // Create new instances for computer control service
+    let cc_screen_service = ScreenCaptureService::new(Arc::clone(&db_arc));
+    let cc_llava_service = LlavaService::new()
+        .expect("Failed to initialize LLaVA for Computer Control");
+
+    // Computer Control needs a separate Connection instance
+    let cc_db_path = Database::get_db_path()
+        .expect("Failed to get database path for Computer Control");
+    let cc_conn = Connection::open(&cc_db_path)
+        .expect("Failed to open database connection for Computer Control");
+    let cc_db_arc = Arc::new(Mutex::new(cc_conn));
+
+    let computer_control = ComputerControlService::new(
+        Arc::new(cc_screen_service),
+        Arc::new(cc_llava_service),
+        cc_db_arc
+    ).expect("Failed to initialize Computer Control Service");
+    let computer_control_arc = Arc::new(computer_control);
+    log::info!("✓ Computer Control Service initialized");
+
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
     let crash_log_dir = data_dir.join("crashes");
@@ -285,11 +310,13 @@ fn main() {
         planner: planner_arc,  // v3.7.0: Plan-and-Solve agent with user confirmation
         approved_plans,  // v3.7.0: User-approved plans awaiting execution
         plan_history,  // v3.7.0: Executed plan history
+        computer_control: Arc::clone(&computer_control_arc),  // v3.8.0: LAM (Large Action Model) for computer use
     };
 
     tauri::Builder::default()
         .manage(app_state)
         .manage(crash_reporter_state)
+        .manage(computer_control_arc)  // v3.8.0: LAM service for commands
         .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
@@ -511,6 +538,22 @@ fn main() {
             commands::planner::planner_set_config,
             commands::planner::planner_generate_and_execute,
             commands::planner::planner_stats,
+            // Computer Control Commands (v3.8.0)
+            commands::computer_control::computer_click_element,
+            commands::computer_control::computer_type_text,
+            commands::computer_control::computer_press_key,
+            commands::computer_control::computer_scroll,
+            commands::computer_control::computer_move_mouse,
+            commands::computer_control::computer_wait,
+            commands::computer_control::computer_get_action_history,
+            commands::computer_control::computer_clear_action_history,
+            commands::computer_control::computer_get_safety_config,
+            commands::computer_control::computer_get_stats,
+            commands::computer_control::computer_click_and_type,
+            commands::computer_control::computer_type_and_submit,
+            commands::computer_control::computer_test_connection,
+            #[cfg(target_os = "macos")]
+            commands::computer_control::computer_execute_applescript,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

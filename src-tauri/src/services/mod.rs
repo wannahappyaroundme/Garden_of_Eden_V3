@@ -82,3 +82,10 @@ pub mod graph_retrieval;   // v3.7.0: Graph-based retrieval with multi-hop reaso
 // Phase 17: ReAct & Plan-and-Solve (v3.7.0)
 pub mod react_agent;  // v3.7.0: ReAct pattern (Reasoning + Acting) for structured problem solving
 pub mod planner;      // v3.7.0: Plan-and-Solve with user confirmation and adaptive execution
+
+// Phase 18: LAM (Large Action Model) - Computer Use (v3.8.0)
+pub mod computer_control;  // v3.8.0: Vision-guided mouse/keyboard automation with safety controls
+pub mod lam_tools;         // v3.8.0: LAM tools for ReAct agent (click, type, scroll, etc.)
+
+#[cfg(test)]
+mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests
