@@ -4,7 +4,9 @@
  * Tauri commands for memory retention management and decay control.
  */
 
-use crate::services::temporal_memory::{TemporalMemoryService, DecayConfig, RetentionStats};
+use crate::services::temporal_memory::{
+    TemporalMemoryService, DecayConfig, RetentionStats, RetentionForecast,
+};
 use std::sync::Arc;
 use tauri::State;
 
@@ -115,4 +117,28 @@ pub async fn temporal_classify_memory(
         .classify_and_set_memory_type(&memory_id, &user_message, &ai_response)
         .map_err(|e| e.to_string())?;
     Ok(mem_type.as_str().to_string())
+}
+
+/// Forecast retention for a memory
+#[tauri::command]
+pub async fn temporal_forecast_retention(
+    memory_id: String,
+    days_ahead: f64,
+    service: State<'_, Arc<TemporalMemoryService>>,
+) -> Result<RetentionForecast, String> {
+    service
+        .forecast_retention(&memory_id, days_ahead)
+        .map_err(|e| e.to_string())
+}
+
+/// Find memories at risk of decay
+#[tauri::command]
+pub async fn temporal_find_at_risk_memories(
+    days_ahead: f64,
+    threshold: f64,
+    service: State<'_, Arc<TemporalMemoryService>>,
+) -> Result<Vec<RetentionForecast>, String> {
+    service
+        .find_at_risk_memories(days_ahead, threshold)
+        .map_err(|e| e.to_string())
 }

@@ -158,6 +158,25 @@ pub struct RetentionStats {
     pub newest_memory_days: f64,
 }
 
+/// Retention forecast for a memory
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetentionForecast {
+    pub memory_id: String,
+    pub current_retention: f64,
+    pub current_age_days: f64,
+    pub days_until_critical: Option<f64>,    // Days until < 0.3
+    pub days_until_pruning: Option<f64>,     // Days until < 0.05
+    pub predicted_trajectory: Vec<TrajectoryPoint>,
+}
+
+/// Point in retention trajectory
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrajectoryPoint {
+    pub timestamp: i64,
+    pub days_from_now: f64,
+    pub retention: f64,
+}
+
 /// Temporal Memory Service
 pub struct TemporalMemoryService {
     db: Arc<Mutex<Database>>,
@@ -627,5 +646,227 @@ impl TemporalMemoryService {
         let memory_type = MemoryType::classify(user_message, ai_response);
         self.set_memory_type(memory_id, memory_type)?;
         Ok(memory_type)
+    }
+
+    /// Forecast retention for a specific memory
+    pub fn forecast_retention(
+        &self,
+        memory_id: &str,
+        days_ahead: f64,
+    ) -> Result<RetentionForecast> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        // Get memory data
+        let (created_at, access_count, is_pinned, decay_strength): (i64, i32, bool, f64) =
+            conn.query_row(
+                "SELECT created_at,
+                        COALESCE(access_count, 0),
+                        COALESCE(is_pinned, 0),
+                        COALESCE(decay_strength, 20.0)
+                 FROM episodic_memory
+                 WHERE id = ?1",
+                rusqlite::params![memory_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )?;
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)?
+            .as_secs() as i64;
+
+        let current_age_days = (now - created_at) as f64 / 86400.0;
+        let current_retention = self.calculate_retention(
+            current_age_days,
+            decay_strength,
+            access_count,
+            is_pinned,
+        );
+
+        // Calculate days until thresholds
+        let days_until_critical = if is_pinned {
+            None // Pinned memories never decay
+        } else {
+            self.calculate_days_until_threshold(
+                current_age_days,
+                decay_strength,
+                access_count,
+                0.3, // Critical threshold
+            )
+        };
+
+        let days_until_pruning = if is_pinned {
+            None
+        } else {
+            self.calculate_days_until_threshold(
+                current_age_days,
+                decay_strength,
+                access_count,
+                0.05, // Pruning threshold
+            )
+        };
+
+        // Generate trajectory
+        let trajectory = self.generate_trajectory(
+            current_age_days,
+            decay_strength,
+            access_count,
+            is_pinned,
+            days_ahead,
+            now,
+        );
+
+        Ok(RetentionForecast {
+            memory_id: memory_id.to_string(),
+            current_retention,
+            current_age_days,
+            days_until_critical,
+            days_until_pruning,
+            predicted_trajectory: trajectory,
+        })
+    }
+
+    /// Calculate days until retention drops below threshold
+    /// Using formula: t = -S * ln(R_target / boost)
+    fn calculate_days_until_threshold(
+        &self,
+        current_age_days: f64,
+        decay_strength: f64,
+        access_count: i32,
+        threshold: f64,
+    ) -> Option<f64> {
+        let config = self.config.lock().unwrap();
+        let access_boost = 1.0 + (access_count as f64 * 0.05).min(0.5);
+
+        // Adjust threshold for access boost
+        let effective_threshold = threshold / access_boost;
+
+        // Ensure threshold is above minimum retention
+        if effective_threshold < config.min_retention {
+            return None; // Will never drop below due to min_retention floor
+        }
+
+        // Solve: effective_threshold = e^(-t_total/S)
+        // t_total = -S * ln(effective_threshold)
+        let total_age_at_threshold = -decay_strength * effective_threshold.ln();
+
+        // Days from now = total_age - current_age
+        let days_from_now = total_age_at_threshold - current_age_days;
+
+        if days_from_now <= 0.0 {
+            Some(0.0) // Already below threshold
+        } else {
+            Some(days_from_now)
+        }
+    }
+
+    /// Generate retention trajectory for the next N days
+    fn generate_trajectory(
+        &self,
+        current_age_days: f64,
+        decay_strength: f64,
+        access_count: i32,
+        is_pinned: bool,
+        days_ahead: f64,
+        current_timestamp: i64,
+    ) -> Vec<TrajectoryPoint> {
+        let mut trajectory = Vec::new();
+        let step_size = if days_ahead <= 30.0 {
+            1.0 // Daily for short term
+        } else if days_ahead <= 90.0 {
+            3.0 // Every 3 days for medium term
+        } else {
+            7.0 // Weekly for long term
+        };
+
+        let mut days_from_now = 0.0;
+        while days_from_now <= days_ahead {
+            let future_age = current_age_days + days_from_now;
+            let retention = self.calculate_retention(
+                future_age,
+                decay_strength,
+                access_count,
+                is_pinned,
+            );
+
+            let timestamp = current_timestamp + (days_from_now * 86400.0) as i64;
+
+            trajectory.push(TrajectoryPoint {
+                timestamp,
+                days_from_now,
+                retention,
+            });
+
+            days_from_now += step_size;
+        }
+
+        trajectory
+    }
+
+    /// Find memories at risk of dropping below threshold within days_ahead
+    pub fn find_at_risk_memories(
+        &self,
+        days_ahead: f64,
+        threshold: f64,
+    ) -> Result<Vec<RetentionForecast>> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        // Get all non-pinned memories
+        let mut stmt = conn.prepare(
+            "SELECT id, created_at,
+                    COALESCE(access_count, 0),
+                    COALESCE(decay_strength, 20.0),
+                    COALESCE(retention_score, 1.0)
+             FROM episodic_memory
+             WHERE COALESCE(is_pinned, 0) = 0"
+        )?;
+
+        let memories: Vec<(String, i64, i32, f64, f64)> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i32>(2)?,
+                    row.get::<_, f64>(3)?,
+                    row.get::<_, f64>(4)?,
+                ))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+
+        drop(stmt);
+        drop(db);
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)?
+            .as_secs() as i64;
+
+        let mut at_risk = Vec::new();
+
+        for (id, created_at, access_count, decay_strength, _current_retention) in memories {
+            let current_age_days = (now - created_at) as f64 / 86400.0;
+
+            // Check if will drop below threshold
+            if let Some(days_until) = self.calculate_days_until_threshold(
+                current_age_days,
+                decay_strength,
+                access_count,
+                threshold,
+            ) {
+                if days_until <= days_ahead {
+                    // Generate forecast
+                    let forecast = self.forecast_retention(&id, days_ahead)?;
+                    at_risk.push(forecast);
+                }
+            }
+        }
+
+        // Sort by days_until_critical (soonest first)
+        at_risk.sort_by(|a, b| {
+            let a_days = a.days_until_critical.unwrap_or(f64::MAX);
+            let b_days = b.days_until_critical.unwrap_or(f64::MAX);
+            a_days.partial_cmp(&b_days).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        Ok(at_risk)
     }
 }
