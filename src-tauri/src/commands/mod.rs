@@ -23,3 +23,4 @@ pub mod graphrag;
 pub mod react;
 pub mod planner;
 pub mod computer_control;
+pub mod streaming_vision;

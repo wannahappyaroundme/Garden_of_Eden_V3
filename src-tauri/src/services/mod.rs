@@ -86,6 +86,7 @@ pub mod planner;      // v3.7.0: Plan-and-Solve with user confirmation and adapt
 // Phase 18: LAM (Large Action Model) - Computer Use (v3.8.0)
 pub mod computer_control;  // v3.8.0: Vision-guided mouse/keyboard automation with safety controls
 pub mod lam_tools;         // v3.8.0: LAM tools for ReAct agent (click, type, scroll, etc.)
+pub mod streaming_vision;  // v3.8.0 Phase 2: Continuous screen monitoring with proactive alerts
 
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests

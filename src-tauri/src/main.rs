@@ -31,6 +31,7 @@ use services::graph_retrieval::GraphRetrievalEngine;
 use services::react_agent::ReActAgent;
 use services::planner::{Planner, Plan};
 use services::computer_control::ComputerControlService;
+use services::streaming_vision::StreamingVisionService;
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
@@ -268,6 +269,23 @@ fn main() {
     let computer_control_arc = Arc::new(computer_control);
     log::info!("✓ Computer Control Service initialized");
 
+    // Initialize Streaming Vision Service (v3.8.0 Phase 2)
+    log::info!("Initializing Streaming Vision Service...");
+    let sv_screen_service = ScreenCaptureService::new(Arc::clone(&db_arc));
+    let sv_llava_service = LlavaService::new()
+        .expect("Failed to initialize LLaVA for Streaming Vision");
+    let sv_tts_service = Arc::new(Mutex::new(TtsService::new()
+        .expect("Failed to initialize TTS for Streaming Vision")));
+
+    let streaming_vision = StreamingVisionService::new(
+        Arc::new(sv_screen_service),
+        Arc::new(sv_llava_service),
+        sv_tts_service,
+        Arc::clone(&db_arc)
+    ).expect("Failed to initialize Streaming Vision Service");
+    let streaming_vision_arc = Arc::new(streaming_vision);
+    log::info!("✓ Streaming Vision Service initialized");
+
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
     let crash_log_dir = data_dir.join("crashes");
@@ -317,6 +335,7 @@ fn main() {
         .manage(app_state)
         .manage(crash_reporter_state)
         .manage(computer_control_arc)  // v3.8.0: LAM service for commands
+        .manage(streaming_vision_arc)  // v3.8.0 Phase 2: Streaming vision service
         .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
@@ -538,7 +557,7 @@ fn main() {
             commands::planner::planner_set_config,
             commands::planner::planner_generate_and_execute,
             commands::planner::planner_stats,
-            // Computer Control Commands (v3.8.0)
+            // Computer Control Commands (v3.8.0 Phase 1)
             commands::computer_control::computer_click_element,
             commands::computer_control::computer_type_text,
             commands::computer_control::computer_press_key,
@@ -554,6 +573,16 @@ fn main() {
             commands::computer_control::computer_test_connection,
             #[cfg(target_os = "macos")]
             commands::computer_control::computer_execute_applescript,
+            // Streaming Vision Commands (v3.8.0 Phase 2)
+            commands::streaming_vision::streaming_vision_start,
+            commands::streaming_vision::streaming_vision_stop,
+            commands::streaming_vision::streaming_vision_get_state,
+            commands::streaming_vision::streaming_vision_get_config,
+            commands::streaming_vision::streaming_vision_update_config,
+            commands::streaming_vision::streaming_vision_get_history,
+            commands::streaming_vision::streaming_vision_clear_history,
+            commands::streaming_vision::streaming_vision_get_stats,
+            commands::streaming_vision::streaming_vision_test_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
