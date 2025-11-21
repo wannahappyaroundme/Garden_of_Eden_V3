@@ -434,6 +434,134 @@ impl LearningService {
 
         prompt
     }
+
+    /// Evolve persona from high-retention temporal memories (v3.8.0 Phase 3)
+    /// Analyzes conversation patterns in memories with retention_score > threshold
+    /// and gradually adjusts persona parameters based on successful interactions
+    pub fn evolve_persona_from_temporal_memory(
+        &self,
+        current_persona: PersonaParameters,
+        retention_threshold: f32,
+        learning_rate: f32,
+    ) -> Result<PersonaParameters> {
+        info!("Evolving persona from temporal memories (threshold: {}, lr: {})", retention_threshold, learning_rate);
+
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        // Get high-retention memories with their satisfaction scores
+        let mut stmt = conn.prepare(
+            "SELECT user_message, ai_response, satisfaction, access_count,
+                    COALESCE(retention_score, 1.0) as retention_score
+             FROM episodic_memory
+             WHERE retention_score > ?1
+             ORDER BY retention_score DESC
+             LIMIT 100"  // Focus on top 100 high-retention memories
+        )?;
+
+        let high_retention_memories: Vec<(String, String, f32, i32, f32)> = stmt
+            .query_map([retention_threshold], |row| {
+                Ok((
+                    row.get(0)?,  // user_message
+                    row.get(1)?,  // ai_response
+                    row.get(2)?,  // satisfaction
+                    row.get(3)?,  // access_count
+                    row.get::<_, f64>(4)? as f32,  // retention_score
+                ))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+
+        if high_retention_memories.is_empty() {
+            warn!("No high-retention memories found above threshold {}", retention_threshold);
+            return Ok(current_persona);
+        }
+
+        info!("Found {} high-retention memories for persona evolution", high_retention_memories.len());
+
+        // Analyze patterns in successful conversations
+        let mut formality_sum = 0.0f32;
+        let mut verbosity_sum = 0.0f32;
+        let mut technical_sum = 0.0f32;
+        let mut emoji_count = 0;
+        let mut total_weight = 0.0f32;
+
+        for (_user_msg, ai_response, satisfaction, access_count, retention_score) in &high_retention_memories {
+            // Weight by retention * satisfaction * access_count
+            let weight = retention_score * satisfaction * (1.0 + (*access_count as f32 * 0.1).min(2.0));
+            total_weight += weight;
+
+            // Infer formality from response style
+            let has_formal_words = ai_response.to_lowercase().contains("please") ||
+                                   ai_response.to_lowercase().contains("kindly") ||
+                                   ai_response.to_lowercase().contains("regarding");
+            formality_sum += if has_formal_words { weight * 0.7 } else { weight * 0.3 };
+
+            // Infer verbosity from response length
+            let word_count = ai_response.split_whitespace().count();
+            let verbosity = if word_count > 200 { 0.8 } else if word_count > 100 { 0.6 } else { 0.4 };
+            verbosity_sum += verbosity * weight;
+
+            // Infer technical depth from technical terminology
+            let has_technical = ai_response.contains("fn ") ||
+                               ai_response.contains("impl ") ||
+                               ai_response.contains("trait ") ||
+                               ai_response.contains("async ") ||
+                               ai_response.contains("tokio") ||
+                               ai_response.contains("Arc<");
+            technical_sum += if has_technical { weight * 0.7 } else { weight * 0.3 };
+
+            // Count emojis
+            if ai_response.contains('✅') || ai_response.contains('📦') ||
+               ai_response.contains('⚡') || ai_response.contains('🔔') {
+                emoji_count += 1;
+            }
+        }
+
+        // Calculate learned traits
+        let learned_formality = formality_sum / total_weight.max(1.0);
+        let learned_verbosity = verbosity_sum / total_weight.max(1.0);
+        let learned_technical = technical_sum / total_weight.max(1.0);
+        let learned_emoji = (emoji_count as f32 / high_retention_memories.len() as f32).min(1.0);
+
+        // Gradually adjust current persona (blend with learned traits)
+        let evolved = PersonaParameters {
+            formality: clamp(
+                current_persona.formality * (1.0 - learning_rate) + learned_formality * learning_rate,
+                0.0,
+                1.0,
+            ),
+            verbosity: clamp(
+                current_persona.verbosity * (1.0 - learning_rate) + learned_verbosity * learning_rate,
+                0.0,
+                1.0,
+            ),
+            technical_depth: clamp(
+                current_persona.technical_depth * (1.0 - learning_rate) + learned_technical * learning_rate,
+                0.0,
+                1.0,
+            ),
+            emoji_usage: clamp(
+                current_persona.emoji_usage * (1.0 - learning_rate) + learned_emoji * learning_rate,
+                0.0,
+                1.0,
+            ),
+            // Keep other parameters unchanged for now
+            humor: current_persona.humor,
+            proactiveness: current_persona.proactiveness,
+            empathy: current_persona.empathy,
+            code_examples: current_persona.code_examples,
+            questioning: current_persona.questioning,
+            creativity: current_persona.creativity,
+        };
+
+        info!("Persona evolution: formality {:.2} → {:.2}, verbosity {:.2} → {:.2}, technical {:.2} → {:.2}",
+            current_persona.formality, evolved.formality,
+            current_persona.verbosity, evolved.verbosity,
+            current_persona.technical_depth, evolved.technical_depth
+        );
+
+        Ok(evolved)
+    }
 }
 
 /// Clamp value between min and max

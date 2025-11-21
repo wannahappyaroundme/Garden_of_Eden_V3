@@ -131,9 +131,66 @@ impl RagService {
         Ok(top_episodes)
     }
 
+    /// Retrieve relevant episodes with temporal decay ranking (v3.8.0 Phase 3)
+    /// Combines semantic similarity with temporal retention scores
+    pub async fn retrieve_relevant_with_temporal(
+        &self,
+        query: &str,
+        top_k: usize,
+    ) -> Result<Vec<Episode>> {
+        log::info!("Retrieving {} relevant episodes with temporal ranking", top_k);
+
+        // Generate query embedding
+        let query_embedding = self.embedding_service.embed(query)?;
+
+        // Get all episodes with embeddings and retention scores from SQLite
+        let episodes = self.get_all_episodes_with_temporal()?;
+
+        // Compute combined score: semantic similarity + temporal retention
+        let mut scored_episodes: Vec<(Episode, f32)> = episodes
+            .into_iter()
+            .filter_map(|(episode, embedding_json, retention_score)| {
+                // Parse embedding
+                if let Ok(embedding) = serde_json::from_str::<Vec<f32>>(&embedding_json) {
+                    let semantic_similarity = EmbeddingService::cosine_similarity(&query_embedding, &embedding);
+
+                    // Weighted combination: 70% semantic, 30% temporal
+                    // This balances relevance with recency/importance
+                    let combined_score = (semantic_similarity * 0.7) + (retention_score * 0.3);
+
+                    Some((episode, combined_score))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Sort by combined score (highest first)
+        scored_episodes.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Take top K
+        let top_episodes: Vec<Episode> = scored_episodes
+            .into_iter()
+            .take(top_k)
+            .map(|(episode, _score)| episode)
+            .collect();
+
+        // Update access counts (this will affect future retention scores)
+        let ids: Vec<String> = top_episodes.iter().map(|e| e.id.clone()).collect();
+        self.increment_access_counts(&ids)?;
+
+        log::info!("Retrieved {} temporally-ranked episodes", top_episodes.len());
+        Ok(top_episodes)
+    }
+
     /// Search memory semantically
     pub async fn search_memory(&self, query: &str, limit: usize) -> Result<Vec<Episode>> {
         self.retrieve_relevant(query, limit).await
+    }
+
+    /// Search memory with temporal ranking (v3.8.0 Phase 3)
+    pub async fn search_memory_temporal(&self, query: &str, limit: usize) -> Result<Vec<Episode>> {
+        self.retrieve_relevant_with_temporal(query, limit).await
     }
 
     /// Get recent episodes (fallback when embeddings fail)
@@ -246,6 +303,40 @@ impl RagService {
                 };
                 let embedding_json: String = row.get(7)?;
                 Ok((episode, embedding_json))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(episodes)
+    }
+
+    /// Get all episodes with their embeddings and retention scores (v3.8.0 Phase 3)
+    fn get_all_episodes_with_temporal(&self) -> Result<Vec<(Episode, String, f32)>> {
+        let db_guard = self.db.lock().unwrap();
+        let db = db_guard.conn();
+
+        let mut stmt = db.prepare(
+            "SELECT id, user_message, ai_response, satisfaction, created_at,
+                    access_count, importance, embedding_id,
+                    COALESCE(retention_score, 1.0) as retention_score
+             FROM episodic_memory
+             WHERE embedding_id IS NOT NULL"
+        )?;
+
+        let episodes = stmt
+            .query_map([], |row| {
+                let episode = Episode {
+                    id: row.get(0)?,
+                    user_message: row.get(1)?,
+                    ai_response: row.get(2)?,
+                    satisfaction: row.get(3)?,
+                    created_at: row.get(4)?,
+                    access_count: row.get(5)?,
+                    importance: row.get(6)?,
+                    embedding_id: row.get::<_, Option<String>>(7)?,
+                };
+                let embedding_json: String = row.get(7)?;
+                let retention_score: f32 = row.get::<_, f64>(8)? as f32;  // SQLite stores as REAL (f64)
+                Ok((episode, embedding_json, retention_score))
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
