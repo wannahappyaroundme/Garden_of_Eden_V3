@@ -378,3 +378,99 @@ pub async fn updater_mark_last_check(state: State<'_, AppState>) -> Result<(), S
     info!("Last check timestamp updated to: {}", now);
     Ok(())
 }
+
+/// Add update history entry (v3.5.0)
+#[tauri::command]
+pub async fn updater_add_history_entry(
+    state: State<'_, AppState>,
+    from_version: String,
+    to_version: String,
+    success: bool,
+    error_message: Option<String>,
+    download_size: Option<i64>,
+    install_duration: Option<i64>,
+) -> Result<(), String> {
+    info!("Command: updater_add_history_entry - {} -> {} (success: {})", from_version, to_version, success);
+
+    let db = state.db.lock().map_err(|e| {
+        error!("Failed to lock database: {}", e);
+        format!("Database lock error: {}", e)
+    })?;
+    let conn = db.conn();
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    conn.execute(
+        "INSERT INTO update_history (from_version, to_version, update_date, success, error_message, download_size, install_duration, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        (
+            &from_version,
+            &to_version,
+            now,
+            success,
+            error_message.as_deref(),
+            download_size,
+            install_duration,
+            now,
+        ),
+    )
+    .map_err(|e| {
+        error!("Failed to insert update history: {}", e);
+        format!("Failed to record update history: {}", e)
+    })?;
+
+    info!("Update history entry added successfully");
+    Ok(())
+}
+
+/// Get update history (v3.5.0)
+#[tauri::command]
+pub async fn updater_get_history(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    info!("Command: updater_get_history");
+
+    let db = state.db.lock().map_err(|e| {
+        error!("Failed to lock database: {}", e);
+        format!("Database lock error: {}", e)
+    })?;
+    let conn = db.conn();
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, from_version, to_version, update_date, success, error_message, download_size, install_duration
+             FROM update_history
+             ORDER BY update_date DESC"
+        )
+        .map_err(|e| {
+            error!("Failed to prepare statement: {}", e);
+            format!("Database error: {}", e)
+        })?;
+
+    let history_iter = stmt
+        .query_map([], |row| {
+            Ok(serde_json::json!({
+                "id": row.get::<_, i64>(0)?,
+                "from_version": row.get::<_, String>(1)?,
+                "to_version": row.get::<_, String>(2)?,
+                "update_date": row.get::<_, i64>(3)?,
+                "success": row.get::<_, bool>(4)?,
+                "error_message": row.get::<_, Option<String>>(5)?,
+                "download_size": row.get::<_, Option<i64>>(6)?,
+                "install_duration": row.get::<_, Option<i64>>(7)?
+            }))
+        })
+        .map_err(|e| {
+            error!("Failed to query update history: {}", e);
+            format!("Database error: {}", e)
+        })?;
+
+    let mut history = Vec::new();
+    for entry in history_iter {
+        history.push(entry.map_err(|e| format!("Failed to parse history entry: {}", e))?);
+    }
+
+    info!("Retrieved {} update history entries", history.len());
+    Ok(serde_json::json!(history))
+}

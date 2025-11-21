@@ -355,6 +355,34 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // LLM settings table (v3.5.0 - VRAM-based model selection)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS llm_settings (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            vram_capacity INTEGER,
+            selected_model TEXT NOT NULL DEFAULT 'qwen2.5:3b',
+            reasoning_mode TEXT NOT NULL DEFAULT 'quick' CHECK(reasoning_mode IN ('quick', 'deep')),
+            auto_select_model BOOLEAN NOT NULL DEFAULT 1,
+            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+            updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )",
+        [],
+    )?;
+
+    // Conversation summaries table (v3.5.0 - Multi-turn memory)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS conversation_summaries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT NOT NULL,
+            summary_text TEXT NOT NULL,
+            messages_summarized INTEGER NOT NULL DEFAULT 0,
+            last_updated INTEGER NOT NULL,
+            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 
@@ -505,6 +533,19 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_update_history_success
          ON update_history(success)",
+        [],
+    )?;
+
+    // v3.5.0: Conversation summaries indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_conversation_summaries_conversation_id
+         ON conversation_summaries(conversation_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_conversation_summaries_last_updated
+         ON conversation_summaries(last_updated DESC)",
         [],
     )?;
 

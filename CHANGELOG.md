@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.5.0] - 2025-01-21
+
+### ✨ Features
+
+#### Enhanced Update Management
+- **Beta Update Channel**: Switch between stable and beta releases
+  - Warning dialog for beta channel with important notes
+  - Visual status indicator showing active channel
+  - Seamless switching between channels
+- **Update Scheduling**: Configurable automatic update checks
+  - Customizable check intervals (30 min - 24 hours)
+  - Background download support
+  - Bandwidth throttling (KB/s limit)
+  - Last check timestamp tracking
+- **Update History**: Complete timeline of all updates
+  - Success/failure status with icons
+  - Version transitions (e.g., 3.4.0 → 3.5.0)
+  - Download size and installation duration
+  - Error messages for failed updates
+  - Smart date formatting (relative for recent)
+
+#### VRAM-Based LLM Selection
+- **Automatic VRAM detection**: Cross-platform support (macOS/Windows/Linux)
+  - Apple Silicon unified memory detection
+  - NVIDIA CUDA memory detection
+  - AMD GPU memory detection
+- **Smart model recommendations**: Based on available VRAM
+  - 4-6GB: Small models (1.5B-3B params)
+  - 8-12GB: Medium models (7B-8B params)
+  - 16GB+: Large models (13B-70B params)
+- **Reasoning mode toggle**: Quick ⚡ vs Deep 🧠 reasoning
+- **Model management**: Select and switch between models
+
+### 🗃️ Database
+- Added `llm_settings` table (VRAM capacity, selected model, reasoning mode)
+- Added `conversation_summaries` table (multi-turn conversation memory)
+- Added indexes for performance optimization
+
+### 🔧 Technical Improvements
+- Extended `SystemSpecs` struct with VRAM detection
+- Platform-specific VRAM detection implementation
+- All Rust and TypeScript code compilation verified
+
+---
+
 ## [3.4.0] - 2025-11-18
 
 ### ✨ Features

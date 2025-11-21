@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
-import { RefreshCw, Download, CheckCircle, Info } from 'lucide-react';
+import { RefreshCw, Download, CheckCircle, Info, Clock, AlertCircle } from 'lucide-react';
 import { toast } from '../../stores/toast.store';
 
 interface UpdateCheckResult {
@@ -16,6 +16,17 @@ interface UpdateCheckResult {
   latest_version: string | null;
   release_notes: string | null;
   download_url: string | null;
+}
+
+interface UpdateHistoryEntry {
+  id: number;
+  from_version: string;
+  to_version: string;
+  update_date: number;
+  success: boolean;
+  error_message: string | null;
+  download_size: number | null;
+  install_duration: number | null;
 }
 
 export function UpdateSettingsPanel() {
@@ -29,11 +40,13 @@ export function UpdateSettingsPanel() {
   const [showBetaWarning, setShowBetaWarning] = useState(false); // v3.5.0
   const [downloadInBackground, setDownloadInBackground] = useState(false); // v3.5.0
   const [bandwidthLimit, setBandwidthLimit] = useState<number | null>(null); // v3.5.0 (KB/s)
+  const [updateHistory, setUpdateHistory] = useState<UpdateHistoryEntry[]>([]); // v3.5.0
 
   useEffect(() => {
     loadCurrentVersion();
     loadUpdateChannel(); // v3.5.0
     loadScheduleSettings(); // v3.5.0
+    loadUpdateHistory(); // v3.5.0
   }, []);
 
   const loadCurrentVersion = async () => {
@@ -121,6 +134,41 @@ export function UpdateSettingsPanel() {
       console.error('Failed to update schedule settings:', error);
       toast.error('Update Failed', error as string);
     }
+  };
+
+  // v3.5.0: Load update history
+  const loadUpdateHistory = async () => {
+    try {
+      const history = await invoke<UpdateHistoryEntry[]>('updater_get_history');
+      setUpdateHistory(history);
+    } catch (error) {
+      console.error('Failed to load update history:', error);
+    }
+  };
+
+  // v3.5.0: Format date for history display
+  const formatHistoryDate = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return 'Today at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Yesterday at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays < 7) {
+      return diffDays + ' days ago';
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  };
+
+  // v3.5.0: Format file size
+  const formatSize = (bytes: number | null) => {
+    if (!bytes) return 'Unknown';
+    const mb = bytes / (1024 * 1024);
+    return mb.toFixed(1) + ' MB';
   };
 
   const checkForUpdates = async () => {
@@ -397,6 +445,69 @@ export function UpdateSettingsPanel() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Update History (v3.5.0) */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Update History</h3>
+
+        {updateHistory.length === 0 ? (
+          <div className="p-8 bg-muted/50 rounded-lg text-center">
+            <Clock className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">No update history yet</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your update installations will be tracked here
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {updateHistory.map((entry) => (
+              <div
+                key={entry.id}
+                className={`p-4 rounded-lg border ${
+                  entry.success
+                    ? 'bg-green-50 dark:bg-green-950/10 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-950/10 border-red-200 dark:border-red-800'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {entry.success ? (
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-semibold">
+                          {entry.from_version} → {entry.to_version}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {formatHistoryDate(entry.update_date)}
+                        </div>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
+                        {entry.download_size && (
+                          <div>{formatSize(entry.download_size)}</div>
+                        )}
+                        {entry.install_duration && (
+                          <div>{entry.install_duration}s</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {entry.error_message && (
+                      <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs">
+                        <span className="font-medium">Error: </span>
+                        {entry.error_message}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Beta Channel Warning Dialog (v3.5.0) */}

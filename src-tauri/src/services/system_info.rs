@@ -24,6 +24,9 @@ pub struct SystemSpecs {
     /// GPU name if available
     pub gpu_name: Option<String>,
 
+    /// VRAM capacity in GB (v3.5.0)
+    pub vram_gb: Option<u32>,
+
     /// Free disk space in GB
     pub disk_free_gb: u32,
 
@@ -73,6 +76,9 @@ impl SystemInfoService {
         // Detect GPU (platform-specific)
         let (has_gpu, gpu_name) = self.detect_gpu()?;
 
+        // Detect VRAM (v3.5.0)
+        let vram_gb = self.detect_vram();
+
         // Get disk space
         let disk_free_gb = self.get_free_disk_space()?;
 
@@ -87,6 +93,7 @@ impl SystemInfoService {
             cpu_name: cpu_name.clone(),
             has_gpu,
             gpu_name: gpu_name.clone(),
+            vram_gb,
             disk_free_gb,
             os: os.clone(),
             os_version,
@@ -99,6 +106,9 @@ impl SystemInfoService {
             if has_gpu { "Available" } else { "Not detected" },
             gpu_name.as_deref().unwrap_or("N/A")
         );
+        if let Some(vram) = vram_gb {
+            info!("  VRAM: {}GB", vram);
+        }
         info!("  Disk: {}GB free", disk_free_gb);
         info!("  OS: {} {}", os, specs.os_version);
 
@@ -203,6 +213,93 @@ impl SystemInfoService {
             }
 
             Ok((false, None))
+        }
+    }
+
+    /// Detect VRAM capacity in GB (v3.5.0)
+    fn detect_vram(&self) -> Option<u32> {
+        #[cfg(target_os = "macos")]
+        {
+            // macOS: Use system_profiler to get VRAM
+            use std::process::Command;
+
+            if let Ok(output) = Command::new("system_profiler")
+                .args(&["SPDisplaysDataType"])
+                .output()
+            {
+                if output.status.success() {
+                    let output_str = String::from_utf8_lossy(&output.stdout);
+
+                    // Look for VRAM info (typically in MB)
+                    for line in output_str.lines() {
+                        if line.contains("VRAM") || line.contains("Chipset Model") {
+                            // Apple Silicon uses unified memory
+                            // Try to extract MB value
+                            if let Some(mb_str) = line.split_whitespace().find(|s| s.contains("MB")) {
+                                if let Ok(mb) = mb_str.trim_end_matches("MB").parse::<u32>() {
+                                    return Some(mb / 1024); // Convert MB to GB
+                                }
+                            }
+                            // Try to extract GB value
+                            if let Some(gb_str) = line.split_whitespace().find(|s| s.contains("GB")) {
+                                if let Ok(gb) = gb_str.trim_end_matches("GB").parse::<u32>() {
+                                    return Some(gb);
+                                }
+                            }
+                        }
+                    }
+
+                    // Apple Silicon fallback: use portion of RAM
+                    // M1/M2/M3 typically allocate 6-8GB for GPU
+                    if output_str.contains("Apple M") {
+                        return Some(8);
+                    }
+                }
+            }
+            None
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            // Windows: Use WMIC to query GPU memory
+            use std::process::Command;
+
+            if let Ok(output) = Command::new("wmic")
+                .args(&["path", "win32_VideoController", "get", "AdapterRAM"])
+                .output()
+            {
+                if output.status.success() {
+                    let output_str = String::from_utf8_lossy(&output.stdout);
+                    for line in output_str.lines().skip(1) {
+                        if let Ok(bytes) = line.trim().parse::<u64>() {
+                            let gb = (bytes / (1024 * 1024 * 1024)) as u32;
+                            if gb > 0 {
+                                return Some(gb);
+                            }
+                        }
+                    }
+                }
+            }
+            None
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        {
+            // Linux: Try nvidia-smi for NVIDIA GPUs
+            use std::process::Command;
+
+            if let Ok(output) = Command::new("nvidia-smi")
+                .args(&["--query-gpu=memory.total", "--format=csv,noheader,nounits"])
+                .output()
+            {
+                if output.status.success() {
+                    let mem_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if let Ok(mb) = mem_str.parse::<u32>() {
+                        return Some(mb / 1024); // Convert MB to GB
+                    }
+                }
+            }
+            None
         }
     }
 
