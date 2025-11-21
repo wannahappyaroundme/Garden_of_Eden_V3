@@ -163,20 +163,16 @@ pub async fn chat(
     })
 }
 
-/// Voice input start command
+/// Voice input start command (DEPRECATED - removed to reduce latency)
 #[tauri::command]
 pub async fn voice_input_start() -> Result<bool, String> {
-    log::info!("Voice input start command called");
-    // TODO: Implement Whisper integration
-    Ok(true)
+    Err("Voice input has been removed to reduce latency and improve performance".to_string())
 }
 
-/// Voice input stop command
+/// Voice input stop command (DEPRECATED - removed to reduce latency)
 #[tauri::command]
 pub async fn voice_input_stop() -> Result<String, String> {
-    log::info!("Voice input stop command called");
-    // TODO: Implement Whisper integration
-    Ok("Transcript placeholder".to_string())
+    Err("Voice input has been removed to reduce latency and improve performance".to_string())
 }
 
 #[derive(Debug, Clone, Serialize)]

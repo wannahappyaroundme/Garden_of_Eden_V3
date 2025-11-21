@@ -8,7 +8,7 @@
  * - Proactive alerts via TTS, notifications, or chat
  */
 
-use crate::services::{screen::ScreenCaptureService, llava::LlavaService, tts::TtsService};
+use crate::services::{screen::ScreenCaptureService, llava::LlavaService};
 use crate::database::Database;
 use anyhow::{Context, Result};
 use screenshots::Screen;
@@ -90,7 +90,6 @@ pub struct StreamingVisionService {
     state: Arc<Mutex<StreamingVisionState>>,
     screen_service: Arc<ScreenCaptureService>,
     llava_service: Arc<LlavaService>,
-    tts_service: Arc<Mutex<TtsService>>,
     db: Arc<Mutex<Database>>,
 }
 
@@ -99,7 +98,6 @@ impl StreamingVisionService {
     pub fn new(
         screen_service: Arc<ScreenCaptureService>,
         llava_service: Arc<LlavaService>,
-        tts_service: Arc<Mutex<TtsService>>,
         db: Arc<Mutex<Database>>,
     ) -> Result<Self> {
         let service = Self {
@@ -107,7 +105,6 @@ impl StreamingVisionService {
             state: Arc::new(Mutex::new(StreamingVisionState::default())),
             screen_service,
             llava_service,
-            tts_service,
             db,
         };
 
@@ -162,7 +159,6 @@ impl StreamingVisionService {
         let state_clone = Arc::clone(&self.state);
         let config_clone = Arc::clone(&self.config);
         let llava_clone = Arc::clone(&self.llava_service);
-        let tts_clone = Arc::clone(&self.tts_service);
         let db_clone = Arc::clone(&self.db);
 
         tokio::spawn(async move {
@@ -186,7 +182,6 @@ impl StreamingVisionService {
                     &state_clone,
                     &config_clone,
                     &llava_clone,
-                    &tts_clone,
                     &db_clone,
                 ).await {
                     log::error!("Streaming vision error: {}", e);
@@ -216,7 +211,6 @@ impl StreamingVisionService {
         state: &Arc<Mutex<StreamingVisionState>>,
         config: &Arc<Mutex<StreamingVisionConfig>>,
         llava: &Arc<LlavaService>,
-        tts: &Arc<Mutex<TtsService>>,
         db: &Arc<Mutex<Database>>,
     ) -> Result<()> {
         // 1. Capture screen
@@ -277,7 +271,7 @@ impl StreamingVisionService {
         let (alert_sent, alert_method) = if is_significant_change {
             if let Some(ref analysis_text) = analysis {
                 if !analysis_text.contains("No significant changes") {
-                    Self::send_alert_static(analysis_text, config, tts, state).await?
+                    Self::send_alert_static(analysis_text, config, state).await?
                 } else {
                     (false, None)
                 }
@@ -339,11 +333,10 @@ impl StreamingVisionService {
         }
     }
 
-    /// Send proactive alert
+    /// Send proactive alert (log-based - TTS removed to reduce latency)
     async fn send_alert_static(
         message: &str,
         config: &Arc<Mutex<StreamingVisionConfig>>,
-        tts: &Arc<Mutex<TtsService>>,
         state: &Arc<Mutex<StreamingVisionState>>,
     ) -> Result<(bool, Option<String>)> {
         let config_guard = config.lock().unwrap();
@@ -358,14 +351,11 @@ impl StreamingVisionService {
         for method in &alert_methods {
             match method.as_str() {
                 "tts" => {
-                    // Send TTS alert
-                    // Note: TTS implementation has Send trait issues with async
-                    // For Phase 2, we log the alert. Full TTS integration in Phase 3.
-                    log::info!("TTS Alert: {}", message);
-                    log::warn!("TTS playback temporarily disabled due to Send trait constraints - will be fixed in Phase 3");
+                    // TTS removed to reduce latency - log alert instead
+                    log::info!("🔔 PROACTIVE ALERT: {}", message);
 
                     state.lock().unwrap().alert_count += 1;
-                    return Ok((true, Some("tts".to_string())));
+                    return Ok((true, Some("log".to_string())));
                 }
                 "notification" => {
                     // Desktop notification (future implementation)

@@ -34,11 +34,6 @@ reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
 futures-util = "0.3"
 screenshots = "0.8"
 base64 = "0.22"
-# Audio/Speech dependencies
-cpal = "0.15"           # Cross-platform audio I/O
-hound = "3.5"           # WAV file handling
-tts = "0.26"            # Text-to-speech
-
 # RAG & Vector DB dependencies (Phase 1) - PRODUCTION LEVEL
 ort = { version = "2.0.0-rc.10", features = ["download-binaries", "ndarray"] }  # ONNX Runtime for BGE-M3 (includes std by default)
 tokenizers = "0.15"     # Tokenization for embedding model
@@ -48,9 +43,6 @@ ndarray = "0.16"        # N-dimensional arrays for ML
 # lancedb = "0.22"        # Vector database for fast similarity search
 # arrow-array = "56"      # Apache Arrow arrays for LanceDB
 # arrow-schema = "56"     # Apache Arrow schema for LanceDB
-
-# Voice Activity Detection (Phase 3)
-webrtc-vad = "0.4"      # Voice activity detection
 
 # Internet Access dependencies (v3.3.0)
 urlencoding = "2.1"     # URL encoding for search queries

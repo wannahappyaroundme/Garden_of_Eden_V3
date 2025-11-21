@@ -7,8 +7,6 @@ mod services;
 
 use database::Database;
 use services::screen::ScreenCaptureService;
-use services::whisper::WhisperService;
-use services::tts::TtsService;
 use services::llava::LlavaService;
 use services::model_installer::ModelInstallerService;
 use services::learning::LearningService;
@@ -32,6 +30,8 @@ use services::react_agent::ReActAgent;
 use services::planner::{Planner, Plan};
 use services::computer_control::ComputerControlService;
 use services::streaming_vision::StreamingVisionService;
+use services::temporal_memory::TemporalMemoryService;
+use services::decay_worker::DecayWorker;
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
@@ -43,8 +43,6 @@ use rusqlite::Connection;
 pub struct AppState {
     db: Mutex<Database>,
     screen_service: ScreenCaptureService,
-    whisper_service: WhisperService,
-    tts_service: TtsService,
     llava_service: Mutex<LlavaService>,
     model_installer: Arc<ModelInstallerService>,
     learning_service: LearningService,
@@ -85,15 +83,7 @@ fn main() {
     // Initialize screen capture service
     let screen_service = ScreenCaptureService::new(Arc::clone(&db_arc));
 
-    // Initialize Whisper service
-    let whisper_service = WhisperService::new(data_dir.clone())
-        .expect("Failed to initialize Whisper service");
-
-    // Initialize TTS service
-    let tts_service = TtsService::new()
-        .expect("Failed to initialize TTS service");
-
-    // Initialize LLaVA service (placeholder)
+    // Initialize LLaVA service
     let llava_service = LlavaService::new()
         .expect("Failed to initialize LLaVA service");
 
@@ -274,17 +264,26 @@ fn main() {
     let sv_screen_service = ScreenCaptureService::new(Arc::clone(&db_arc));
     let sv_llava_service = LlavaService::new()
         .expect("Failed to initialize LLaVA for Streaming Vision");
-    let sv_tts_service = Arc::new(Mutex::new(TtsService::new()
-        .expect("Failed to initialize TTS for Streaming Vision")));
 
     let streaming_vision = StreamingVisionService::new(
         Arc::new(sv_screen_service),
         Arc::new(sv_llava_service),
-        sv_tts_service,
         Arc::clone(&db_arc)
     ).expect("Failed to initialize Streaming Vision Service");
     let streaming_vision_arc = Arc::new(streaming_vision);
     log::info!("✓ Streaming Vision Service initialized");
+
+    // Initialize Temporal Memory Service (v3.8.0 Phase 3)
+    log::info!("Initializing Temporal Memory Service...");
+    let temporal_memory = TemporalMemoryService::new(Arc::clone(&db_arc))
+        .expect("Failed to initialize Temporal Memory Service");
+    let temporal_memory_arc = Arc::new(temporal_memory);
+    log::info!("✓ Temporal Memory Service initialized");
+
+    // Start Memory Decay Worker (v3.8.0 Phase 3)
+    log::info!("Starting Memory Decay Worker (24h interval)...");
+    let _decay_worker = DecayWorker::start(Arc::clone(&temporal_memory_arc), true);
+    log::info!("✓ Memory Decay Worker started with auto-prune enabled");
 
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
@@ -305,8 +304,6 @@ fn main() {
             Database::new().expect("Failed to initialize database for app state")
         ),
         screen_service,
-        whisper_service,
-        tts_service,
         llava_service: Mutex::new(llava_service),
         model_installer,
         learning_service,
@@ -336,26 +333,12 @@ fn main() {
         .manage(crash_reporter_state)
         .manage(computer_control_arc)  // v3.8.0: LAM service for commands
         .manage(streaming_vision_arc)  // v3.8.0 Phase 2: Streaming vision service
+        .manage(temporal_memory_arc)  // v3.8.0 Phase 3: Temporal memory service
         .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
             commands::ai::chat_stream,
             commands::ai::chat_with_tools,  // v3.6.0: Tool-enabled chat
-            commands::ai::voice_input_start,
-            commands::ai::voice_input_stop,
-            commands::audio::whisper_start_recording,
-            commands::audio::whisper_stop_recording,
-            commands::audio::whisper_transcribe,
-            commands::audio::whisper_is_recording,
-            commands::audio::whisper_cleanup_old_files,
-            commands::audio::tts_speak,
-            commands::audio::tts_stop,
-            commands::audio::tts_is_speaking,
-            commands::audio::tts_get_voices,
-            commands::audio::tts_set_rate,
-            commands::audio::tts_set_volume,
-            commands::audio::tts_get_status,
-            commands::audio::tts_test,
             commands::conversation::get_conversations,
             commands::conversation::get_conversation_messages,
             commands::conversation::delete_conversation,
@@ -583,6 +566,15 @@ fn main() {
             commands::streaming_vision::streaming_vision_clear_history,
             commands::streaming_vision::streaming_vision_get_stats,
             commands::streaming_vision::streaming_vision_test_connection,
+            // Temporal Memory Commands (v3.8.0 Phase 3)
+            commands::temporal_memory::temporal_pin_memory,
+            commands::temporal_memory::temporal_unpin_memory,
+            commands::temporal_memory::temporal_get_retention_stats,
+            commands::temporal_memory::temporal_trigger_decay_update,
+            commands::temporal_memory::temporal_get_config,
+            commands::temporal_memory::temporal_update_config,
+            commands::temporal_memory::temporal_prune_memories,
+            commands::temporal_memory::temporal_calculate_retention,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

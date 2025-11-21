@@ -1,5 +1,4 @@
 pub mod ai;
-pub mod audio;
 pub mod conversation;
 pub mod onboarding;
 pub mod screen;
@@ -24,3 +23,4 @@ pub mod react;
 pub mod planner;
 pub mod computer_control;
 pub mod streaming_vision;
+pub mod temporal_memory;

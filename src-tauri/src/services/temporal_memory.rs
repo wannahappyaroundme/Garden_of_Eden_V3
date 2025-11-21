@@ -1,0 +1,446 @@
+/**
+ * Phase 3: Temporal Memory (v3.8.0)
+ *
+ * Ebbinghaus Forgetting Curve implementation with gradual decay:
+ * - R(t) = max(min_retention, e^(-t/S))
+ * - S = 20.0 (gradual decay per user requirement)
+ * - 24h: ~100% retention
+ * - 30d: ~22-50% retention (with access boost)
+ * - 90d: ≥10% minimum retention
+ *
+ * Features:
+ * - Memory pinning (important events never decay)
+ * - Access-based retention boost
+ * - Automated decay updates every 24 hours
+ * - Configurable decay strength per memory
+ */
+
+use crate::database::Database;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Temporal memory configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecayConfig {
+    /// Base decay strength (S parameter in Ebbinghaus formula)
+    /// Higher = slower forgetting. Default: 20.0 for gradual decay
+    pub base_strength: f64,
+
+    /// Minimum retention score (floor to prevent complete forgetting)
+    pub min_retention: f64,
+
+    /// Maximum retention score (ceiling)
+    pub max_retention: f64,
+
+    /// Decay worker interval in hours
+    pub decay_worker_interval_hours: u64,
+
+    /// Last time decay worker ran (Unix timestamp)
+    pub last_decay_run: Option<i64>,
+}
+
+impl Default for DecayConfig {
+    fn default() -> Self {
+        Self {
+            base_strength: 20.0,  // Gradual decay per user requirement
+            min_retention: 0.10,  // 10% minimum
+            max_retention: 1.0,   // 100% maximum
+            decay_worker_interval_hours: 24,
+            last_decay_run: None,
+        }
+    }
+}
+
+/// Memory retention statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetentionStats {
+    pub total_memories: usize,
+    pub pinned_memories: usize,
+    pub high_retention: usize,  // >0.7
+    pub medium_retention: usize,  // 0.3-0.7
+    pub low_retention: usize,  // <0.3
+    pub average_retention: f64,
+    pub oldest_memory_days: f64,
+    pub newest_memory_days: f64,
+}
+
+/// Temporal Memory Service
+pub struct TemporalMemoryService {
+    db: Arc<Mutex<Database>>,
+    config: Arc<Mutex<DecayConfig>>,
+}
+
+impl TemporalMemoryService {
+    /// Create new temporal memory service
+    pub fn new(db: Arc<Mutex<Database>>) -> Result<Self> {
+        let service = Self {
+            db,
+            config: Arc::new(Mutex::new(DecayConfig::default())),
+        };
+
+        service.init_database()?;
+
+        Ok(service)
+    }
+
+    /// Initialize database tables and columns for temporal memory
+    fn init_database(&self) -> Result<()> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        // Add new columns to episodic_memory table
+        // Note: SQLite doesn't support ALTER TABLE if column exists, so we ignore errors
+        let _ = conn.execute(
+            "ALTER TABLE episodic_memory ADD COLUMN retention_score REAL DEFAULT 1.0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE episodic_memory ADD COLUMN last_decay_update INTEGER DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE episodic_memory ADD COLUMN is_pinned BOOLEAN DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE episodic_memory ADD COLUMN decay_strength REAL DEFAULT 20.0",
+            [],
+        );
+
+        // Create indexes for performance
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_episodic_retention
+             ON episodic_memory(retention_score)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_episodic_decay_update
+             ON episodic_memory(last_decay_update)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_episodic_pinned
+             ON episodic_memory(is_pinned)",
+            [],
+        );
+
+        // Create config table (singleton)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS memory_decay_config (
+                id INTEGER PRIMARY KEY CHECK(id = 1),
+                base_strength REAL NOT NULL DEFAULT 20.0,
+                min_retention REAL NOT NULL DEFAULT 0.10,
+                max_retention REAL NOT NULL DEFAULT 1.0,
+                decay_worker_interval_hours INTEGER NOT NULL DEFAULT 24,
+                last_decay_run INTEGER,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )",
+            [],
+        ).context("Failed to create memory_decay_config table")?;
+
+        // Insert default config if not exists
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM memory_decay_config WHERE id = 1",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        if count == 0 {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)?
+                .as_secs() as i64;
+
+            conn.execute(
+                "INSERT INTO memory_decay_config
+                 (id, base_strength, min_retention, max_retention,
+                  decay_worker_interval_hours, created_at, updated_at)
+                 VALUES (1, 20.0, 0.10, 1.0, 24, ?1, ?2)",
+                rusqlite::params![now, now],
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// Calculate retention using Ebbinghaus curve: R(t) = max(min, e^(-t/S))
+    pub fn calculate_retention(
+        &self,
+        days_elapsed: f64,
+        decay_strength: f64,
+        access_count: i32,
+        is_pinned: bool,
+    ) -> f64 {
+        if is_pinned {
+            return 1.0; // Pinned memories never decay
+        }
+
+        let config = self.config.lock().unwrap();
+
+        // Base retention from Ebbinghaus curve
+        let base_retention = (-days_elapsed / decay_strength).exp();
+
+        // Boost retention based on access frequency
+        // Each access adds 5% boost, capped at 50%
+        let access_boost = 1.0 + (access_count as f64 * 0.05).min(0.5);
+
+        // Apply boost and clamp to [min_retention, max_retention]
+        let retention = (base_retention * access_boost)
+            .max(config.min_retention)
+            .min(config.max_retention);
+
+        retention
+    }
+
+    /// Update all memory retention scores (called by decay worker)
+    pub fn update_all_retention_scores(&self) -> Result<usize> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)?
+            .as_secs() as i64;
+
+        // Get all memories with their current data
+        let mut stmt = conn.prepare(
+            "SELECT id, created_at, access_count, is_pinned, decay_strength
+             FROM episodic_memory"
+        )?;
+
+        let memories: Vec<(String, i64, i32, bool, f64)> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i32>(2).unwrap_or(0),
+                    row.get::<_, bool>(3).unwrap_or(false),
+                    row.get::<_, f64>(4).unwrap_or(20.0),
+                ))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+
+        let mut update_count = 0;
+
+        // Update each memory's retention score
+        for (id, created_at, access_count, is_pinned, decay_strength) in memories {
+            let days_elapsed = (now - created_at) as f64 / 86400.0; // seconds to days
+
+            let retention = self.calculate_retention(
+                days_elapsed,
+                decay_strength,
+                access_count,
+                is_pinned,
+            );
+
+            conn.execute(
+                "UPDATE episodic_memory
+                 SET retention_score = ?1, last_decay_update = ?2
+                 WHERE id = ?3",
+                rusqlite::params![retention, now, id],
+            )?;
+
+            update_count += 1;
+        }
+
+        // Update last_decay_run in config
+        conn.execute(
+            "UPDATE memory_decay_config SET last_decay_run = ?1, updated_at = ?2 WHERE id = 1",
+            rusqlite::params![now, now],
+        )?;
+
+        log::info!("Updated {} memory retention scores", update_count);
+
+        Ok(update_count)
+    }
+
+    /// Pin a memory (mark as important, prevents decay)
+    pub fn pin_memory(&self, memory_id: &str) -> Result<()> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        conn.execute(
+            "UPDATE episodic_memory SET is_pinned = 1, retention_score = 1.0 WHERE id = ?1",
+            rusqlite::params![memory_id],
+        )?;
+
+        log::info!("Pinned memory: {}", memory_id);
+        Ok(())
+    }
+
+    /// Unpin a memory (resume normal decay)
+    pub fn unpin_memory(&self, memory_id: &str) -> Result<()> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        conn.execute(
+            "UPDATE episodic_memory SET is_pinned = 0 WHERE id = ?1",
+            rusqlite::params![memory_id],
+        )?;
+
+        log::info!("Unpinned memory: {}", memory_id);
+
+        // Recalculate retention score for this memory
+        let (created_at, access_count, decay_strength): (i64, i32, f64) = conn.query_row(
+            "SELECT created_at, access_count, decay_strength FROM episodic_memory WHERE id = ?1",
+            rusqlite::params![memory_id],
+            |row| Ok((row.get(0)?, row.get(1).unwrap_or(0), row.get(2).unwrap_or(20.0))),
+        )?;
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)?
+            .as_secs() as i64;
+
+        let days_elapsed = (now - created_at) as f64 / 86400.0;
+        let retention = self.calculate_retention(days_elapsed, decay_strength, access_count, false);
+
+        conn.execute(
+            "UPDATE episodic_memory SET retention_score = ?1 WHERE id = ?2",
+            rusqlite::params![retention, memory_id],
+        )?;
+
+        Ok(())
+    }
+
+    /// Prune memories below retention threshold
+    pub fn prune_low_retention_memories(&self, threshold: f64) -> Result<usize> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        let count = conn.execute(
+            "DELETE FROM episodic_memory WHERE retention_score < ?1 AND is_pinned = 0",
+            rusqlite::params![threshold],
+        )?;
+
+        log::info!("Pruned {} low-retention memories (threshold: {})", count, threshold);
+
+        Ok(count)
+    }
+
+    /// Get retention statistics
+    pub fn get_retention_stats(&self) -> Result<RetentionStats> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        let total_memories: usize = conn.query_row(
+            "SELECT COUNT(*) FROM episodic_memory",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        let pinned_memories: usize = conn.query_row(
+            "SELECT COUNT(*) FROM episodic_memory WHERE is_pinned = 1",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        let high_retention: usize = conn.query_row(
+            "SELECT COUNT(*) FROM episodic_memory WHERE retention_score > 0.7",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        let medium_retention: usize = conn.query_row(
+            "SELECT COUNT(*) FROM episodic_memory WHERE retention_score BETWEEN 0.3 AND 0.7",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        let low_retention: usize = conn.query_row(
+            "SELECT COUNT(*) FROM episodic_memory WHERE retention_score < 0.3",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        let average_retention: f64 = conn.query_row(
+            "SELECT AVG(retention_score) FROM episodic_memory",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0.0);
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)?
+            .as_secs() as i64;
+
+        let oldest_memory_days: f64 = conn.query_row(
+            "SELECT MIN(created_at) FROM episodic_memory",
+            [],
+            |row| {
+                let created: Option<i64> = row.get(0).ok();
+                Ok(created.map(|c| (now - c) as f64 / 86400.0).unwrap_or(0.0))
+            },
+        ).unwrap_or(0.0);
+
+        let newest_memory_days: f64 = conn.query_row(
+            "SELECT MAX(created_at) FROM episodic_memory",
+            [],
+            |row| {
+                let created: Option<i64> = row.get(0).ok();
+                Ok(created.map(|c| (now - c) as f64 / 86400.0).unwrap_or(0.0))
+            },
+        ).unwrap_or(0.0);
+
+        Ok(RetentionStats {
+            total_memories,
+            pinned_memories,
+            high_retention,
+            medium_retention,
+            low_retention,
+            average_retention,
+            oldest_memory_days,
+            newest_memory_days,
+        })
+    }
+
+    /// Get current decay configuration
+    pub fn get_config(&self) -> DecayConfig {
+        self.config.lock().unwrap().clone()
+    }
+
+    /// Update decay configuration
+    pub fn update_config(&self, new_config: DecayConfig) -> Result<()> {
+        let db = self.db.lock().unwrap();
+        let conn = db.conn();
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)?
+            .as_secs() as i64;
+
+        conn.execute(
+            "UPDATE memory_decay_config
+             SET base_strength = ?1, min_retention = ?2, max_retention = ?3,
+                 decay_worker_interval_hours = ?4, updated_at = ?5
+             WHERE id = 1",
+            rusqlite::params![
+                new_config.base_strength,
+                new_config.min_retention,
+                new_config.max_retention,
+                new_config.decay_worker_interval_hours,
+                now,
+            ],
+        )?;
+
+        *self.config.lock().unwrap() = new_config;
+
+        Ok(())
+    }
+
+    /// Calculate importance score for memory ranking
+    /// Combines retention, satisfaction, and access count
+    pub fn calculate_importance(
+        &self,
+        retention: f64,
+        satisfaction: f64,
+        access_count: i32,
+    ) -> f64 {
+        // Weighted combination:
+        // - 50% retention (temporal relevance)
+        // - 30% satisfaction (conversation quality)
+        // - 20% access frequency (usage patterns)
+        let base = (retention * 0.5) + (satisfaction * 0.3);
+        let access_factor = ((access_count as f64) * 0.05).min(0.2);
+
+        base + access_factor
+    }
+}

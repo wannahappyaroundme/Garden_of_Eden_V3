@@ -1,7 +1,5 @@
 pub mod ollama;
 pub mod screen;
-pub mod whisper;
-pub mod tts;
 pub mod llava;
 pub mod system_info;
 pub mod model_recommender;
@@ -87,6 +85,8 @@ pub mod planner;      // v3.7.0: Plan-and-Solve with user confirmation and adapt
 pub mod computer_control;  // v3.8.0: Vision-guided mouse/keyboard automation with safety controls
 pub mod lam_tools;         // v3.8.0: LAM tools for ReAct agent (click, type, scroll, etc.)
 pub mod streaming_vision;  // v3.8.0 Phase 2: Continuous screen monitoring with proactive alerts
+pub mod temporal_memory;   // v3.8.0 Phase 3: Ebbinghaus forgetting curve with gradual decay
+pub mod decay_worker;      // v3.8.0 Phase 3: 24h background worker for memory retention updates
 
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests
