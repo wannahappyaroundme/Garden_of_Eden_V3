@@ -15,3 +15,4 @@ pub mod crash_reporter;
 pub mod tool_history;
 pub mod tool_settings;
 pub mod llm;
+pub mod conversation_memory;

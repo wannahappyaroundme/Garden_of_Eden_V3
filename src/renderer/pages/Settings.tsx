@@ -15,6 +15,7 @@ import { toast } from '../stores/toast.store';
 import { ToolsSettings } from '../components/settings';
 import { CrashReportsPanel } from '../components/settings/CrashReportsPanel'; // v3.4.0
 import { UpdateSettingsPanel } from '../components/settings/UpdateSettingsPanel'; // v3.4.0
+import LLMSettingsPanel from '../components/settings/LLMSettings'; // v3.5.0
 
 interface SettingsProps {
   onClose: () => void;
@@ -23,7 +24,7 @@ interface SettingsProps {
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'app' | 'updates' | 'crashes' | 'about'>('persona'); // v3.4.0: Added updates and crashes tabs
+  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'app' | 'updates' | 'crashes' | 'about'>('persona'); // v3.5.0: Added llm tab
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -220,6 +221,17 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           >
             🔧 도구 설정
           </button>
+          {/* v3.5.0: LLM Settings Tab */}
+          <button
+            onClick={() => setActiveTab('llm')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'llm'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🧠 LLM 설정
+          </button>
           <button
             onClick={() => setActiveTab('app')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -300,6 +312,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           {activeTab === 'tools' && (
             <div className="max-w-5xl mx-auto">
               <ToolsSettings />
+            </div>
+          )}
+
+          {/* LLM Settings Tab (v3.5.0) */}
+          {activeTab === 'llm' && (
+            <div className="max-w-4xl mx-auto">
+              <LLMSettingsPanel />
             </div>
           )}
 

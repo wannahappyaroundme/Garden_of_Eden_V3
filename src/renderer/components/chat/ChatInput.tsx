@@ -9,6 +9,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { cn } from '../../lib/utils';
 import VoiceVisualizer from '../VoiceVisualizer';
+import ReasoningModeToggle from './ReasoningModeToggle'; // v3.5.0
 
 export interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -166,8 +167,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         </Button>
       </div>
 
-      {/* Helper text - Enhanced visibility */}
-      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground mt-2">
+      {/* Reasoning Mode Toggle and Helper text - v3.5.0 */}
+      <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground mt-2">
+        {/* Reasoning Mode Toggle */}
+        <ReasoningModeToggle />
+
+        {/* Helper text - Enhanced visibility */}
+        <div className="flex items-center justify-center gap-4">
         <div className="flex items-center gap-1.5">
           <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono text-[10px]">
             Enter
@@ -185,6 +191,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             ⌘K
           </kbd>
           <span>포커스</span>
+        </div>
         </div>
       </div>
     </div>

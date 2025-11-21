@@ -58,3 +58,6 @@ pub mod tool_implementations;
 pub mod tool_history;        // v3.3.0: Tool execution tracking and analytics
 pub mod tool_settings;       // v3.3.0: Tool configuration management
 pub mod plugin_tool_bridge;  // v3.3.0: Plugin-to-tool integration bridge
+
+// Phase 12: Conversation Memory (v3.5.0)
+pub mod conversation_memory; // v3.5.0: Summary Buffer Memory for multi-turn conversations
