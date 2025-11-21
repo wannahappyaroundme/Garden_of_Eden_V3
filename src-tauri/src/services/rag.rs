@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Context, Result};
-use rusqlite::Connection;
+use anyhow::{anyhow, Result};
+use crate::database::Database;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
@@ -21,7 +21,7 @@ pub struct Episode {
 /// RAG Service for episodic memory retrieval
 /// Stores and retrieves past conversations using semantic search
 pub struct RagService {
-    db: Arc<Mutex<Connection>>,
+    db: Arc<Mutex<Database>>,
     embedding_service: Arc<EmbeddingService>,
     _lance_db_path: PathBuf,
 }
@@ -29,7 +29,7 @@ pub struct RagService {
 impl RagService {
     /// Create new RAG service
     pub fn new(
-        db: Arc<Mutex<Connection>>,
+        db: Arc<Mutex<Database>>,
         embedding_service: Arc<EmbeddingService>,
         lance_db_path: PathBuf,
     ) -> Result<Self> {
@@ -66,7 +66,8 @@ impl RagService {
         let embedding_json = serde_json::to_string(&embedding)?;
 
         // Store metadata and embedding in SQLite
-        let db = self.db.lock().unwrap();
+        let db_guard = self.db.lock().unwrap();
+        let db = db_guard.conn();
         db.execute(
             "INSERT INTO episodic_memory (
                 id, user_message, ai_response, satisfaction, created_at,
@@ -137,7 +138,8 @@ impl RagService {
 
     /// Get recent episodes (fallback when embeddings fail)
     pub fn get_recent_episodes(&self, limit: usize) -> Result<Vec<Episode>> {
-        let db = self.db.lock().unwrap();
+        let db_guard = self.db.lock().unwrap();
+        let db = db_guard.conn();
 
         let mut stmt = db.prepare(
             "SELECT id, user_message, ai_response, satisfaction, created_at,
@@ -169,7 +171,8 @@ impl RagService {
     pub fn cleanup_old_memories(&self) -> Result<usize> {
         let threshold_timestamp = chrono::Utc::now().timestamp() - (30 * 24 * 60 * 60); // 30 days
 
-        let db = self.db.lock().unwrap();
+        let db_guard = self.db.lock().unwrap();
+        let db = db_guard.conn();
         let deleted = db.execute(
             "DELETE FROM episodic_memory
              WHERE created_at < ?1 AND access_count < 3 AND satisfaction < 0.5",
@@ -182,7 +185,8 @@ impl RagService {
 
     /// Get memory statistics
     pub fn get_statistics(&self) -> Result<MemoryStats> {
-        let db = self.db.lock().unwrap();
+        let db_guard = self.db.lock().unwrap();
+        let db = db_guard.conn();
 
         let total_memories: i64 = db.query_row(
             "SELECT COUNT(*) FROM episodic_memory",
@@ -218,7 +222,8 @@ impl RagService {
 
     /// Get all episodes with their embeddings
     fn get_all_episodes_with_embeddings(&self) -> Result<Vec<(Episode, String)>> {
-        let db = self.db.lock().unwrap();
+        let db_guard = self.db.lock().unwrap();
+        let db = db_guard.conn();
 
         let mut stmt = db.prepare(
             "SELECT id, user_message, ai_response, satisfaction, created_at,
@@ -253,7 +258,8 @@ impl RagService {
             return Ok(());
         }
 
-        let db = self.db.lock().unwrap();
+        let db_guard = self.db.lock().unwrap();
+        let db = db_guard.conn();
 
         for id in ids {
             db.execute(

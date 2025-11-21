@@ -61,3 +61,24 @@ pub mod plugin_tool_bridge;  // v3.3.0: Plugin-to-tool integration bridge
 
 // Phase 12: Conversation Memory (v3.5.0)
 pub mod conversation_memory; // v3.5.0: Summary Buffer Memory for multi-turn conversations
+
+// Phase 13: Hybrid Search (v3.6.0)
+pub mod bm25;  // v3.6.0: BM25 lexical search for hybrid retrieval
+pub mod hybrid_search;  // v3.6.0: Hybrid search combining BM25 + BGE-M3 with RRF fusion
+pub mod reranker;  // v3.6.0: Cross-encoder re-ranking for improved relevance
+
+// Phase 14: Attention Sink (v3.6.0)
+pub mod attention_sink;  // v3.6.0: StreamingLLM pattern for long context handling
+
+// Phase 15: Prompt Caching (v3.6.0)
+pub mod prompt_cache;  // v3.6.0: LRU cache for system prompts (50% speed improvement)
+
+// Phase 16: GraphRAG (v3.7.0)
+pub mod entity_extractor;  // v3.7.0: Entity and relationship extraction for knowledge graphs
+pub mod graph_builder;     // v3.7.0: Knowledge graph construction with community detection
+pub mod graph_storage;     // v3.7.0: SQLite-based graph storage with CRUD operations
+pub mod graph_retrieval;   // v3.7.0: Graph-based retrieval with multi-hop reasoning
+
+// Phase 17: ReAct & Plan-and-Solve (v3.7.0)
+pub mod react_agent;  // v3.7.0: ReAct pattern (Reasoning + Acting) for structured problem solving
+pub mod planner;      // v3.7.0: Plan-and-Solve with user confirmation and adaptive execution

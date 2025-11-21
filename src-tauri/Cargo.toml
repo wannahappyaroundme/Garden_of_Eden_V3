@@ -63,6 +63,10 @@ walkdir = "2.5"         # Directory traversal for plugin discovery
 # Tool Calling System dependencies (v3.5.1)
 async-trait = "0.1"     # Async trait support for ToolExecutor
 
+# Hybrid Search dependencies (v3.6.0)
+unicode-segmentation = "1.12"  # Text tokenization for BM25
+sha2 = "0.10"  # SHA-256 hashing for prompt cache
+
 # Proactive Mode dependencies (Phase 4)
 notify = "6.1"          # File system watching
 regex = "1.10"          # Pattern matching for trigger detection

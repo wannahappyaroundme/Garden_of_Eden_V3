@@ -21,9 +21,19 @@ use services::tool_implementations::{
 };
 use services::tool_history::ToolHistoryService;
 use services::tool_settings::ToolSettingsService;
+use services::embedding::EmbeddingService;
+use services::rag::RagService;
+use services::hybrid_search::HybridSearchEngine;
+use services::entity_extractor::EntityExtractor;
+use services::graph_builder::GraphBuilder;
+use services::graph_storage::GraphStorage;
+use services::graph_retrieval::GraphRetrievalEngine;
+use services::react_agent::ReActAgent;
+use services::planner::{Planner, Plan};
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 use tokio::sync::Mutex as TokioMutex;
 
 /// Application state shared across Tauri commands
@@ -40,6 +50,19 @@ pub struct AppState {
     tool_service: Arc<ToolService>,  // v3.6.0: Tool calling system
     tool_history_service: Arc<TokioMutex<ToolHistoryService>>,  // v3.3.0: Tool execution tracking
     tool_settings_service: Arc<TokioMutex<ToolSettingsService>>,  // v3.3.0: Tool configuration
+    embedding: Arc<EmbeddingService>,  // v3.6.0: BGE-M3 embeddings
+    rag: Arc<RagService>,  // v3.6.0: RAG service
+    hybrid_search: Arc<TokioMutex<HybridSearchEngine>>,  // v3.6.0: Hybrid search (BM25 + semantic)
+    attention_sink: Arc<services::attention_sink::AttentionSinkManager>,  // v3.6.0: Long context handling
+    prompt_cache: Arc<Mutex<services::prompt_cache::PromptCache>>,  // v3.6.0: Prompt caching
+    entity_extractor: Arc<EntityExtractor>,  // v3.7.0: Entity extraction for GraphRAG
+    graph_builder: Arc<TokioMutex<GraphBuilder>>,  // v3.7.0: Knowledge graph construction
+    graph_storage: Arc<GraphStorage>,  // v3.7.0: SQLite-based graph storage
+    graph_retrieval: Arc<GraphRetrievalEngine>,  // v3.7.0: Graph-based retrieval
+    react_agent: Arc<ReActAgent>,  // v3.7.0: ReAct agent (Reasoning + Acting)
+    planner: Arc<Planner>,  // v3.7.0: Plan-and-Solve agent with user confirmation
+    approved_plans: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: User-approved plans awaiting execution
+    plan_history: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: Executed plan history
 }
 
 fn main() {
@@ -134,6 +157,92 @@ fn main() {
     let tool_settings_service = Arc::new(TokioMutex::new(tool_settings_service));
     log::info!("✓ Tool Settings Service initialized");
 
+    // Initialize Embedding Service (v3.6.0)
+    log::info!("Initializing Embedding Service (BGE-M3)...");
+    let embedding_service = EmbeddingService::new()
+        .expect("Failed to initialize Embedding Service");
+    let embedding_service = Arc::new(embedding_service);
+    log::info!("✓ Embedding Service initialized");
+
+    // Initialize RAG Service (v3.6.0)
+    log::info!("Initializing RAG Service...");
+    let lance_db_path = data_dir.join("lance_db");
+    let rag_service = RagService::new(
+        Arc::clone(&db_arc),
+        Arc::clone(&embedding_service),
+        lance_db_path,
+    ).expect("Failed to initialize RAG Service");
+    let rag_service_arc = Arc::new(rag_service);
+    log::info!("✓ RAG Service initialized");
+
+    // Initialize Hybrid Search Engine (v3.6.0)
+    log::info!("Initializing Hybrid Search Engine...");
+    let hybrid_search_engine = HybridSearchEngine::new(
+        Arc::clone(&embedding_service),
+        Arc::clone(&rag_service_arc),
+    );
+    log::info!("✓ Hybrid Search Engine initialized");
+
+    // Initialize Attention Sink Manager (v3.6.0)
+    log::info!("Initializing Attention Sink Manager...");
+    let attention_sink_manager = services::attention_sink::AttentionSinkManager::new();
+    let attention_sink_arc = Arc::new(attention_sink_manager);
+    log::info!("✓ Attention Sink Manager initialized");
+
+    // Initialize Prompt Cache (v3.6.0)
+    log::info!("Initializing Prompt Cache...");
+    let prompt_cache = services::prompt_cache::PromptCache::new();
+    let prompt_cache_arc = Arc::new(Mutex::new(prompt_cache));
+    log::info!("✓ Prompt Cache initialized");
+
+    // Initialize GraphRAG Services (v3.7.0)
+    log::info!("Initializing GraphRAG Services...");
+
+    // Entity Extractor
+    let entity_extractor = EntityExtractor::new();
+    let entity_extractor_arc = Arc::new(entity_extractor);
+    log::info!("✓ Entity Extractor initialized");
+
+    // Graph Storage
+    let graph_db_path = data_dir.join("knowledge_graph.db");
+    let graph_storage = GraphStorage::new(
+        graph_db_path.to_str().expect("Invalid graph DB path")
+    ).expect("Failed to initialize Graph Storage");
+    let graph_storage_arc = Arc::new(graph_storage);
+    log::info!("✓ Graph Storage initialized");
+
+    // Graph Builder
+    let graph_builder = GraphBuilder::new(Arc::clone(&entity_extractor_arc));
+    let graph_builder_arc = Arc::new(TokioMutex::new(graph_builder));
+    log::info!("✓ Graph Builder initialized");
+
+    // Graph Retrieval Engine
+    let graph_retrieval = GraphRetrievalEngine::new(Arc::clone(&graph_storage_arc));
+    let graph_retrieval_arc = Arc::new(graph_retrieval);
+    log::info!("✓ Graph Retrieval Engine initialized");
+
+    log::info!("✓ All GraphRAG Services initialized successfully");
+
+    // Initialize ReAct Agent (v3.7.0)
+    log::info!("Initializing ReAct Agent...");
+    let react_agent = ReActAgent::new(
+        "http://localhost:11434".to_string(),
+        Arc::clone(&tool_service)
+    );
+    let react_agent_arc = Arc::new(react_agent);
+    log::info!("✓ ReAct Agent initialized");
+
+    // Initialize Plan-and-Solve Planner (v3.7.0)
+    log::info!("Initializing Plan-and-Solve Planner...");
+    let planner = Planner::new(
+        "http://localhost:11434".to_string(),
+        Arc::clone(&react_agent_arc)
+    );
+    let planner_arc = Arc::new(planner);
+    let approved_plans = Arc::new(TokioMutex::new(HashMap::new()));
+    let plan_history = Arc::new(TokioMutex::new(HashMap::new()));
+    log::info!("✓ Plan-and-Solve Planner initialized");
+
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
     let crash_log_dir = data_dir.join("crashes");
@@ -163,6 +272,19 @@ fn main() {
         tool_service,  // v3.6.0: Tool calling system
         tool_history_service,  // v3.3.0: Tool execution tracking
         tool_settings_service,  // v3.3.0: Tool configuration
+        embedding: embedding_service,  // v3.6.0: BGE-M3 embeddings
+        rag: rag_service_arc,  // v3.6.0: RAG service
+        hybrid_search: Arc::new(TokioMutex::new(hybrid_search_engine)),  // v3.6.0: Hybrid search
+        attention_sink: attention_sink_arc,  // v3.6.0: Attention sink for long contexts
+        prompt_cache: prompt_cache_arc,  // v3.6.0: Prompt caching
+        entity_extractor: entity_extractor_arc,  // v3.7.0: Entity extraction for GraphRAG
+        graph_builder: graph_builder_arc,  // v3.7.0: Knowledge graph construction
+        graph_storage: graph_storage_arc,  // v3.7.0: SQLite-based graph storage
+        graph_retrieval: graph_retrieval_arc,  // v3.7.0: Graph-based retrieval
+        react_agent: react_agent_arc,  // v3.7.0: ReAct agent (Reasoning + Acting)
+        planner: planner_arc,  // v3.7.0: Plan-and-Solve agent with user confirmation
+        approved_plans,  // v3.7.0: User-approved plans awaiting execution
+        plan_history,  // v3.7.0: Executed plan history
     };
 
     tauri::Builder::default()
@@ -305,6 +427,33 @@ fn main() {
             commands::conversation_memory::memory_get_summary,
             commands::conversation_memory::memory_delete_summary,
             commands::conversation_memory::memory_format_context,
+            // Hybrid Search Commands (v3.6.0)
+            commands::hybrid_search::hybrid_search_init,
+            commands::hybrid_search::hybrid_search_rebuild_index,
+            commands::hybrid_search::hybrid_search_query,
+            commands::hybrid_search::hybrid_search_set_weights,
+            commands::hybrid_search::hybrid_search_set_rrf_k,
+            commands::hybrid_search::hybrid_search_stats,
+            commands::hybrid_search::hybrid_search_compare,
+            commands::hybrid_search::hybrid_search_toggle_reranking,
+            // Attention Sink Commands (v3.6.0)
+            commands::attention_sink::attention_sink_manage_context,
+            commands::attention_sink::attention_sink_format_prompt,
+            commands::attention_sink::attention_sink_needs_compression,
+            commands::attention_sink::attention_sink_estimate_tokens,
+            commands::attention_sink::attention_sink_get_config,
+            commands::attention_sink::attention_sink_stats,
+            // Prompt Cache Commands (v3.6.0)
+            commands::prompt_cache::prompt_cache_contains,
+            commands::prompt_cache::prompt_cache_get,
+            commands::prompt_cache::prompt_cache_put,
+            commands::prompt_cache::prompt_cache_clear_expired,
+            commands::prompt_cache::prompt_cache_clear_all,
+            commands::prompt_cache::prompt_cache_stats,
+            commands::prompt_cache::prompt_cache_hit_rate,
+            commands::prompt_cache::prompt_cache_get_all,
+            commands::prompt_cache::prompt_cache_get_config,
+            commands::prompt_cache::prompt_cache_evict_lru,
             commands::crash_reporter::crash_reporter_is_enabled,
             commands::crash_reporter::crash_reporter_enable,
             commands::crash_reporter::crash_reporter_disable,
@@ -330,6 +479,38 @@ fn main() {
             commands::tool_settings::disable_tool,
             commands::tool_settings::reset_tool_settings,
             commands::tool_settings::get_tool_default_config,
+            // GraphRAG Commands (v3.7.0)
+            commands::graphrag::graphrag_extract_entities,
+            commands::graphrag::graphrag_build_graph,
+            commands::graphrag::graphrag_save_graph,
+            commands::graphrag::graphrag_load_entity,
+            commands::graphrag::graphrag_search_entities,
+            commands::graphrag::graphrag_get_neighbors,
+            commands::graphrag::graphrag_get_community,
+            commands::graphrag::graphrag_retrieve,
+            commands::graphrag::graphrag_find_path,
+            commands::graphrag::graphrag_stats,
+            commands::graphrag::graphrag_delete_entity,
+            commands::graphrag::graphrag_clear_all,
+            commands::graphrag::graphrag_get_extractor_config,
+            commands::graphrag::graphrag_get_retrieval_config,
+            // ReAct Commands (v3.7.0)
+            commands::react::react_execute,
+            commands::react::react_get_config,
+            commands::react::react_set_config,
+            // Plan-and-Solve Commands (v3.7.0)
+            commands::planner::planner_generate,
+            commands::planner::planner_approve,
+            commands::planner::planner_execute,
+            commands::planner::planner_reject,
+            commands::planner::planner_get_plan,
+            commands::planner::planner_list_approved,
+            commands::planner::planner_list_history,
+            commands::planner::planner_clear_history,
+            commands::planner::planner_get_config,
+            commands::planner::planner_set_config,
+            commands::planner::planner_generate_and_execute,
+            commands::planner::planner_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
