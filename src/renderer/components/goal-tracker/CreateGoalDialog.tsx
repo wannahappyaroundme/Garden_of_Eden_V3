@@ -180,9 +180,9 @@ export function CreateGoalDialog({ onClose, onCreate }: CreateGoalDialogProps) {
                 onChange={(e) => setTimeFrame(e.target.value)}
                 className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
               >
-                <option value="short">Short (< 1 month)</option>
+                <option value="short">Short (&lt; 1 month)</option>
                 <option value="medium">Medium (1-6 months)</option>
-                <option value="long">Long (> 6 months)</option>
+                <option value="long">Long (&gt; 6 months)</option>
               </select>
             </div>
           </div>
