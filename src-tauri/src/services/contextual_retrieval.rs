@@ -18,7 +18,7 @@
 
 use crate::database::Database;
 use crate::services::embedding::EmbeddingService;
-use crate::services::rag::RagService;
+use crate::services::rag_v2::RagServiceV2;  // v3.4.0: LanceDB migration
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
@@ -64,7 +64,7 @@ pub struct ContextualBoost {
 /// Contextual Retrieval Service
 pub struct ContextualRetrievalService {
     db: Arc<Mutex<Database>>,
-    rag_service: Arc<RagService>,
+    rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
     config: Arc<Mutex<ContextualRetrievalConfig>>,
 }
 
@@ -72,7 +72,7 @@ impl ContextualRetrievalService {
     /// Create new contextual retrieval service
     pub fn new(
         db: Arc<Mutex<Database>>,
-        rag_service: Arc<RagService>,
+        rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
     ) -> Result<Self> {
         let service = Self {
             db,

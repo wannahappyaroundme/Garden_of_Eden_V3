@@ -128,6 +128,6 @@ export const DB_PATH = 'database';
 export const PERFORMANCE_TARGETS = {
   RESPONSE_TIME_MS: 3000, // 3 seconds
   STARTUP_TIME_MS: 5000, // 5 seconds
-  MAX_MEMORY_MB: 15360, // 15GB
+  MAX_MEMORY_MB: 30720, // 30GB (v3.4.0: Increased for LanceDB performance)
   TARGET_FPS: 60,
 } as const;

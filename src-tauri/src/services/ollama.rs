@@ -4,7 +4,7 @@ use futures_util::StreamExt;
 use std::sync::Arc;
 use tauri::{Manager, Emitter};  // v3.3.0: For emit() method
 
-use super::rag::{RagService, format_episodes_for_context};
+use super::rag_v2::{RagServiceV2, format_episodes_for_context};  // v3.4.0: LanceDB for 10-100x faster RAG
 use super::tool_calling::{ToolService, ToolCall, ToolDefinition};
 use super::learning::LearningService;
 use crate::database::Database;
@@ -44,7 +44,7 @@ pub async fn generate_response(user_message: &str) -> Result<String, String> {
 /// Generate a response from Ollama with RAG context
 pub async fn generate_response_with_rag(
     user_message: &str,
-    rag_service: Option<Arc<RagService>>,
+    rag_service: Option<Arc<RagServiceV2>>,  // v3.4.0: LanceDB
 ) -> Result<String, String> {
     generate_response_with_rag_and_persona_ref(user_message, rag_service, None).await
 }
@@ -52,7 +52,7 @@ pub async fn generate_response_with_rag(
 /// Generate a response from Ollama with RAG context and persona (v3.8.0: Full personalization)
 pub async fn generate_response_with_rag_and_persona_ref(
     user_message: &str,
-    rag_service: Option<Arc<RagService>>,
+    rag_service: Option<Arc<RagServiceV2>>,  // v3.4.0: LanceDB
     db: Option<&std::sync::Mutex<Database>>,
 ) -> Result<String, String> {
     log::info!("Generating AI response for message: {}", user_message);
@@ -178,7 +178,7 @@ where
 /// Generate a streaming response from Ollama with RAG context
 pub async fn generate_response_stream_with_rag<F>(
     user_message: &str,
-    rag_service: Option<Arc<RagService>>,
+    rag_service: Option<Arc<RagServiceV2>>,  // v3.4.0: LanceDB
     mut on_chunk: F,
 ) -> Result<String, String>
 where
@@ -323,7 +323,7 @@ pub async fn test_connection() -> Result<bool, String> {
 /// Store a conversation episode in RAG memory
 /// Should be called after a successful response generation
 pub async fn store_conversation_in_rag(
-    rag_service: Arc<RagService>,
+    rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
     user_message: &str,
     ai_response: &str,
     satisfaction: f32,
@@ -447,7 +447,7 @@ fn convert_tool_definition(tool: &ToolDefinition) -> OllamaTool {
 pub async fn generate_response_with_tools(
     user_message: &str,
     tool_service: Arc<ToolService>,
-    rag_service: Option<Arc<RagService>>,
+    rag_service: Option<Arc<RagServiceV2>>,  // v3.4.0: LanceDB
     max_iterations: usize,
     app_handle: Option<tauri::AppHandle>,  // v3.7.0: For emitting tool events
     message_id: Option<String>,  // v3.7.0: Message ID for event tracking

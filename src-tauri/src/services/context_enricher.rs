@@ -20,7 +20,7 @@
 use crate::database::Database;
 use crate::services::active_window::ActiveWindowService;
 use crate::services::visual_analyzer::VisualAnalyzerService;
-use crate::services::rag::RagService;
+use crate::services::rag_v2::RagServiceV2;  // v3.4.0: LanceDB migration
 use anyhow::{Context, Result};
 use chrono::{Datelike, Timelike};
 use serde::{Deserialize, Serialize};
@@ -118,7 +118,7 @@ pub struct ContextEnricherService {
     db: Arc<Mutex<Database>>,
     active_window: ActiveWindowService,
     visual_analyzer: Option<Arc<TokioMutex<VisualAnalyzerService>>>,
-    rag: Arc<RagService>,
+    rag: Arc<RagServiceV2>,  // v3.4.0: LanceDB
     config: Arc<Mutex<ContextEnricherConfig>>,
 }
 
@@ -126,7 +126,7 @@ impl ContextEnricherService {
     /// Create new context enricher
     pub fn new(
         db: Arc<Mutex<Database>>,
-        rag: Arc<RagService>,
+        rag: Arc<RagServiceV2>,  // v3.4.0: LanceDB
         visual_analyzer: Option<Arc<TokioMutex<VisualAnalyzerService>>>,
     ) -> Result<Self> {
         let active_window = ActiveWindowService::new()

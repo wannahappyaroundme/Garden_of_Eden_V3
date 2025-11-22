@@ -20,7 +20,7 @@
 
 use crate::database::Database;
 use crate::services::embedding::EmbeddingService;
-use crate::services::rag::RagService;
+use crate::services::rag_v2::RagServiceV2;  // v3.4.0: LanceDB migration
 use crate::services::ollama;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -93,7 +93,7 @@ pub struct ConsolidationStats {
 /// Memory Consolidation Service
 pub struct MemoryConsolidationService {
     db: Arc<Mutex<Database>>,
-    rag_service: Arc<RagService>,
+    rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
     embedding_service: Arc<EmbeddingService>,
     config: Arc<Mutex<ConsolidationConfig>>,
 }
@@ -102,7 +102,7 @@ impl MemoryConsolidationService {
     /// Create new memory consolidation service
     pub fn new(
         db: Arc<Mutex<Database>>,
-        rag_service: Arc<RagService>,
+        rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
         embedding_service: Arc<EmbeddingService>,
     ) -> Result<Self> {
         let service = Self {
