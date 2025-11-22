@@ -32,6 +32,7 @@ use services::computer_control::ComputerControlService;
 use services::streaming_vision::StreamingVisionService;
 use services::temporal_memory::TemporalMemoryService;
 use services::decay_worker::DecayWorker;
+use services::pattern_detector::LlmPatternDetector;
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
@@ -285,6 +286,12 @@ fn main() {
     let _decay_worker = DecayWorker::start(Arc::clone(&temporal_memory_arc), true);
     log::info!("✓ Memory Decay Worker started with auto-prune enabled");
 
+    // Initialize Pattern Detector (v3.8.0 Phase 4)
+    log::info!("Initializing Pattern Detector (ML-based trait analysis)...");
+    let pattern_detector = LlmPatternDetector::new();
+    let pattern_detector_arc = Arc::new(pattern_detector);
+    log::info!("✓ Pattern Detector initialized");
+
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
     let crash_log_dir = data_dir.join("crashes");
@@ -334,6 +341,7 @@ fn main() {
         .manage(computer_control_arc)  // v3.8.0: LAM service for commands
         .manage(streaming_vision_arc)  // v3.8.0 Phase 2: Streaming vision service
         .manage(temporal_memory_arc)  // v3.8.0 Phase 3: Temporal memory service
+        .manage(pattern_detector_arc)  // v3.8.0 Phase 4: Pattern detector service
         .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
@@ -582,6 +590,9 @@ fn main() {
             // Retention Forecasting (Phase 4)
             commands::temporal_memory::temporal_forecast_retention,
             commands::temporal_memory::temporal_find_at_risk_memories,
+            // Advanced Pattern Detection (Phase 4)
+            commands::pattern_detection::pattern_analyze_traits,
+            commands::pattern_detection::pattern_analyze_single_trait,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

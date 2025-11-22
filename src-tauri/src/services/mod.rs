@@ -87,6 +87,7 @@ pub mod lam_tools;         // v3.8.0: LAM tools for ReAct agent (click, type, sc
 pub mod streaming_vision;  // v3.8.0 Phase 2: Continuous screen monitoring with proactive alerts
 pub mod temporal_memory;   // v3.8.0 Phase 3: Ebbinghaus forgetting curve with gradual decay
 pub mod decay_worker;      // v3.8.0 Phase 3: 24h background worker for memory retention updates
+pub mod pattern_detector;  // v3.8.0 Phase 4: ML-based trait extraction using Ollama/Qwen
 
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests

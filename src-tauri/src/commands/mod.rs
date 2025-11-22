@@ -24,3 +24,4 @@ pub mod planner;
 pub mod computer_control;
 pub mod streaming_vision;
 pub mod temporal_memory;
+pub mod pattern_detection;
