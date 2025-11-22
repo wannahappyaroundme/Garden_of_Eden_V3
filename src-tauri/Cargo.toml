@@ -59,6 +59,12 @@ async-trait = "0.1"     # Async trait support for ToolExecutor
 unicode-segmentation = "1.12"  # Text tokenization for BM25
 sha2 = "0.10"  # SHA-256 hashing for prompt cache
 
+# LanceDB Vector Database (v3.4.0 - Phase 6)
+lancedb = "0.22"        # Vector database for fast similarity search
+arrow-array = "56"      # Apache Arrow arrays for LanceDB
+arrow-schema = "56"     # Apache Arrow schema for LanceDB
+futures = "0.3"         # Async utilities for LanceDB
+
 # Proactive Mode dependencies (Phase 4)
 notify = "6.1"          # File system watching
 regex = "1.10"          # Pattern matching for trigger detection

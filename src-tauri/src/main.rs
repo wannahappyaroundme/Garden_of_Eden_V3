@@ -805,6 +805,10 @@ fn main() {
             commands::goal_tracker::goal_detect_progress,
             commands::goal_tracker::goal_get_achievements,
             commands::goal_tracker::goal_delete,
+            // RAFT Commands (v3.4.0 Phase 7)
+            commands::raft::get_raft_config,
+            commands::raft::update_raft_config,
+            commands::raft::reset_raft_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -35,3 +35,4 @@ pub mod memory_enhancer;
 pub mod task_planner;
 pub mod learning_style;
 pub mod goal_tracker;
+pub mod raft;  // v3.4.0 Phase 7: RAFT hallucination reduction

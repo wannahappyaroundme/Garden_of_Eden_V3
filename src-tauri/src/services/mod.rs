@@ -8,10 +8,10 @@ pub mod prompt_customizer;
 
 // Phase 1: RAG & Episodic Memory
 pub mod embedding;
-pub mod rag;
+pub mod rag;  // v3.2.0: Original RAG with SQLite JSON embeddings
+pub mod rag_v2;  // v3.4.0 Phase 6: RAG with LanceDB (10-100x faster)
 pub mod raft;  // v3.2.0: RAFT hallucination reduction
-// rag_lancedb postponed - LanceDB 0.22 API migration complex
-// Using SQLite + BGE-M3 embeddings instead (sufficient for v3.2.0)
+pub mod vector_store;  // v3.4.0 Phase 6: LanceDB vector database
 
 // Phase 2: Screen Context & Vision
 pub mod active_window;
