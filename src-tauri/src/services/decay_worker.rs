@@ -13,7 +13,7 @@
 use crate::services::temporal_memory::TemporalMemoryService;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::task::JoinHandle;
+use std::thread::JoinHandle;
 
 /// Decay Worker
 ///
@@ -35,7 +35,11 @@ impl DecayWorker {
         temporal_service: Arc<TemporalMemoryService>,
         enable_auto_prune: bool,
     ) -> Self {
-        let handle = tokio::spawn(async move {
+        let handle = std::thread::spawn(move || {
+            // Create a new Tokio runtime for this background thread
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime for DecayWorker");
+
+            rt.block_on(async move {
             // Get interval from config
             let interval_hours = temporal_service.get_config().decay_worker_interval_hours;
 
@@ -97,17 +101,19 @@ impl DecayWorker {
                     }
                 }
             }
-        });
+            })  // End of rt.block_on(async move {})
+        });  // End of std::thread::spawn
 
         Self { handle }
     }
 
     /// Stop the decay worker
     ///
-    /// Aborts the background task. Note: Current iteration will complete before stopping.
+    /// Note: Thread-based worker cannot be aborted. It will run until completion.
     pub fn stop(self) {
-        self.handle.abort();
-        log::info!("Memory decay worker stopped");
+        log::info!("Memory decay worker stop requested (thread will finish current cycle)");
+        // Join the thread to ensure clean shutdown
+        let _ = self.handle.join();
     }
 
     /// Check if worker is still running

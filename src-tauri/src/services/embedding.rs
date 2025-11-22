@@ -4,8 +4,9 @@
  * BGE-M3 (BAAI General Embedding Model v3) - State-of-the-art multilingual embeddings
  * - Supports 100+ languages including Korean and English
  * - 1024-dimensional dense vectors
- * - Superior semantic understanding
+ * - Superior semantic understanding and retrieval performance
  * - ONNX Runtime for efficient inference
+ * - Model size: ~543MB (quantized INT8 for fast inference)
  */
 
 use anyhow::{anyhow, Result};
@@ -39,16 +40,16 @@ impl EmbeddingService {
     ///
     /// Downloads model on first run if not present
     pub fn new() -> Result<Self> {
-        log::info!("Initializing BGE-M3 ONNX Embedding Service (Production)");
+        log::info!("Initializing BGE-M3 ONNX Embedding Service");
 
         // Get model paths
         let model_dir = Self::get_model_dir()?;
-        let model_path = model_dir.join("bge-m3.onnx");
+        let model_path = model_dir.join("model_quantized.onnx");
         let tokenizer_path = model_dir.join("tokenizer.json");
 
         // Download model if not present
         if !model_path.exists() || !tokenizer_path.exists() {
-            log::info!("BGE-M3 model not found, downloading...");
+            log::info!("BGE-M3 model not found, downloading (~543MB quantized)...");
             Self::download_model(&model_dir)?;
         }
 
@@ -60,7 +61,7 @@ impl EmbeddingService {
         );
 
         // Load ONNX model with ORT 2.0 API
-        log::info!("Loading BGE-M3 ONNX model...");
+        log::info!("Loading BGE-M3 ONNX model (quantized INT8)...");
         let session = Arc::new(Mutex::new(
             Session::builder()
                 .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?
@@ -213,28 +214,30 @@ impl EmbeddingService {
         Ok(model_dir)
     }
 
-    /// Download BGE-M3 model from Hugging Face
+    /// Download BGE-M3 model from Hugging Face (Xenova optimized ONNX)
     fn download_model(model_dir: &PathBuf) -> Result<()> {
         log::info!("Downloading BGE-M3 model from Hugging Face...");
-        log::warn!("This is a one-time download (~2GB). Please wait...");
+        log::warn!("This is a one-time download (~543MB quantized). Please wait...");
 
-        // URLs for BGE-M3 ONNX model and tokenizer
-        const MODEL_URL: &str = "https://huggingface.co/BAAI/bge-m3/resolve/main/onnx/model.onnx";
-        const TOKENIZER_URL: &str = "https://huggingface.co/BAAI/bge-m3/resolve/main/tokenizer.json";
+        // URLs for BGE-M3 ONNX model (Xenova/optimum quantized INT8 version)
+        const MODEL_URL: &str = "https://huggingface.co/Xenova/bge-m3/resolve/main/onnx/model_quantized.onnx";
+        const TOKENIZER_URL: &str = "https://huggingface.co/Xenova/bge-m3/resolve/main/tokenizer.json";
 
-        // Download model
-        log::info!("Downloading model.onnx...");
+        // Download model (quantized INT8 for faster inference)
+        log::info!("Downloading model_quantized.onnx (~543MB)...");
         let model_bytes = reqwest::blocking::get(MODEL_URL)?
             .bytes()?;
-        std::fs::write(model_dir.join("bge-m3.onnx"), model_bytes)?;
+        log::info!("Downloaded {} bytes ({:.1} MB)", model_bytes.len(), model_bytes.len() as f64 / 1024.0 / 1024.0);
+        std::fs::write(model_dir.join("model_quantized.onnx"), model_bytes)?;
 
         // Download tokenizer
         log::info!("Downloading tokenizer.json...");
         let tokenizer_bytes = reqwest::blocking::get(TOKENIZER_URL)?
             .bytes()?;
+        log::info!("Downloaded {} bytes ({:.1} KB)", tokenizer_bytes.len(), tokenizer_bytes.len() as f64 / 1024.0);
         std::fs::write(model_dir.join("tokenizer.json"), tokenizer_bytes)?;
 
-        log::info!("BGE-M3 model downloaded successfully");
+        log::info!("BGE-M3 model downloaded successfully!");
         Ok(())
     }
 

@@ -193,6 +193,43 @@ impl RagService {
         self.retrieve_relevant_with_temporal(query, limit).await
     }
 
+    /// Search episodes with similarity scores (v3.8.0 Phase 4 - for contextual retrieval)
+    /// Returns episodes paired with their similarity scores
+    pub async fn search_with_scores(&self, query: &str, top_k: usize) -> Result<Vec<(Episode, f32)>> {
+        log::info!("Searching {} episodes with similarity scores", top_k);
+
+        // Generate query embedding
+        let query_embedding = self.embedding_service.embed(query)?;
+
+        // Get all episodes with embeddings from SQLite
+        let episodes = self.get_all_episodes_with_embeddings()?;
+
+        // Compute cosine similarity for each episode
+        let mut scored_episodes: Vec<(Episode, f32)> = episodes
+            .into_iter()
+            .filter_map(|(episode, embedding_json)| {
+                // Parse embedding
+                if let Ok(embedding) = serde_json::from_str::<Vec<f32>>(&embedding_json) {
+                    let similarity = EmbeddingService::cosine_similarity(&query_embedding, &embedding);
+                    Some((episode, similarity))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Sort by similarity (highest first)
+        scored_episodes.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Take top K
+        scored_episodes.truncate(top_k);
+
+        // Note: Intentionally NOT updating access counts here,
+        // as this is for contextual boost analysis, not retrieval
+        log::info!("Found {} scored episodes", scored_episodes.len());
+        Ok(scored_episodes)
+    }
+
     /// Get recent episodes (fallback when embeddings fail)
     pub fn get_recent_episodes(&self, limit: usize) -> Result<Vec<Episode>> {
         let db_guard = self.db.lock().unwrap();

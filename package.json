@@ -28,7 +28,8 @@
     "download:qwen": "node scripts/download-models.js --model=qwen",
     "download:whisper": "node scripts/download-models.js --model=whisper",
     "download:llava": "node scripts/download-models.js --model=llava",
-    "generate:icons": "node scripts/generate-placeholder-icon.js"
+    "generate:icons": "node scripts/generate-placeholder-icon.js",
+    "dev:renderer": "vite"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.1",

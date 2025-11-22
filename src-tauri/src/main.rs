@@ -33,6 +33,13 @@ use services::streaming_vision::StreamingVisionService;
 use services::temporal_memory::TemporalMemoryService;
 use services::decay_worker::DecayWorker;
 use services::pattern_detector::LlmPatternDetector;
+use services::contextual_retrieval::ContextualRetrievalService;
+use services::memory_consolidation::MemoryConsolidationService;
+use services::chain_of_thought::ChainOfThoughtEngine;
+use services::visual_analyzer::VisualAnalyzerService;
+use services::context_enricher::ContextEnricherService;
+use services::semantic_wiki::SemanticWikiService;
+use services::memory_enhancer::MemoryEnhancerService;
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
@@ -152,12 +159,41 @@ fn main() {
     let tool_settings_service = Arc::new(TokioMutex::new(tool_settings_service));
     log::info!("✓ Tool Settings Service initialized");
 
-    // Initialize Embedding Service (v3.6.0)
+    // Initialize Embedding Service (v3.6.0 - BGE-M3 quantized INT8)
     log::info!("Initializing Embedding Service (BGE-M3)...");
-    let embedding_service = EmbeddingService::new()
-        .expect("Failed to initialize Embedding Service");
-    let embedding_service = Arc::new(embedding_service);
-    log::info!("✓ Embedding Service initialized");
+    let embedding_service = match EmbeddingService::new() {
+        Ok(service) => {
+            log::info!("✓ Embedding Service initialized");
+            Arc::new(service)
+        }
+        Err(e) => {
+            log::error!("⚠ Failed to initialize Embedding Service: {}", e);
+            log::error!("⚠ This is a known issue with ONNX Runtime on some systems.");
+            log::error!("⚠ To fix:");
+            log::error!("   1. Delete: ~/Library/Application Support/garden-of-eden-v3/models/bge-m3");
+            log::error!("   2. Restart the app (BGE-M3 will re-download, ~543MB)");
+            log::error!("   3. If issue persists, check ONNX Runtime installation");
+
+            panic!("\n╔════════════════════════════════════════════════════════════════╗\n\
+                    ║  CRITICAL ERROR: Embedding Service Failed to Initialize       ║\n\
+                    ╚════════════════════════════════════════════════════════════════╝\n\
+                    \n\
+                    Error: {}\n\
+                    \n\
+                    🔧 QUICK FIX:\n\
+                    Run this command to reset the BGE-M3 model:\n\
+                    \n\
+                    rm -rf ~/Library/Application\\ Support/garden-of-eden-v3/models/bge-m3\n\
+                    \n\
+                    Then restart the app. BGE-M3 will re-download automatically (~543MB quantized).\n\
+                    \n\
+                    📝 This is usually caused by corrupted model files or ONNX Runtime issues.\n\
+                    The app requires BGE-M3 embeddings for RAG and semantic search features.\n\
+                    \n\
+                    ⚠️  Note: The app WILL crash until this is fixed.\n\
+                    ", e);
+        }
+    };
 
     // Initialize RAG Service (v3.6.0)
     log::info!("Initializing RAG Service...");
@@ -292,6 +328,68 @@ fn main() {
     let pattern_detector_arc = Arc::new(pattern_detector);
     log::info!("✓ Pattern Detector initialized");
 
+    // Initialize Contextual Retrieval Service (v3.8.0 Phase 4)
+    log::info!("Initializing Contextual Retrieval Service...");
+    let contextual_retrieval = ContextualRetrievalService::new(
+        Arc::clone(&db_arc),
+        Arc::clone(&rag_service_arc)
+    ).expect("Failed to initialize Contextual Retrieval Service");
+    let contextual_retrieval_arc = Arc::new(contextual_retrieval);
+    log::info!("✓ Contextual Retrieval Service initialized");
+
+    // Initialize Memory Consolidation Service (v3.8.0 Phase 4)
+    log::info!("Initializing Memory Consolidation Service...");
+    let memory_consolidation = MemoryConsolidationService::new(
+        Arc::clone(&db_arc),
+        Arc::clone(&rag_service_arc),
+        Arc::clone(&embedding_service)
+    ).expect("Failed to initialize Memory Consolidation Service");
+    let memory_consolidation_arc = Arc::new(memory_consolidation);
+    log::info!("✓ Memory Consolidation Service initialized");
+
+    // Initialize Chain-of-Thought Engine (v3.9.0 Phase 5)
+    log::info!("Initializing Chain-of-Thought Engine...");
+    let cot_engine = ChainOfThoughtEngine::new();
+    let cot_engine_arc = Arc::new(cot_engine);
+    log::info!("✓ Chain-of-Thought Engine initialized");
+
+    // Initialize Visual Analyzer (v3.9.0 Phase 5 - Stage 1)
+    log::info!("Initializing Visual Analyzer...");
+    let visual_screen_service = Arc::new(ScreenCaptureService::new(Arc::clone(&db_arc)));
+    let visual_analyzer = VisualAnalyzerService::new(
+        visual_screen_service,
+        Arc::clone(&db_arc)
+    ).expect("Failed to initialize Visual Analyzer");
+    let visual_analyzer_arc = Arc::new(TokioMutex::new(visual_analyzer));
+    log::info!("✓ Visual Analyzer initialized (lazy LLaVA loading)");
+
+    // Initialize Context Enricher (v3.9.0 Phase 5 - Stage 1)
+    log::info!("Initializing Context Enricher...");
+    let context_enricher = ContextEnricherService::new(
+        Arc::clone(&db_arc),
+        Arc::clone(&rag_service_arc),
+        Some(Arc::clone(&visual_analyzer_arc))
+    ).expect("Failed to initialize Context Enricher");
+    let context_enricher_arc = Arc::new(context_enricher);
+    log::info!("✓ Context Enricher initialized");
+
+    // Initialize Semantic Wiki (v3.9.0 Phase 5 - Stage 2)
+    log::info!("Initializing Semantic Wiki...");
+    let semantic_wiki = SemanticWikiService::new(
+        Arc::clone(&db_arc),
+        Arc::clone(&embedding_service)
+    ).expect("Failed to initialize Semantic Wiki");
+    let semantic_wiki_arc = Arc::new(semantic_wiki);
+    log::info!("✓ Semantic Wiki initialized");
+
+    // Initialize Memory Enhancer (v3.9.0 Phase 5 - Stage 2)
+    log::info!("Initializing Memory Enhancer...");
+    let memory_enhancer = MemoryEnhancerService::new(
+        Arc::clone(&db_arc)
+    ).expect("Failed to initialize Memory Enhancer");
+    let memory_enhancer_arc = Arc::new(memory_enhancer);
+    log::info!("✓ Memory Enhancer initialized");
+
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
     let crash_log_dir = data_dir.join("crashes");
@@ -342,6 +440,13 @@ fn main() {
         .manage(streaming_vision_arc)  // v3.8.0 Phase 2: Streaming vision service
         .manage(temporal_memory_arc)  // v3.8.0 Phase 3: Temporal memory service
         .manage(pattern_detector_arc)  // v3.8.0 Phase 4: Pattern detector service
+        .manage(contextual_retrieval_arc)  // v3.8.0 Phase 4: Contextual retrieval service
+        .manage(memory_consolidation_arc)  // v3.8.0 Phase 4: Memory consolidation service
+        .manage(cot_engine_arc)  // v3.9.0 Phase 5: Chain-of-Thought engine
+        .manage(visual_analyzer_arc)  // v3.9.0 Phase 5 Stage 1: Visual analyzer (lazy LLaVA)
+        .manage(context_enricher_arc)  // v3.9.0 Phase 5 Stage 1: Context enricher
+        .manage(semantic_wiki_arc)  // v3.9.0 Phase 5 Stage 2: Semantic knowledge base
+        .manage(memory_enhancer_arc)  // v3.9.0 Phase 5 Stage 2: Memory quality scoring and enhancement
         .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
@@ -391,6 +496,7 @@ fn main() {
             commands::learning::learning_generate_system_prompt,
             commands::learning::learning_save_persona,
             commands::learning::learning_load_persona,
+            commands::learning::learning_evolve_full_persona_from_temporal,  // Phase 4
             commands::webhook::register_webhook,
             commands::webhook::list_webhooks,
             commands::webhook::get_webhook,
@@ -593,6 +699,51 @@ fn main() {
             // Advanced Pattern Detection (Phase 4)
             commands::pattern_detection::pattern_analyze_traits,
             commands::pattern_detection::pattern_analyze_single_trait,
+            // Contextual Retrieval (Phase 4)
+            commands::contextual_retrieval::contextual_boost_memories,
+            commands::contextual_retrieval::contextual_decay_old_boosts,
+            commands::contextual_retrieval::contextual_get_boost_stats,
+            commands::contextual_retrieval::contextual_update_config,
+            commands::contextual_retrieval::contextual_get_config,
+            // Memory Consolidation (Phase 4)
+            commands::memory_consolidation::consolidation_run,
+            commands::memory_consolidation::consolidation_get_stats,
+            commands::memory_consolidation::consolidation_update_config,
+            commands::memory_consolidation::consolidation_get_config,
+            // Chain-of-Thought (Phase 5)
+            commands::chain_of_thought::cot_reason,
+            commands::chain_of_thought::cot_update_config,
+            commands::chain_of_thought::cot_get_config,
+            commands::chain_of_thought::cot_clear_cache,
+            commands::chain_of_thought::cot_get_cache_stats,
+            // Visual Analyzer (Phase 5 - Stage 1)
+            commands::visual_analyzer::visual_analyze_image,
+            commands::visual_analyzer::visual_analyze_screen,
+            commands::visual_analyzer::visual_update_config,
+            commands::visual_analyzer::visual_get_config,
+            commands::visual_analyzer::visual_is_loaded,
+            commands::visual_analyzer::visual_get_recent,
+            // Context Enricher (Phase 5 - Stage 1)
+            commands::context_enricher::context_enrich,
+            commands::context_enricher::context_update_config,
+            commands::context_enricher::context_get_config,
+            // Semantic Wiki (Phase 5 - Stage 2)
+            commands::semantic_wiki::wiki_extract_facts,
+            commands::semantic_wiki::wiki_store_facts,
+            commands::semantic_wiki::wiki_search,
+            commands::semantic_wiki::wiki_get_by_entity,
+            commands::semantic_wiki::wiki_get_stats,
+            commands::semantic_wiki::wiki_update_config,
+            commands::semantic_wiki::wiki_get_config,
+            // Memory Enhancer (Phase 5 - Stage 2)
+            commands::memory_enhancer::memory_analyze_quality,
+            commands::memory_enhancer::memory_enhance,
+            commands::memory_enhancer::memory_process,
+            commands::memory_enhancer::memory_batch_enhance,
+            commands::memory_enhancer::memory_get_enhancement_stats,
+            commands::memory_enhancer::memory_get_enhancement,
+            commands::memory_enhancer::memory_update_config,
+            commands::memory_enhancer::memory_get_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

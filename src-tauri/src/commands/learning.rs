@@ -136,3 +136,29 @@ pub async fn learning_load_persona(
 
     Ok(persona)
 }
+
+/// Evolve full persona from temporal memories using ML-based trait analysis (Phase 4)
+#[tauri::command]
+pub async fn learning_evolve_full_persona_from_temporal(
+    state: State<'_, AppState>,
+    current_persona: PersonaParameters,
+    retention_threshold: f32,
+    learning_rate: f32,
+    pattern_detector: State<'_, std::sync::Arc<crate::services::pattern_detector::LlmPatternDetector>>,
+) -> Result<PersonaParameters, String> {
+    log::info!(
+        "Evolving full persona from temporal memories (threshold={}, rate={})",
+        retention_threshold,
+        learning_rate
+    );
+
+    state.learning_service
+        .evolve_full_persona_from_temporal(
+            current_persona,
+            retention_threshold,
+            learning_rate,
+            &pattern_detector,
+        )
+        .await
+        .map_err(|e| format!("Failed to evolve full persona: {}", e))
+}

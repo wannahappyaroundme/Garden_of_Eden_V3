@@ -63,19 +63,26 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 
 ---
 
-## ✨ Current Features (v3.3.0)
+## ✨ Current Features (v3.9.0 - Phase 5 Stage 2 Complete)
 
 ### 🤖 AI Intelligence
 - **Local LLM**: Qwen 2.5 14B (9.0GB Q4_K_M) via Ollama - excellent reasoning, Korean support, fast inference
-- **Tool Calling System** ✨ NEW: AI can use 6 production tools (web search, file ops, system info, calculator)
-- **Internet Access** ✨ NEW: Privacy-preserving web search (DuckDuckGo/SearX) and URL fetching
+- **Embeddings**: BGE-M3 (543MB quantized INT8) - state-of-the-art 1024-dim multilingual embeddings for 100+ languages
+- **Reasoning Engine 2.0** ✨ NEW (v3.9.0): Advanced multi-stage reasoning pipeline
+  - **Chain-of-Thought**: Step-by-step reasoning with self-correction and confidence scoring
+  - **Context Enricher**: 5-source context aggregation (temporal, active window, conversation, RAG, visual)
+  - **Semantic Wiki**: Automatic fact extraction and knowledge base with BGE-M3 semantic search
+  - **Memory Enhancer**: Quality scoring and automatic enhancement of memories
+  - **Visual Analyzer**: LLaVA-powered image understanding with lazy loading (0MB→2GB→0MB)
+- **Tool Calling System**: AI can use 6 production tools (web search, file ops, system info, calculator)
+- **Internet Access**: Privacy-preserving web search (DuckDuckGo/SearX) and URL fetching
 - **Plugin System**: V8 JavaScript runtime for extensible plugins
 - **Streaming Responses**: Real-time token-by-token output
 - **Markdown Support**: Code highlighting with rehype-highlight
 - **RAG Memory**: Episodic memory with RAFT hallucination reduction
 - **Learning System**: AI optimizes personality based on user feedback
-- **Personality Detection** ✨ NEW (v3.3.0): Automatic Big Five + MBTI analysis from conversation patterns
-- **LoRA Fine-tuning** ✨ NEW (v3.3.0): Deep personalization with parameter-efficient training
+- **Personality Detection** (v3.3.0): Automatic Big Five + MBTI analysis from conversation patterns
+- **LoRA Fine-tuning** (v3.3.0): Deep personalization with parameter-efficient training
 
 ### 🎛️ Persona Customization & Learning (v3.3.0 Upgrade)
 - **10 Adjustable Parameters**: Formality, Verbosity, Humor, Emoji Usage, Empathy, Creativity, Proactiveness, Technical Depth, Code Examples, Questioning
@@ -153,6 +160,37 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 ## 📦 What's Included
 
 ### Backend (Rust/Tauri)
+
+**Phase 5: Reasoning Engine 2.0 (v3.9.0) - NEW**
+- `src-tauri/src/services/chain_of_thought.rs` - Step-by-step reasoning with self-correction
+  - Multi-step reasoning pipeline (up to 5 steps)
+  - Confidence scoring (0.0-1.0) with automatic retry below 0.6 threshold
+  - LRU cache (50 entries) for repeated queries
+  - Weighted confidence calculation (later steps weighted higher)
+- `src-tauri/src/services/context_enricher.rs` - Multi-source context aggregation
+  - 5 context sources: Temporal, Active Window, Conversation, RAG, Visual
+  - Priority-based sorting (Conversation=4, Visual/Window=3, RAG=2, Temporal=1)
+  - Token budget management (1000 tokens ≈ 4000 chars max)
+  - Smart pruning to fit context within limits
+- `src-tauri/src/services/visual_analyzer.rs` - LLaVA image understanding
+  - Lazy loading pattern: 0MB idle → 2GB active → 0MB unloaded
+  - Screen capture + base64 image analysis
+  - SQLite storage for visual memories (5 most recent cached)
+  - Auto-unload after 30s of inactivity
+- `src-tauri/src/services/semantic_wiki.rs` - Automatic fact extraction & knowledge base
+  - 6 fact categories: preference, knowledge, task, definition, instruction, other
+  - JSON-based fact extraction from conversations via LLM
+  - Semantic search with BGE-M3 embeddings (cosine similarity > 0.7)
+  - Duplicate detection (95% similarity threshold)
+  - Entity-based grouping and relationship tracking
+- `src-tauri/src/services/memory_enhancer.rs` - Memory quality scoring & enhancement
+  - 4-dimensional quality metrics: clarity, completeness, relevance, specificity (0.0-1.0)
+  - Automatic enhancement for memories with quality < 0.6
+  - LLM-powered context injection for weak areas (< 0.7)
+  - Batch processing (configurable batch size, default: 10)
+  - Enhancement statistics tracking
+
+**Core Services**
 - `src-tauri/src/services/ollama.rs` - Ollama integration with streaming
 - `src-tauri/src/services/learning.rs` - Persona optimization engine
 - `src-tauri/src/services/personality_detector.rs` - **v3.3.0**: Big Five + MBTI detection
@@ -163,7 +201,7 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 - `src-tauri/src/services/llava.rs` - Vision model integration
 - `src-tauri/src/services/screen.rs` - Screen capture & context
 - `src-tauri/src/services/active_window.rs` - Active window detection
-- `src-tauri/src/services/embedding.rs` - TF-IDF embeddings
+- `src-tauri/src/services/embedding.rs` - BGE-M3 embeddings (ONNX Runtime)
 - `src-tauri/src/services/proactive_manager.rs` - Background monitoring
 - `src-tauri/src/database/` - SQLite with migrations
 
@@ -195,21 +233,22 @@ cd Garden_of_Eden_V3
 # 2. Install dependencies
 npm install
 
-# 3. Install Ollama (if not already installed)
-brew install ollama
-
-# 4. Start Ollama service
-brew services start ollama
-
-# 5. Run the app
+# 3. Run the app (Ollama will auto-install if not present)
 npm run dev
 ```
 
+**🎉 No manual Ollama setup required!**
+- The app will automatically detect and install Ollama on first run
+- **macOS**: Downloads directly from ollama.ai (no Homebrew needed!)
+- **Windows**: Downloads official installer and runs silent installation
+- Works on both platforms without any prerequisites
+
 The onboarding wizard will guide you through:
 1. Language selection (Korean/English)
-2. Model selection (qwen2.5:7b auto-downloads ~4.7GB)
-3. Persona customization
-4. Optional Google login for cloud backup
+2. **Automatic Ollama Installation** (if not detected) ✨ NEW
+3. Model selection (Qwen 2.5 14B auto-downloads ~9GB)
+4. Persona customization
+5. Optional Google login for cloud backup
 
 **Detailed instructions**: See [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
@@ -357,6 +396,72 @@ The onboarding wizard will guide you through:
 │  - File System                          │
 └─────────────────────────────────────────┘
 ```
+
+### Phase 5: Reasoning Engine 2.0 Architecture (v3.9.0)
+
+**4-Stage Sequential Pipeline** (VRAM-Efficient Design):
+
+```
+Stage 1: Context Gathering
+┌────────────────────────────────────┐
+│ Context Enricher                   │
+│ ├─ Temporal Context (time/date)    │
+│ ├─ Active Window (current app)     │
+│ ├─ Conversation History (3 msgs)   │
+│ ├─ RAG Memories (3 results)        │
+│ └─ Visual Analyzer (lazy-loaded)   │──▶ LLaVA 2GB (load on demand)
+└────────────────────────────────────┘
+                  ↓
+
+Stage 2: Knowledge Enhancement
+┌────────────────────────────────────┐
+│ Semantic Wiki                      │
+│ ├─ Fact Extraction (6 categories)  │
+│ ├─ Duplicate Detection (95%)       │
+│ └─ Semantic Search (cosine > 0.7)  │
+│ Memory Enhancer                    │
+│ ├─ Quality Scoring (4 metrics)     │
+│ └─ Auto Enhancement (< 0.6)        │
+└────────────────────────────────────┘
+                  ↓
+
+Stage 3: Reasoning
+┌────────────────────────────────────┐
+│ Chain-of-Thought Engine            │
+│ ├─ Multi-step Reasoning (5 steps)  │
+│ ├─ Confidence Scoring (> 0.6)      │
+│ ├─ Self-Correction (retry)         │
+│ └─ LRU Cache (50 entries)          │
+└────────────────────────────────────┘
+                  ↓
+
+Stage 4: Future (Learning & Planning)
+┌────────────────────────────────────┐
+│ Task Planner (TODO)                │
+│ Learning Style Adapter (TODO)      │
+│ Goal Tracker (TODO)                │
+└────────────────────────────────────┘
+```
+
+**Key Design Decisions:**
+- **Lazy Loading**: LLaVA loads only when visual analysis needed (0MB → 2GB → 0MB)
+- **Sequential Execution**: Stages run in order to avoid dependency conflicts
+- **Shared Ollama Instance**: All services reuse single LLM connection (no VRAM overhead)
+- **Cache-First**: CoT cache + wiki duplicate detection reduce redundant LLM calls
+- **Quality-First**: Self-correction + enhancement ensure high-quality outputs
+
+**Database Schema (Phase 5 Tables):**
+- `visual_memories`: Stores LLaVA analysis results (id, image_data, analysis, created_at)
+- `wiki_facts`: Knowledge base (id, statement, category, entity, confidence, source_conversation_id, created_at)
+- `wiki_fact_embeddings`: BGE-M3 embeddings for semantic search (fact_id, embedding)
+- `memory_enhancements`: Quality metrics (id, memory_id, original_content, enhanced_content, quality_score, clarity, completeness, relevance, specificity, was_enhanced, enhanced_at)
+
+**API Commands (28 new commands):**
+- CoT: `cot_reason`, `cot_update_config`, `cot_get_config`, `cot_clear_cache`, `cot_get_cache_stats`
+- Visual: `visual_analyze_image`, `visual_analyze_screen`, `visual_update_config`, `visual_get_config`, `visual_is_loaded`, `visual_get_recent`
+- Context: `context_enrich`, `context_update_config`, `context_get_config`
+- Wiki: `wiki_extract_facts`, `wiki_store_facts`, `wiki_search`, `wiki_get_by_entity`, `wiki_get_stats`, `wiki_update_config`, `wiki_get_config`
+- Memory: `memory_analyze_quality`, `memory_enhance`, `memory_process`, `memory_batch_enhance`, `memory_get_enhancement_stats`, `memory_get_enhancement`, `memory_update_config`, `memory_get_config`
 
 ---
 

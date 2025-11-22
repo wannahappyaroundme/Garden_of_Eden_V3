@@ -562,6 +562,167 @@ impl LearningService {
 
         Ok(evolved)
     }
+
+    /// Evolve FULL persona from temporal memories using ML-based trait analysis (v3.8.0 Phase 4)
+    /// Uses Advanced Pattern Detection to analyze all 10 personality traits
+    pub async fn evolve_full_persona_from_temporal(
+        &self,
+        current_persona: PersonaParameters,
+        retention_threshold: f32,
+        learning_rate: f32,
+        pattern_detector: &crate::services::pattern_detector::LlmPatternDetector,
+    ) -> Result<PersonaParameters> {
+        // Query high-retention memories (ensure stmt is dropped before await)
+        let memories: Vec<(String, f32, i32, f32)> = {
+            let db = self.db.lock().unwrap();
+            let conn = db.conn();
+
+            let mut stmt = conn.prepare(
+                "SELECT ai_response, satisfaction, access_count, retention_score
+                 FROM episodic_memory
+                 WHERE COALESCE(retention_score, 1.0) > ?1
+                 ORDER BY retention_score DESC
+                 LIMIT 100"
+            )?;
+
+            let result = stmt
+                .query_map([retention_threshold], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, f32>(1).unwrap_or(0.5),
+                        row.get::<_, i32>(2).unwrap_or(0),
+                        row.get::<_, f32>(3).unwrap_or(1.0),
+                    ))
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+
+            result
+        }; // db and stmt dropped here
+
+        if memories.is_empty() {
+            info!("No high-retention memories found, keeping current persona");
+            return Ok(current_persona);
+        }
+
+        info!("Analyzing {} high-retention memories for full persona evolution", memories.len());
+
+        // Analyze each memory with ML pattern detector
+        let mut total_weight = 0.0;
+        let mut weighted_traits = [0.0_f32; 10];  // 10 persona parameters
+
+        for (ai_response, satisfaction, access_count, retention_score) in &memories {
+            // Calculate weight: retention * satisfaction * access_boost
+            let access_boost = 1.0 + (*access_count as f32 * 0.1).min(2.0);
+            let weight = retention_score * satisfaction * access_boost;
+            total_weight += weight;
+
+            // Analyze traits using ML
+            match pattern_detector.analyze_traits(ai_response).await {
+                Ok(analysis) => {
+                    weighted_traits[0] += analysis.formality * weight;
+                    weighted_traits[1] += analysis.verbosity * weight;
+                    weighted_traits[2] += analysis.humor * weight;
+                    weighted_traits[3] += analysis.emoji_usage * weight;
+                    weighted_traits[4] += analysis.proactivity * weight;
+                    weighted_traits[5] += analysis.technical_depth * weight;
+                    weighted_traits[6] += analysis.empathy * weight;
+                    weighted_traits[7] += analysis.creativity * weight;  // Maps to code_examples
+                    weighted_traits[8] += analysis.assertiveness * weight;  // Maps to questioning
+                    weighted_traits[9] += analysis.creativity * weight;  // Creativity
+                }
+                Err(e) => {
+                    warn!("Failed to analyze trait for memory, skipping: {}", e);
+                    // Don't adjust total_weight down; use current persona values instead
+                    weighted_traits[0] += current_persona.formality * weight;
+                    weighted_traits[1] += current_persona.verbosity * weight;
+                    weighted_traits[2] += current_persona.humor * weight;
+                    weighted_traits[3] += current_persona.emoji_usage * weight;
+                    weighted_traits[4] += current_persona.proactiveness * weight;
+                    weighted_traits[5] += current_persona.technical_depth * weight;
+                    weighted_traits[6] += current_persona.empathy * weight;
+                    weighted_traits[7] += current_persona.code_examples * weight;
+                    weighted_traits[8] += current_persona.questioning * weight;
+                    weighted_traits[9] += current_persona.creativity * weight;
+                }
+            }
+        }
+
+        // Normalize by total weight
+        let learned_traits: Vec<f32> = weighted_traits
+            .iter()
+            .map(|sum| (sum / total_weight).clamp(0.0, 1.0))
+            .collect();
+
+        // Gradual blending with current persona
+        let evolved = PersonaParameters {
+            formality: clamp(
+                current_persona.formality * (1.0 - learning_rate) + learned_traits[0] * learning_rate,
+                0.0, 1.0
+            ),
+            verbosity: clamp(
+                current_persona.verbosity * (1.0 - learning_rate) + learned_traits[1] * learning_rate,
+                0.0, 1.0
+            ),
+            humor: clamp(
+                current_persona.humor * (1.0 - learning_rate) + learned_traits[2] * learning_rate,
+                0.0, 1.0
+            ),
+            emoji_usage: clamp(
+                current_persona.emoji_usage * (1.0 - learning_rate) + learned_traits[3] * learning_rate,
+                0.0, 1.0
+            ),
+            proactiveness: clamp(
+                current_persona.proactiveness * (1.0 - learning_rate) + learned_traits[4] * learning_rate,
+                0.0, 1.0
+            ),
+            technical_depth: clamp(
+                current_persona.technical_depth * (1.0 - learning_rate) + learned_traits[5] * learning_rate,
+                0.0, 1.0
+            ),
+            empathy: clamp(
+                current_persona.empathy * (1.0 - learning_rate) + learned_traits[6] * learning_rate,
+                0.0, 1.0
+            ),
+            code_examples: clamp(
+                current_persona.code_examples * (1.0 - learning_rate) + learned_traits[7] * learning_rate,
+                0.0, 1.0
+            ),
+            questioning: clamp(
+                current_persona.questioning * (1.0 - learning_rate) + learned_traits[8] * learning_rate,
+                0.0, 1.0
+            ),
+            creativity: clamp(
+                current_persona.creativity * (1.0 - learning_rate) + learned_traits[9] * learning_rate,
+                0.0, 1.0
+            ),
+        };
+
+        info!(
+            "Full persona evolved (ML-based):\n\
+             Formality: {:.2} → {:.2}\n\
+             Verbosity: {:.2} → {:.2}\n\
+             Humor: {:.2} → {:.2}\n\
+             Emoji: {:.2} → {:.2}\n\
+             Proactivity: {:.2} → {:.2}\n\
+             Technical: {:.2} → {:.2}\n\
+             Empathy: {:.2} → {:.2}\n\
+             Code Examples: {:.2} → {:.2}\n\
+             Questioning: {:.2} → {:.2}\n\
+             Creativity: {:.2} → {:.2}",
+            current_persona.formality, evolved.formality,
+            current_persona.verbosity, evolved.verbosity,
+            current_persona.humor, evolved.humor,
+            current_persona.emoji_usage, evolved.emoji_usage,
+            current_persona.proactiveness, evolved.proactiveness,
+            current_persona.technical_depth, evolved.technical_depth,
+            current_persona.empathy, evolved.empathy,
+            current_persona.code_examples, evolved.code_examples,
+            current_persona.questioning, evolved.questioning,
+            current_persona.creativity, evolved.creativity
+        );
+
+        Ok(evolved)
+    }
 }
 
 /// Clamp value between min and max

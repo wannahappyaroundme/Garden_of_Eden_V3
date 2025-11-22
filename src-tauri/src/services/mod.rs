@@ -88,6 +88,15 @@ pub mod streaming_vision;  // v3.8.0 Phase 2: Continuous screen monitoring with 
 pub mod temporal_memory;   // v3.8.0 Phase 3: Ebbinghaus forgetting curve with gradual decay
 pub mod decay_worker;      // v3.8.0 Phase 3: 24h background worker for memory retention updates
 pub mod pattern_detector;  // v3.8.0 Phase 4: ML-based trait extraction using Ollama/Qwen
+pub mod contextual_retrieval;  // v3.8.0 Phase 4: Topic-based retention boosting for active conversations
+pub mod memory_consolidation;  // v3.8.0 Phase 4: Intelligent merging of similar low-retention memories
+
+// Phase 5: Reasoning Engine 2.0 (v3.9.0)
+pub mod chain_of_thought;  // v3.9.0: Step-by-step reasoning with self-correction
+pub mod visual_analyzer;   // v3.9.0 Stage 1: Image understanding with LLaVA (lazy loading)
+pub mod context_enricher;  // v3.9.0 Stage 1: Multi-source context aggregation
+pub mod semantic_wiki;     // v3.9.0 Stage 2: Fact extraction and knowledge base
+pub mod memory_enhancer;   // v3.9.0 Stage 2: Memory quality scoring and enhancement
 
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests

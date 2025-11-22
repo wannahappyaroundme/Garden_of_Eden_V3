@@ -129,7 +129,7 @@ impl ModelInstallerService {
 
     #[cfg(target_os = "macos")]
     async fn install_ollama_macos(&self) -> Result<()> {
-        info!("Installing Ollama via Homebrew on macOS...");
+        info!("Installing Ollama on macOS...");
 
         // Check if Homebrew is installed
         let brew_check = TokioCommand::new("which")
@@ -137,59 +137,119 @@ impl ModelInstallerService {
             .output()
             .await;
 
-        if brew_check.is_err() || !brew_check.unwrap().status.success() {
-            return Err(anyhow!(
-                "Homebrew is not installed. Please install Homebrew first from https://brew.sh, then try again."
-            ));
-        }
+        let has_brew = brew_check.is_ok() && brew_check.unwrap().status.success();
 
-        // Install Ollama via Homebrew
-        info!("Running: brew install ollama");
-        let mut child = TokioCommand::new("brew")
-            .args(&["install", "ollama"])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .context("Failed to start brew install")?;
+        if has_brew {
+            // Option 1: Use Homebrew if available
+            info!("Homebrew detected - Installing Ollama via brew...");
+            let mut child = TokioCommand::new("brew")
+                .args(&["install", "ollama"])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .context("Failed to start brew install")?;
 
-        let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to capture stdout"))?;
-        let mut reader = BufReader::new(stdout).lines();
+            let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to capture stdout"))?;
+            let mut reader = BufReader::new(stdout).lines();
 
-        // Stream output for user feedback
-        while let Some(line) = reader.next_line().await? {
-            info!("Brew: {}", line);
-        }
+            // Stream output for user feedback
+            while let Some(line) = reader.next_line().await? {
+                info!("Brew: {}", line);
+            }
 
-        let status = child.wait().await?;
+            let status = child.wait().await?;
 
-        if !status.success() {
-            return Err(anyhow!("Homebrew installation failed. Please install Ollama manually from https://ollama.ai"));
-        }
+            if !status.success() {
+                return Err(anyhow!("Homebrew installation failed. Please install Ollama manually from https://ollama.ai"));
+            }
 
-        info!("Ollama installed successfully via Homebrew!");
+            info!("Ollama installed successfully via Homebrew!");
 
-        // Start Ollama service
-        info!("Starting Ollama service...");
-        let start_result = TokioCommand::new("brew")
-            .args(&["services", "start", "ollama"])
-            .output()
-            .await;
+            // Start Ollama service
+            info!("Starting Ollama service...");
+            let start_result = TokioCommand::new("brew")
+                .args(&["services", "start", "ollama"])
+                .output()
+                .await;
 
-        if let Err(e) = start_result {
-            warn!("Failed to start Ollama service via brew services: {}. Will try direct start.", e);
+            if let Err(e) = start_result {
+                warn!("Failed to start Ollama service via brew services: {}. Will try direct start.", e);
 
-            // Try starting Ollama directly in background
-            let _ = TokioCommand::new("ollama")
-                .arg("serve")
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                // Try starting Ollama directly in background
+                let _ = TokioCommand::new("ollama")
+                    .arg("serve")
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn();
+
+                // Give it a moment to start
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            } else {
+                // Give brew services time to start
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            }
+        } else {
+            // Option 2: Direct download if no Homebrew
+            info!("Homebrew not found - downloading Ollama directly...");
+
+            // Download Ollama.app (official macOS app)
+            let download_url = "https://ollama.ai/download/Ollama-darwin.zip";
+            let temp_dir = std::env::temp_dir();
+            let zip_path = temp_dir.join("Ollama.zip");
+
+            info!("Downloading Ollama from {}...", download_url);
+
+            // Download using curl (pre-installed on macOS)
+            let download = TokioCommand::new("curl")
+                .args(&[
+                    "-L",
+                    "-o",
+                    zip_path.to_str().unwrap(),
+                    download_url,
+                ])
+                .output()
+                .await
+                .context("Failed to download Ollama")?;
+
+            if !download.status.success() {
+                return Err(anyhow!(
+                    "Failed to download Ollama. Please install manually from https://ollama.ai"
+                ));
+            }
+
+            info!("Extracting Ollama.app...");
+
+            // Extract to /Applications
+            let extract = TokioCommand::new("unzip")
+                .args(&[
+                    "-o",  // Overwrite
+                    zip_path.to_str().unwrap(),
+                    "-d",
+                    "/Applications",
+                ])
+                .output()
+                .await
+                .context("Failed to extract Ollama")?;
+
+            if !extract.status.success() {
+                return Err(anyhow!(
+                    "Failed to extract Ollama. Please install manually from https://ollama.ai"
+                ));
+            }
+
+            // Clean up
+            let _ = std::fs::remove_file(&zip_path);
+
+            info!("Ollama installed successfully to /Applications/Ollama.app!");
+
+            // Start Ollama
+            info!("Starting Ollama...");
+            let _ = TokioCommand::new("open")
+                .args(&["-a", "Ollama"])
                 .spawn();
 
-            // Give it a moment to start
-            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-        } else {
-            // Give brew services time to start
-            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            // Give it time to start
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         }
 
         // Wait for Ollama to be ready
@@ -203,31 +263,52 @@ impl ModelInstallerService {
     async fn install_ollama_windows(&self) -> Result<()> {
         info!("Installing Ollama on Windows...");
 
-        // Download Ollama installer
+        // Try PowerShell download first (more reliable than curl on Windows)
         let installer_url = "https://ollama.ai/download/OllamaSetup.exe";
         let installer_path = std::env::temp_dir().join("OllamaSetup.exe");
 
         info!("Downloading Ollama installer from {}", installer_url);
 
-        // Download the installer using curl (available on Windows 10+)
-        let download = TokioCommand::new("curl")
-            .args(&[
-                "-L",
-                "-o",
-                installer_path.to_str().unwrap(),
-                installer_url,
-            ])
-            .output()
-            .await
-            .context("Failed to download Ollama installer")?;
+        // Try PowerShell download (preferred on Windows)
+        let ps_script = format!(
+            "Invoke-WebRequest -Uri '{}' -OutFile '{}'",
+            installer_url,
+            installer_path.display()
+        );
 
-        if !download.status.success() {
-            return Err(anyhow!(
-                "Failed to download Ollama installer. Please download manually from https://ollama.ai"
-            ));
+        let download = TokioCommand::new("powershell")
+            .args(&["-Command", &ps_script])
+            .output()
+            .await;
+
+        let download_success = if let Ok(output) = download {
+            output.status.success()
+        } else {
+            false
+        };
+
+        // Fallback to curl if PowerShell failed
+        if !download_success {
+            warn!("PowerShell download failed, trying curl...");
+            let download = TokioCommand::new("curl")
+                .args(&[
+                    "-L",
+                    "-o",
+                    installer_path.to_str().unwrap(),
+                    installer_url,
+                ])
+                .output()
+                .await
+                .context("Failed to download Ollama installer")?;
+
+            if !download.status.success() {
+                return Err(anyhow!(
+                    "Failed to download Ollama installer. Please download manually from https://ollama.ai"
+                ));
+            }
         }
 
-        info!("Running Ollama installer...");
+        info!("Download complete! Running Ollama installer...");
 
         // Run the installer (silent mode)
         let install = TokioCommand::new(&installer_path)
