@@ -97,6 +97,9 @@ pub mod visual_analyzer;   // v3.9.0 Stage 1: Image understanding with LLaVA (la
 pub mod context_enricher;  // v3.9.0 Stage 1: Multi-source context aggregation
 pub mod semantic_wiki;     // v3.9.0 Stage 2: Fact extraction and knowledge base
 pub mod memory_enhancer;   // v3.9.0 Stage 2: Memory quality scoring and enhancement
+pub mod task_planner;      // v3.9.0 Stage 4: Autonomous task breakdown and execution planning
+pub mod learning_style_adapter;  // v3.9.0 Stage 4: Learning style detection and response adaptation
+pub mod goal_tracker;      // v3.9.0 Stage 4: Long-term goal monitoring and progress tracking
 
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests

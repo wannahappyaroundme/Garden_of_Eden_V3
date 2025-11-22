@@ -32,3 +32,6 @@ pub mod visual_analyzer;
 pub mod context_enricher;
 pub mod semantic_wiki;
 pub mod memory_enhancer;
+pub mod task_planner;
+pub mod learning_style;
+pub mod goal_tracker;

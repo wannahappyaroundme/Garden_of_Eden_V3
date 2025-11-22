@@ -40,6 +40,9 @@ use services::visual_analyzer::VisualAnalyzerService;
 use services::context_enricher::ContextEnricherService;
 use services::semantic_wiki::SemanticWikiService;
 use services::memory_enhancer::MemoryEnhancerService;
+use services::task_planner::TaskPlannerService;
+use services::learning_style_adapter::LearningStyleAdapterService;
+use services::goal_tracker::GoalTrackerService;
 use commands::calendar::CalendarServiceWrapper;
 use commands::crash_reporter::CrashReporterState;
 use std::sync::{Arc, Mutex};
@@ -390,6 +393,30 @@ fn main() {
     let memory_enhancer_arc = Arc::new(memory_enhancer);
     log::info!("✓ Memory Enhancer initialized");
 
+    // Initialize Task Planner (v3.9.0 Phase 5 - Stage 4)
+    log::info!("Initializing Task Planner...");
+    let task_planner = TaskPlannerService::new(
+        Arc::clone(&db_arc)
+    ).expect("Failed to initialize Task Planner");
+    let task_planner_arc = Arc::new(task_planner);
+    log::info!("✓ Task Planner initialized");
+
+    // Initialize Learning Style Adapter (v3.9.0 Phase 5 - Stage 4)
+    log::info!("Initializing Learning Style Adapter...");
+    let learning_style_adapter = LearningStyleAdapterService::new(
+        Arc::clone(&db_arc)
+    ).expect("Failed to initialize Learning Style Adapter");
+    let learning_style_adapter_arc = Arc::new(learning_style_adapter);
+    log::info!("✓ Learning Style Adapter initialized");
+
+    // Initialize Goal Tracker (v3.9.0 Phase 5 - Stage 4)
+    log::info!("Initializing Goal Tracker...");
+    let goal_tracker = GoalTrackerService::new(
+        Arc::clone(&db_arc)
+    ).expect("Failed to initialize Goal Tracker");
+    let goal_tracker_arc = Arc::new(goal_tracker);
+    log::info!("✓ Goal Tracker initialized");
+
     // Initialize Crash Reporter Service (v3.4.0)
     log::info!("Initializing Crash Reporter Service...");
     let crash_log_dir = data_dir.join("crashes");
@@ -447,6 +474,9 @@ fn main() {
         .manage(context_enricher_arc)  // v3.9.0 Phase 5 Stage 1: Context enricher
         .manage(semantic_wiki_arc)  // v3.9.0 Phase 5 Stage 2: Semantic knowledge base
         .manage(memory_enhancer_arc)  // v3.9.0 Phase 5 Stage 2: Memory quality scoring and enhancement
+        .manage(task_planner_arc)  // v3.9.0 Phase 5 Stage 4: Task planning and execution
+        .manage(learning_style_adapter_arc)  // v3.9.0 Phase 5 Stage 4: Learning style adaptation
+        .manage(goal_tracker_arc)  // v3.9.0 Phase 5 Stage 4: Goal tracking and achievement
         .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
@@ -744,6 +774,32 @@ fn main() {
             commands::memory_enhancer::memory_get_enhancement,
             commands::memory_enhancer::memory_update_config,
             commands::memory_enhancer::memory_get_config,
+            // Task Planner (Phase 5 - Stage 4)
+            commands::task_planner::task_decompose,
+            commands::task_planner::task_create,
+            commands::task_planner::task_get,
+            commands::task_planner::task_update_status,
+            commands::task_planner::task_update_progress,
+            commands::task_planner::task_generate_execution_plan,
+            commands::task_planner::task_get_subtasks,
+            commands::task_planner::task_get_all,
+            commands::task_planner::task_delete,
+            // Learning Style Adapter (Phase 5 - Stage 4)
+            commands::learning_style::learning_style_get_profile,
+            commands::learning_style::learning_style_record_interaction,
+            commands::learning_style::learning_style_update_profile,
+            commands::learning_style::learning_style_adapt_response,
+            commands::learning_style::learning_style_update_manual,
+            // Goal Tracker (Phase 5 - Stage 4)
+            commands::goal_tracker::goal_create,
+            commands::goal_tracker::goal_get,
+            commands::goal_tracker::goal_update_progress,
+            commands::goal_tracker::goal_complete_milestone,
+            commands::goal_tracker::goal_get_active,
+            commands::goal_tracker::goal_get_stale,
+            commands::goal_tracker::goal_detect_progress,
+            commands::goal_tracker::goal_get_achievements,
+            commands::goal_tracker::goal_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
