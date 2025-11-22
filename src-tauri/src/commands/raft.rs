@@ -44,7 +44,7 @@ impl From<RaftConfigDto> for RaftConfig {
 /// Get current RAFT configuration
 #[tauri::command]
 pub async fn get_raft_config(state: State<'_, AppState>) -> Result<RaftConfigDto, String> {
-    let rag_service = state.rag_service_v2.lock().await;
+    let rag_service = &state.rag;
 
     let config = rag_service
         .get_raft_config()
@@ -59,7 +59,7 @@ pub async fn update_raft_config(
     state: State<'_, AppState>,
     config: RaftConfigDto,
 ) -> Result<(), String> {
-    let rag_service = state.rag_service_v2.lock().await;
+    let rag_service = &state.rag;
 
     // Validate configuration
     if config.relevance_threshold < 0.0 || config.relevance_threshold > 1.0 {
@@ -83,7 +83,7 @@ pub async fn update_raft_config(
 /// Reset RAFT configuration to defaults
 #[tauri::command]
 pub async fn reset_raft_config(state: State<'_, AppState>) -> Result<RaftConfigDto, String> {
-    let rag_service = state.rag_service_v2.lock().await;
+    let rag_service = &state.rag;
 
     let default_config = RaftConfig {
         relevance_threshold: 0.5,

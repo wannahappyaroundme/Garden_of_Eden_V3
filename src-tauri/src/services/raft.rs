@@ -13,7 +13,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use super::rag::Episode;
+use super::rag_v2::Episode;  // v3.4.0 Phase 7: Updated to use LanceDB-based RAG v2
 
 /// RAFT configuration for hallucination reduction
 #[derive(Debug, Clone, Serialize, Deserialize)]

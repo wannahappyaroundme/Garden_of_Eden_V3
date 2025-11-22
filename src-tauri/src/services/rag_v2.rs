@@ -283,10 +283,10 @@ impl RagServiceV2 {
             .map(|raft_ep| raft_ep.episode.clone())
             .collect();
 
-        // Update access counts for relevant episodes only
+        // Update access counts for relevant episodes only (not distractors)
         let relevant_ids: Vec<String> = raft_episodes
             .iter()
-            .filter(|raft_ep| raft_ep.is_relevant)
+            .filter(|raft_ep| !raft_ep.is_distractor)
             .map(|raft_ep| raft_ep.episode.id.clone())
             .collect();
         self.increment_access_counts(&relevant_ids)?;
