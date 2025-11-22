@@ -13,7 +13,12 @@ import ToastContainer from './components/ToastContainer';
 import { UpdateNotification } from './components/UpdateNotification'; // v3.4.0
 import './i18n/config'; // Initialize i18n
 
-type Page = 'onboarding' | 'chat' | 'settings' | 'integrations' | 'memory';
+// v3.9.0 Phase 5 - Reasoning Engine 2.0 Components
+import { TaskPlannerPanel } from './components/task-planner/TaskPlannerPanel';
+import { GoalTrackerPanel } from './components/goal-tracker/GoalTrackerPanel';
+import { LearningStylePanel } from './components/learning-style/LearningStylePanel';
+
+type Page = 'onboarding' | 'chat' | 'settings' | 'integrations' | 'memory' | 'task-planner' | 'goal-tracker' | 'learning-style';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('chat');
@@ -93,6 +98,9 @@ function App() {
           onOpenSettings={() => setCurrentPage('settings')}
           onOpenIntegrations={() => setCurrentPage('integrations')}
           onOpenMemory={() => setCurrentPage('memory')}
+          onOpenTaskPlanner={() => setCurrentPage('task-planner')}
+          onOpenGoalTracker={() => setCurrentPage('goal-tracker')}
+          onOpenLearningStyle={() => setCurrentPage('learning-style')}
         />
       )}
       {currentPage === 'settings' && (
@@ -103,6 +111,55 @@ function App() {
       )}
       {currentPage === 'memory' && (
         <MemoryVisualization onClose={() => setCurrentPage('chat')} />
+      )}
+      {/* v3.9.0 Phase 5 - Reasoning Engine 2.0 Pages */}
+      {currentPage === 'task-planner' && (
+        <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
+          <header className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Task Planner</h1>
+            <button
+              onClick={() => setCurrentPage('chat')}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              ← Back to Chat
+            </button>
+          </header>
+          <div className="flex-1 overflow-auto">
+            <TaskPlannerPanel />
+          </div>
+        </div>
+      )}
+      {currentPage === 'goal-tracker' && (
+        <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
+          <header className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Goal Tracker</h1>
+            <button
+              onClick={() => setCurrentPage('chat')}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              ← Back to Chat
+            </button>
+          </header>
+          <div className="flex-1 overflow-auto">
+            <GoalTrackerPanel />
+          </div>
+        </div>
+      )}
+      {currentPage === 'learning-style' && (
+        <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
+          <header className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Learning Style</h1>
+            <button
+              onClick={() => setCurrentPage('chat')}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              ← Back to Chat
+            </button>
+          </header>
+          <div className="flex-1 overflow-auto">
+            <LearningStylePanel />
+          </div>
+        </div>
       )}
       <ToastContainer />
       {/* v3.4.0: Auto-update notification - only show after onboarding */}

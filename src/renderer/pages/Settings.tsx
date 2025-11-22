@@ -16,6 +16,7 @@ import { ToolsSettings } from '../components/settings';
 import { CrashReportsPanel } from '../components/settings/CrashReportsPanel'; // v3.4.0
 import { UpdateSettingsPanel } from '../components/settings/UpdateSettingsPanel'; // v3.4.0
 import LLMSettingsPanel from '../components/settings/LLMSettings'; // v3.5.0
+import { Phase5Settings } from '../components/settings/Phase5Settings'; // v3.9.0
 
 interface SettingsProps {
   onClose: () => void;
@@ -24,7 +25,7 @@ interface SettingsProps {
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'app' | 'updates' | 'crashes' | 'about'>('persona'); // v3.5.0: Added llm tab
+  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'phase5' | 'app' | 'updates' | 'crashes' | 'about'>('persona'); // v3.9.0: Added phase5 tab
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -232,6 +233,17 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           >
             🧠 LLM 설정
           </button>
+          {/* v3.9.0: Phase 5 Reasoning Engine Tab */}
+          <button
+            onClick={() => setActiveTab('phase5')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'phase5'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🔗 추론 엔진
+          </button>
           <button
             onClick={() => setActiveTab('app')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -319,6 +331,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           {activeTab === 'llm' && (
             <div className="max-w-4xl mx-auto">
               <LLMSettingsPanel />
+            </div>
+          )}
+
+          {/* Phase 5 Reasoning Engine Tab (v3.9.0) */}
+          {activeTab === 'phase5' && (
+            <div className="max-w-5xl mx-auto">
+              <Phase5Settings />
             </div>
           )}
 

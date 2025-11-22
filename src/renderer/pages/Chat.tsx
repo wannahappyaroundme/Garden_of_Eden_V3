@@ -46,9 +46,19 @@ interface ChatProps {
   onOpenSettings: () => void;
   onOpenIntegrations?: () => void;
   onOpenMemory?: () => void;
+  onOpenTaskPlanner?: () => void; // v3.9.0 Phase 5 Stage 4
+  onOpenGoalTracker?: () => void; // v3.9.0 Phase 5 Stage 4
+  onOpenLearningStyle?: () => void; // v3.9.0 Phase 5 Stage 4
 }
 
-export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatProps) {
+export function Chat({
+  onOpenSettings,
+  onOpenIntegrations,
+  onOpenMemory,
+  onOpenTaskPlanner,
+  onOpenGoalTracker,
+  onOpenLearningStyle,
+}: ChatProps) {
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
@@ -855,6 +865,46 @@ export function Chat({ onOpenSettings, onOpenIntegrations, onOpenMemory }: ChatP
                     fill="currentColor"
                   />
                 </svg>
+              </Button>
+            )}
+
+            {/* v3.9.0 Phase 5 Stage 4 - Reasoning Engine 2.0 Navigation */}
+            {onOpenTaskPlanner && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenTaskPlanner}
+                className="h-8 w-8 p-0"
+                aria-label="작업 계획"
+                title="Task Planner"
+              >
+                🎯
+              </Button>
+            )}
+
+            {onOpenGoalTracker && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenGoalTracker}
+                className="h-8 w-8 p-0"
+                aria-label="목표 추적"
+                title="Goal Tracker"
+              >
+                🏆
+              </Button>
+            )}
+
+            {onOpenLearningStyle && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenLearningStyle}
+                className="h-8 w-8 p-0"
+                aria-label="학습 스타일"
+                title="Learning Style"
+              >
+                🎓
               </Button>
             )}
 
