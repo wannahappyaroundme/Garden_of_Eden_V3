@@ -29,7 +29,12 @@
     "download:whisper": "node scripts/download-models.js --model=whisper",
     "download:llava": "node scripts/download-models.js --model=llava",
     "generate:icons": "node scripts/generate-placeholder-icon.js",
-    "dev:renderer": "vite"
+    "dev:renderer": "vite",
+    "release:manifest": "node scripts/generate-update-manifest.js",
+    "release:checksums": "./scripts/generate-checksums.sh",
+    "release:create": "./scripts/create-github-release.sh",
+    "release:upload": "./scripts/upload-release-assets.sh",
+    "release": "npm run release:manifest && npm run release:checksums && npm run release:create && npm run release:upload"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.1",

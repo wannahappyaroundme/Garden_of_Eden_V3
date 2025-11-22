@@ -36,14 +36,22 @@ jobs:
       with:
         workspaces: src-tauri
 
+    - name: Install Protocol Buffers
+      run: |
+        choco install protoc -y
+        refreshenv
+
     - name: Install dependencies
       run: npm ci
+
+    - name: TypeScript type check
+      run: npm run type-check
 
     - name: Build renderer (React)
       run: npm run build:renderer
 
     - name: Build Tauri app (Windows)
-      run: npm run tauri build
+      run: npm run tauri:build:win
       env:
         TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
