@@ -63,12 +63,12 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 
 ---
 
-## ✨ Current Features (v3.9.0 - Phase 5 COMPLETE)
+## ✨ Current Features (v3.4.0 - Phase 5 COMPLETE)
 
 ### 🤖 AI Intelligence
 - **Local LLM**: Qwen 2.5 14B (9.0GB Q4_K_M) via Ollama - excellent reasoning, Korean support, fast inference
 - **Embeddings**: BGE-M3 (543MB quantized INT8) - state-of-the-art 1024-dim multilingual embeddings for 100+ languages
-- **Reasoning Engine 2.0** ✨ NEW (v3.9.0): Advanced 4-stage reasoning pipeline (ALL STAGES COMPLETE)
+- **Reasoning Engine 2.0** ✨ NEW (v3.4.0): Advanced 4-stage reasoning pipeline (ALL STAGES COMPLETE)
   - **Stage 1 - Context Gathering**:
     - **Visual Analyzer**: LLaVA-powered image understanding with lazy loading (0MB→2GB→0MB)
     - **Context Enricher**: 5-source context aggregation (temporal, active window, conversation, RAG, visual)
@@ -168,7 +168,7 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 
 ### Backend (Rust/Tauri)
 
-**Phase 5: Reasoning Engine 2.0 (v3.9.0) - NEW**
+**Phase 5: Reasoning Engine 2.0 (v3.4.0) - NEW**
 - `src-tauri/src/services/chain_of_thought.rs` - Step-by-step reasoning with self-correction
   - Multi-step reasoning pipeline (up to 5 steps)
   - Confidence scoring (0.0-1.0) with automatic retry below 0.6 threshold
@@ -364,15 +364,22 @@ The onboarding wizard will guide you through:
 - **[Building & Deployment](docs/BUILDING.md)** - Build from source, create releases
 - **[API Reference](docs/API.md)** - Tauri IPC commands documentation
 - **[Testing Guide](docs/TESTING.md)** - Running tests, adding new tests
-- **[Tool Calling Testing](TESTING_v3.6.0.md)** - v3.6.0 tool system testing guide
-- **[LoRA Fine-tuning Guide](docs/LORA_FINE_TUNING_GUIDE.md)** - **v3.3.0**: Complete fine-tuning workflow ✨ NEW
+- **[LoRA Fine-tuning Guide](docs/guides/LORA_FINE_TUNING_GUIDE.md)** - Complete fine-tuning workflow
+- **[RAFT Integration](docs/guides/RAFT_INTEGRATION.md)** - Hallucination reduction system
+- **[Auto-Updater Guide](docs/guides/AUTO_UPDATER_GUIDE.md)** - In-app update system
 - **[Claude Development](docs/CLAUDE.md)** - Using Claude Code for development
 - **[Contributing](CONTRIBUTING.md)** - How to contribute
 
+### Deployment & Operations
+- **[Release Workflow](docs/deployment/RELEASE_WORKFLOW.md)** - Release process and deployment
+- **[Windows Development](docs/deployment/WINDOWS_DEVELOPMENT.md)** - Windows-specific development guide
+- **[Service Architecture](docs/deployment/SERVICE.md)** - Service architecture documentation
+
 ### Additional Resources
-- **[Changelog](CHANGELOG.md)** - Version history (v3.3.0 updates)
-- **[Progress Log](PROGRESS.md)** - Development progress (69+ tests passing)
-- **[Master Specification](docs/archive/MASTER_SPEC.md)** - Complete original design (12,000 lines)
+- **[Changelog](CHANGELOG.md)** - Version history (v3.4.0 updates)
+- **[Roadmap](docs/ROADMAP.md)** - Product roadmap
+- **[Phase 5 Complete](PHASE5_COMPLETE.md)** - Phase 5 implementation summary
+- **[Advanced Features](ADVANCED_FEATURES.md)** - Deep dive into advanced capabilities
 
 ---
 
@@ -404,7 +411,7 @@ The onboarding wizard will guide you through:
 └─────────────────────────────────────────┘
 ```
 
-### Phase 5: Reasoning Engine 2.0 Architecture (v3.9.0)
+### Phase 5: Reasoning Engine 2.0 Architecture (v3.4.0)
 
 **4-Stage Sequential Pipeline** (VRAM-Efficient Design):
 
