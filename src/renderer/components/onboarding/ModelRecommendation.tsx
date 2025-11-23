@@ -28,6 +28,7 @@ export default function ModelRecommendation({
 
   useEffect(() => {
     loadModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update required models when voice enabled changes
@@ -52,7 +53,7 @@ export default function ModelRecommendation({
 
     try {
       // Get available models based on language preference
-      const availableModels = await window.api.getAvailableModelsForSystem();
+      const availableModels = await window.api.getAvailableModelsForSystem(languagePreference);
       setModels(availableModels);
 
       // Auto-select the recommended model

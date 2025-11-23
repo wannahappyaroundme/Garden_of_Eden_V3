@@ -3,7 +3,7 @@
  * KakaoTalk-inspired message bubble with timestamp
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { cn } from '../../lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -31,6 +31,7 @@ export function ChatBubble({
   const [copied, setCopied] = useState(false);
   const [currentSatisfaction, setCurrentSatisfaction] = useState<'positive' | 'negative' | null>(satisfaction || null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Format timestamp to HH:MM
   const timeString = new Intl.DateTimeFormat('ko-KR', {
@@ -38,6 +39,21 @@ export function ChatBubble({
     minute: '2-digit',
     hour12: false,
   }).format(timestamp);
+
+  // Track elapsed time when streaming (for AI messages only)
+  useEffect(() => {
+    if (!isStreaming || isUser) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isStreaming, isUser]);
 
   const handleCopy = async () => {
     try {
@@ -112,7 +128,9 @@ export function ChatBubble({
             {!isUser && message ? (
               <MarkdownRenderer content={message} />
             ) : (
-              <div className="whitespace-pre-wrap">{message || (isStreaming ? '...' : '')}</div>
+              <div className="whitespace-pre-wrap">
+                {message || (isStreaming ? `Thinking... ${elapsedSeconds}s` : '')}
+              </div>
             )}
           </div>
 

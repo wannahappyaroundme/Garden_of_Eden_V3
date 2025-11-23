@@ -162,8 +162,8 @@ function App() {
         </div>
       )}
       <ToastContainer />
-      {/* v3.4.0: Auto-update notification - only show after onboarding */}
-      {currentPage !== 'onboarding' && (
+      {/* v3.4.0: Auto-update notification - only show after onboarding and in production */}
+      {currentPage !== 'onboarding' && import.meta.env.PROD && (
         <UpdateNotification
           checkOnMount={true}
           autoCheckInterval={60} // Check every hour
