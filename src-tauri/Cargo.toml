@@ -30,7 +30,7 @@ chrono = "0.4"
 sys-info = "0.9"
 sysinfo = "0.33"
 dirs = "6.0"
-reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
+reqwest = { version = "0.12", features = ["json", "stream", "blocking", "native-tls-vendored"] }
 futures-util = "0.3"
 screenshots = "0.8"
 base64 = "0.22"
