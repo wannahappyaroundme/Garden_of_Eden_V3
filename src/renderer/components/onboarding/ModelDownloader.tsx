@@ -1,6 +1,6 @@
 /**
  * ModelDownloader Component
- * Fourth step: Download all required models (LLM, LLaVA, Whisper) with progress tracking
+ * Fourth step: Download all required models (LLM, LLaVA) with progress tracking
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -50,22 +50,17 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
       console.log('[ModelDownloader] Checking model existence:', {
         llm: requiredModels.llm,
         llava: requiredModels.llava,
-        whisper: requiredModels.whisper
       });
 
       const llmExists = await window.api.checkModelExists(requiredModels.llm);
       const llavaExists = await window.api.checkModelExists(requiredModels.llava);
-      const whisperExists = requiredModels.whisper
-        ? await window.api.checkModelExists(requiredModels.whisper)
-        : true; // Skip if voice not enabled
 
       console.log('[ModelDownloader] Model existence check results:', {
         llmExists,
         llavaExists,
-        whisperExists
       });
 
-      if (llmExists && llavaExists && whisperExists) {
+      if (llmExists && llavaExists) {
         // All required models already exist
         console.log('[ModelDownloader] All models exist, completing...');
         setCurrentPhase('completed');
@@ -76,7 +71,7 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
       // Start downloads for missing models
       console.log('[ModelDownloader] Starting downloads for missing models...');
       setCurrentPhase('downloading');
-      startDownloads(llmExists, llavaExists, whisperExists);
+      startDownloads(llmExists, llavaExists);
     } catch (err) {
       console.error('[ModelDownloader] Error in checkOllamaAndModels:', err);
       setError(err instanceof Error ? err.message : String(err));
@@ -106,9 +101,9 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
     }
   };
 
-  const startDownloads = async (llmExists: boolean, llavaExists: boolean, whisperExists: boolean) => {
+  const startDownloads = async (llmExists: boolean, llavaExists: boolean) => {
     try {
-      console.log('[ModelDownloader] startDownloads called with:', { llmExists, llavaExists, whisperExists });
+      console.log('[ModelDownloader] startDownloads called with:', { llmExists, llavaExists });
 
       // Start downloads (they run in background)
       if (!llmExists) {
@@ -127,14 +122,6 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
         console.log('[ModelDownloader] LLaVA already exists, skipping download');
       }
 
-      if (!whisperExists && requiredModels.whisper) {
-        console.log('[ModelDownloader] Starting Whisper download:', requiredModels.whisper);
-        await window.api.startModelDownload(requiredModels.whisper, 'whisper');
-        console.log('[ModelDownloader] Whisper download started');
-      } else {
-        console.log('[ModelDownloader] Whisper already exists or not required, skipping download');
-      }
-
       console.log('[ModelDownloader] All downloads initiated, starting progress polling...');
 
       // Start polling for progress
@@ -147,13 +134,11 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
           // Check if all completed
           const allCompleted =
             (llmExists || isCompleted(state.llm_model)) &&
-            (llavaExists || isCompleted(state.llava_model)) &&
-            (whisperExists || !requiredModels.whisper || isCompleted(state.whisper_model));
+            (llavaExists || isCompleted(state.llava_model));
 
           console.log('[ModelDownloader] Completion check:', {
             llmStatus: llmExists ? 'exists' : state.llm_model.status,
             llavaStatus: llavaExists ? 'exists' : state.llava_model.status,
-            whisperStatus: whisperExists ? 'exists' : state.whisper_model.status,
             allCompleted
           });
 
@@ -167,17 +152,15 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
             setTimeout(() => onComplete(), 2000);
           }
 
-          // Check for errors (only check Whisper if voice enabled)
+          // Check for errors
           const hasError =
             isFailed(state.llm_model) ||
-            isFailed(state.llava_model) ||
-            (requiredModels.whisper && isFailed(state.whisper_model));
+            isFailed(state.llava_model);
 
           if (hasError) {
             console.error('[ModelDownloader] Download error detected:', {
               llm: state.llm_model.status,
               llava: state.llava_model.status,
-              whisper: state.whisper_model.status
             });
             if (pollInterval.current) {
               clearInterval(pollInterval.current);
@@ -409,14 +392,6 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
               progress={downloadState.llava_model}
               icon="👁️"
             />
-            {requiredModels.whisper && (
-              <ModelDownloadItem
-                name="음성 인식 (Whisper)"
-                model={requiredModels.whisper}
-                progress={downloadState.whisper_model}
-                icon="🎤"
-              />
-            )}
           </div>
         )}
 
