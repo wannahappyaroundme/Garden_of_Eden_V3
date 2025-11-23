@@ -1,5 +1,5 @@
 use anyhow::Result;
-use log::{info, error, warn};
+use log::{info, error};
 
 /// Active window information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -102,13 +102,12 @@ impl ActiveWindowService {
     fn get_active_window_windows(&self) -> Result<ActiveWindow> {
         use windows::Win32::Foundation::HWND;
         use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
-        use windows::core::PWSTR;
 
         unsafe {
             // Get foreground window handle
             let hwnd = GetForegroundWindow();
 
-            if hwnd.0 == 0 {
+            if hwnd.0.is_null() {
                 return Err(anyhow::anyhow!("No foreground window found"));
             }
 
@@ -140,7 +139,7 @@ impl ActiveWindowService {
     #[cfg(target_os = "windows")]
     fn get_process_name_windows(&self, hwnd: windows::Win32::Foundation::HWND) -> Result<String> {
         use windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId;
-        use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION};
+        use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_NAME_FORMAT};
         use windows::Win32::Foundation::{CloseHandle, MAX_PATH};
 
         unsafe {
@@ -158,7 +157,7 @@ impl ActiveWindowService {
 
             let result = QueryFullProcessImageNameW(
                 process_handle,
-                0,
+                PROCESS_NAME_FORMAT(0),
                 windows::core::PWSTR(name_buffer.as_mut_ptr()),
                 &mut name_len,
             );
