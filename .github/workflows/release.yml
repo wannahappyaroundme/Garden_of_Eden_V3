@@ -23,11 +23,6 @@ jobs:
             target: aarch64-apple-darwin
             rust_target: aarch64-apple-darwin
 
-          - name: macOS (Intel)
-            os: macos-latest
-            target: x86_64-apple-darwin
-            rust_target: x86_64-apple-darwin
-
           - name: Windows
             os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -170,7 +165,6 @@ jobs:
 
           #### macOS
           - **Apple Silicon (M1/M2/M3/M4)**: `Garden-of-Eden-*-aarch64-apple-darwin.dmg`
-          - **Intel (x86_64)**: `Garden-of-Eden-*-x86_64-apple-darwin.dmg`
 
           #### Windows
           - **Installer (Recommended)**: `Garden-of-Eden-*-setup.exe` (NSIS installer)
