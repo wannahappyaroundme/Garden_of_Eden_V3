@@ -98,6 +98,16 @@ accessibility = "0.2"   # macOS Accessibility API for LAM
 version = "2.0.0-rc.10"
 features = ["download-binaries", "ndarray", "coreml"]  # CoreML for M1/M2/M3 Max GPU acceleration
 
+# DirectML GPU acceleration (Windows - AMD/NVIDIA/Intel GPU support)
+[target.'cfg(target_os = "windows")'.dependencies.ort]
+version = "2.0.0-rc.10"
+features = ["download-binaries", "ndarray", "directml"]  # DirectML for Windows GPU (AMD/NVIDIA/Intel)
+
+# CUDA GPU acceleration (Linux/Windows with NVIDIA GPU)
+[target.'cfg(target_os = "linux")'.dependencies.ort]
+version = "2.0.0-rc.10"
+features = ["download-binaries", "ndarray", "cuda"]  # CUDA for NVIDIA GPU on Linux
+
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [
     "Win32_Foundation",

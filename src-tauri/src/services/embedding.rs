@@ -46,7 +46,13 @@ impl EmbeddingService {
         #[cfg(target_vendor = "apple")]
         log::info!("Platform: Apple ({}) - CoreML GPU acceleration available", std::env::consts::ARCH);
 
-        #[cfg(not(target_vendor = "apple"))]
+        #[cfg(target_os = "windows")]
+        log::info!("Platform: Windows ({}) - DirectML GPU acceleration available (AMD/NVIDIA/Intel)", std::env::consts::ARCH);
+
+        #[cfg(target_os = "linux")]
+        log::info!("Platform: Linux ({}) - CUDA GPU acceleration available (NVIDIA)", std::env::consts::ARCH);
+
+        #[cfg(not(any(target_vendor = "apple", target_os = "windows", target_os = "linux")))]
         log::info!("Platform: {} ({}) - CPU-only execution", std::env::consts::OS, std::env::consts::ARCH);
 
         // Get model paths
@@ -67,10 +73,10 @@ impl EmbeddingService {
                 .map_err(|e| anyhow!("Failed to load tokenizer: {}", e))?,
         );
 
-        // Load ONNX model with ORT 2.0 API + CoreML acceleration (M3 Max GPU)
-        log::info!("Loading BGE-M3 ONNX model (quantized INT8) with CoreML acceleration...");
+        // Load ONNX model with ORT 2.0 API + GPU acceleration
+        log::info!("Loading BGE-M3 ONNX model (quantized INT8) with GPU acceleration...");
 
-        // Try to create session with CoreML first, fallback to CPU if unavailable
+        // Try to create session with GPU acceleration, fallback to CPU if unavailable
         // ORT 2.0 API: Use execution provider directly in SessionBuilder
         let session_result = {
             #[cfg(target_vendor = "apple")]
@@ -80,12 +86,12 @@ impl EmbeddingService {
                 let mut builder = Session::builder()
                     .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?;
 
-                // Register CoreML execution provider (M3 Max GPU)
+                // Register CoreML execution provider (Apple Silicon GPU)
                 let coreml_ep = CoreMLExecutionProvider::default();
                 if let Err(e) = coreml_ep.register(&mut builder) {
                     log::warn!("⚠ CoreML registration failed: {:?}, falling back to CPU", e);
                 } else {
-                    log::info!("✓ CoreML execution provider registered");
+                    log::info!("✓ CoreML execution provider registered (Apple GPU)");
                 }
 
                 builder
@@ -94,8 +100,52 @@ impl EmbeddingService {
                     .commit_from_file(&model_path)
                     .map_err(|e| anyhow!("Failed to load BGE-M3 model: {:?}", e))
             }
-            #[cfg(not(target_vendor = "apple"))]
+            #[cfg(target_os = "windows")]
             {
+                use ort::execution_providers::{DirectMLExecutionProvider, ExecutionProvider};
+
+                let mut builder = Session::builder()
+                    .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?;
+
+                // Register DirectML execution provider (Windows GPU - AMD/NVIDIA/Intel)
+                let directml_ep = DirectMLExecutionProvider::default();
+                if let Err(e) = directml_ep.register(&mut builder) {
+                    log::warn!("⚠ DirectML registration failed: {:?}, falling back to CPU", e);
+                } else {
+                    log::info!("✓ DirectML execution provider registered (Windows GPU)");
+                }
+
+                builder
+                    .with_intra_threads(4)
+                    .map_err(|e| anyhow!("Failed to set intra_threads: {:?}", e))?
+                    .commit_from_file(&model_path)
+                    .map_err(|e| anyhow!("Failed to load BGE-M3 model: {:?}", e))
+            }
+            #[cfg(target_os = "linux")]
+            {
+                use ort::execution_providers::{CUDAExecutionProvider, ExecutionProvider};
+
+                let mut builder = Session::builder()
+                    .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?;
+
+                // Register CUDA execution provider (NVIDIA GPU on Linux)
+                let cuda_ep = CUDAExecutionProvider::default();
+                if let Err(e) = cuda_ep.register(&mut builder) {
+                    log::warn!("⚠ CUDA registration failed: {:?}, falling back to CPU", e);
+                    log::info!("→ Make sure CUDA/cuDNN is installed for GPU acceleration");
+                } else {
+                    log::info!("✓ CUDA execution provider registered (NVIDIA GPU)");
+                }
+
+                builder
+                    .with_intra_threads(4)
+                    .map_err(|e| anyhow!("Failed to set intra_threads: {:?}", e))?
+                    .commit_from_file(&model_path)
+                    .map_err(|e| anyhow!("Failed to load BGE-M3 model: {:?}", e))
+            }
+            #[cfg(not(any(target_vendor = "apple", target_os = "windows", target_os = "linux")))]
+            {
+                log::info!("CPU-only execution (no GPU acceleration available)");
                 Session::builder()
                     .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?
                     .with_intra_threads(4)
