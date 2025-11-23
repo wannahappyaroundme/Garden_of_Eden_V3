@@ -62,13 +62,17 @@ jobs:
       - name: Install macOS dependencies
         if: matrix.platform.os == 'macos-latest'
         run: |
-          # Tauri requires no additional dependencies on macOS
+          # Install protobuf (required for lance-encoding)
+          brew install protobuf
+          # Add Rust target
           rustup target add ${{ matrix.platform.rust_target }}
 
       # Windows specific dependencies
       - name: Install Windows dependencies
         if: matrix.platform.os == 'windows-latest'
         run: |
+          # Install protobuf (required for lance-encoding)
+          choco install protoc -y
           # Tauri requires WebView2 which is included in Windows 11 by default
           echo "Windows build environment ready"
 
@@ -85,7 +89,8 @@ jobs:
             libxdo-dev \
             libssl-dev \
             libayatana-appindicator3-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            protobuf-compiler
 
       - name: Install frontend dependencies
         run: npm ci
