@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Brain, TrendingUp, RotateCcw, Save, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Brain, TrendingUp, RotateCcw, Save, Download, Upload, Cloud, CloudOff } from 'lucide-react';
 
 interface PersonaSettingsProps {
   onClose: () => void;
@@ -57,7 +57,7 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
   const [hasChanges, setHasChanges] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState<number | null>(null);
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = false; // TODO: Implement auth store
 
   // Load stats and persona on mount
   useEffect(() => {
@@ -101,8 +101,9 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
 
   const checkLastBackup = async () => {
     try {
-      const time = await CloudSyncService.getLastBackupTime();
-      setLastBackupTime(time);
+      // TODO: Implement CloudSyncService
+      // const time = await CloudSyncService.getLastBackupTime();
+      setLastBackupTime(null);
     } catch (error) {
       console.error('Failed to check last backup:', error);
     }
@@ -162,13 +163,15 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
 
     setIsSyncing(true);
     try {
-      const backupData: CloudBackupData = {
+      const backupData: { persona: PersonaParameters; timestamp: number } = {
         persona,
         timestamp: Date.now(),
       };
-      await CloudSyncService.uploadBackup(backupData);
+      // TODO: Implement CloudSyncService
+      // await CloudSyncService.uploadBackup(backupData);
       await checkLastBackup();
-      alert('Persona backed up to Google Drive!');
+      alert('Persona backup feature coming soon!');
+      console.log('Backup data:', backupData);
     } catch (error) {
       console.error('Failed to backup to cloud:', error);
       alert('Failed to backup to cloud: ' + error);
@@ -185,7 +188,9 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
 
     setIsSyncing(true);
     try {
-      const backupData = await CloudSyncService.downloadBackup();
+      // TODO: Implement CloudSyncService
+      // const backupData = await CloudSyncService.downloadBackup();
+      const backupData = { persona: DEFAULT_PERSONA, timestamp: Date.now() };
       if (backupData && backupData.persona) {
         setPersona(backupData.persona);
         // Save to local database

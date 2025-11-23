@@ -83,20 +83,8 @@ export const GraphRAGPanel: React.FC = () => {
     }
   };
 
-  const handleBuildGraph = async (text: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      await invoke('graphrag_build_graph', { text });
-      await loadStats();
-      alert('Graph built successfully!');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // TODO: Implement graph building UI
+  // const handleBuildGraph = async (text: string) => { ... }
 
   return (
     <div className="graphrag-panel p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">

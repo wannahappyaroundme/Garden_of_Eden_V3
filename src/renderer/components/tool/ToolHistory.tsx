@@ -3,7 +3,7 @@
  * Main tool call history panel with filtering, search, and export
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { History, TrendingUp, AlertCircle } from 'lucide-react';
 import { ToolHistoryItem } from './ToolHistoryItem';
 import { ToolHistoryFilter } from './ToolHistoryFilter';
@@ -23,9 +23,9 @@ export interface ToolHistoryProps {
   className?: string;
 }
 
-export function ToolHistory({ records, onRefresh, onClearHistory, className }: ToolHistoryProps) {
+export function ToolHistory({ records, onClearHistory, className }: ToolHistoryProps) {
   const [filter, setFilter] = useState<FilterType>({});
-  const [sortOptions, setSortOptions] = useState<ToolHistorySortOptions>({
+  const [sortOptions, _setSortOptions] = useState<ToolHistorySortOptions>({
     sortBy: 'timestamp',
     order: 'desc',
   });

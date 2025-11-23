@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { api, type WebhookRecord, type CreateWebhookArgs } from '../lib/tauri-api';
@@ -56,7 +55,8 @@ const PRESETS: Record<PresetType, PresetInfo> = {
 };
 
 export function Integrations({ onClose }: IntegrationsProps) {
-  const { t } = useTranslation();
+  // TODO: Use translation when needed
+  // const { t } = useTranslation();
   const [webhooks, setWebhooks] = useState<WebhookRecord[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<PresetType | null>(null);

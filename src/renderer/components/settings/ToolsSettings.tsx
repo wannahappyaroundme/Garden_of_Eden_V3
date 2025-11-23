@@ -160,13 +160,18 @@ export function ToolsSettings({ className }: ToolsSettingsProps) {
           const privacyInfo = TOOL_PRIVACY_INFO[tool.name];
           const isExpanded = expandedTool === tool.name;
 
+          // Determine enabled state based on tool settings type
+          const enabled = tool.settingsKey === 'fileOperations'
+            ? (toolSettings as typeof settings.fileOperations).readEnabled
+            : 'enabled' in toolSettings ? toolSettings.enabled : false;
+
           return (
             <div key={tool.name} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               {/* Tool Header */}
               <div className="p-4 bg-white dark:bg-gray-800">
                 <ToolToggle
                   toolName={tool.name}
-                  enabled={toolSettings?.enabled ?? false}
+                  enabled={enabled}
                   onToggle={handleToolToggle}
                   requiresPermission={privacyInfo?.requiresPermission}
                 />

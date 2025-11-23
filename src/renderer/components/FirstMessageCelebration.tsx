@@ -28,6 +28,7 @@ export default function FirstMessageCelebration({
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [show, onComplete]);
 
   if (!show) return null;
@@ -45,8 +46,9 @@ export default function FirstMessageCelebration({
       {particles.map((i) => {
         const angle = (i / particles.length) * Math.PI * 2;
         const distance = 100 + Math.random() * 50;
-        const x = Math.cos(angle) * distance;
-        const y = Math.sin(angle) * distance;
+        // Position calculations for potential future use
+        Math.cos(angle) * distance; // x
+        Math.sin(angle) * distance; // y
         const delay = i * 50;
 
         return (

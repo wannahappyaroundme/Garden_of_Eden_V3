@@ -12,8 +12,6 @@ interface ModelDownloaderProps {
   onBack: () => void;
 }
 
-type ModelType = 'llm' | 'llava' | 'whisper';
-
 export default function ModelDownloader({ requiredModels, onComplete, onBack }: ModelDownloaderProps) {
   const [downloadState, setDownloadState] = useState<ModelDownloadState | null>(null);
   const [currentPhase, setCurrentPhase] = useState<'checking' | 'installing_ollama' | 'downloading' | 'completed' | 'error'>('checking');
@@ -207,25 +205,8 @@ export default function ModelDownloader({ requiredModels, onComplete, onBack }: 
     return typeof progress.status === 'object' && 'Failed' in progress.status;
   };
 
-  const getStatusText = (progress: DownloadProgress): string => {
-    if (typeof progress.status === 'string') {
-      switch (progress.status) {
-        case 'not_started':
-          return '대기 중...';
-        case 'completed':
-          return '완료!';
-        default:
-          return '진행 중...';
-      }
-    } else if (typeof progress.status === 'object') {
-      if ('Downloading' in progress.status) {
-        return `다운로드 중... ${progress.progress_percent.toFixed(1)}%`;
-      } else if ('Failed' in progress.status) {
-        return '실패';
-      }
-    }
-    return '알 수 없음';
-  };
+  // TODO: Use getStatusText for UI display
+  // const getStatusText = (progress: DownloadProgress): string => { ... }
 
   if (currentPhase === 'checking') {
     return (

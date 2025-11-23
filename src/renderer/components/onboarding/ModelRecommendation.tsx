@@ -52,11 +52,11 @@ export default function ModelRecommendation({
 
     try {
       // Get available models based on language preference
-      const availableModels = await window.api.getAvailableModelsForSystem(languagePreference);
+      const availableModels = await window.api.getAvailableModelsForSystem();
       setModels(availableModels);
 
       // Auto-select the recommended model
-      const recommended = availableModels.find((m) => m.is_recommended);
+      const recommended = availableModels.find((m: { is_recommended: boolean }) => m.is_recommended);
       if (recommended) {
         setSelectedModel(recommended.model);
         await updateRequiredModels(recommended.model);
@@ -167,7 +167,8 @@ export default function ModelRecommendation({
     );
   }
 
-  const recommendedModel = models.find((m) => m.is_recommended);
+  // TODO: Use recommended model for UI highlighting
+  // const recommendedModel = models.find((m) => m.is_recommended);
   const tierName =
     specs.total_ram_gb < 12
       ? '경량 (Lightweight)'

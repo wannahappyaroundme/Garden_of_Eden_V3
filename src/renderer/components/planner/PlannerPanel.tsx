@@ -130,35 +130,9 @@ export const PlannerPanel: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: PlanStep['status']) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
-      case 'in_progress':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
-      case 'failed':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
-      case 'skipped':
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400';
-      default:
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
-    }
-  };
-
-  const getStatusIcon = (status: PlanStep['status']) => {
-    switch (status) {
-      case 'completed':
-        return '✅';
-      case 'in_progress':
-        return '⏳';
-      case 'failed':
-        return '❌';
-      case 'skipped':
-        return '⏭️';
-      default:
-        return '⏸️';
-    }
-  };
+  // TODO: Use these helper functions for UI display
+  // const getStatusColor = (status: PlanStep['status']) => { ... }
+  // const getStatusIcon = (status: PlanStep['status']) => { ... }
 
   return (
     <div className="planner-panel p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">

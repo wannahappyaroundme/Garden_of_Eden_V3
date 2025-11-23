@@ -10,9 +10,10 @@ interface AlertProps {
   title?: string;
   children: React.ReactNode;
   onClose?: () => void;
+  className?: string;
 }
 
-export function Alert({ variant = 'info', title, children, onClose }: AlertProps) {
+export function Alert({ variant = 'info', title, children, onClose, className }: AlertProps) {
   const variantStyles = {
     error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200',
     warning: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200',
@@ -28,7 +29,7 @@ export function Alert({ variant = 'info', title, children, onClose }: AlertProps
   };
 
   return (
-    <div className={cn('rounded-lg border p-4 relative', variantStyles[variant])}>
+    <div className={cn('rounded-lg border p-4 relative', variantStyles[variant], className)}>
       {onClose && (
         <button
           onClick={onClose}

@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
-import { Input } from '../ui/input';
 import { GoalCard } from './GoalCard';
 import { CreateGoalDialog } from './CreateGoalDialog';
 import { AchievementBadge } from './AchievementBadge';

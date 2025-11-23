@@ -9,7 +9,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
-import { cn } from '../../lib/utils';
 import { TaskCard } from './TaskCard';
 import { ExecutionTimeline } from './ExecutionTimeline';
 
@@ -50,7 +49,7 @@ export function TaskPlannerPanel() {
   const [executionPlan, setExecutionPlan] = useState<ExecutionPlan | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [createdRootTask, setCreatedRootTask] = useState<Task | null>(null);
+  const [_createdRootTask, setCreatedRootTask] = useState<Task | null>(null);
 
   const handleDecompose = async () => {
     if (!taskDescription.trim()) {

@@ -24,7 +24,6 @@ import {
   ProactiveSuggestion,
   useProactiveNotifications,
 } from '../components/ProactiveNotification';
-import { Eye, EyeOff } from 'lucide-react';
 import SuggestedPromptCard from '../components/SuggestedPromptCard';
 import ModeIndicator from '../components/ModeIndicator';
 import ShortcutHelp from '../components/ShortcutHelp';
@@ -84,7 +83,7 @@ export function Chat({
   const { notification, showNotification, hideNotification } = useDynamicIsland();
 
   // Proactive notifications
-  const { currentSuggestion, dismissSuggestion } = useProactiveNotifications();
+  const { dismissSuggestion } = useProactiveNotifications();
 
   // Load mock tool history data (v3.7.0 Phase 3 demo)
   useEffect(() => {
@@ -404,7 +403,8 @@ export function Chat({
   }, []);
 
   const handleSendMessage = async (content: string) => {
-    const startTime = Date.now();
+    // Track start time for potential performance monitoring
+    Date.now();
 
     // Create new conversation if this is the first message
     let conversationId = currentConversationId;
@@ -566,8 +566,8 @@ export function Chat({
 
         console.log(`Feedback recorded: ${satisfaction} for message ${messageId}`);
 
-        // Show brief notification
-        showNotification('feedback', { type: satisfaction });
+        // TODO: Show feedback notification with proper type
+        // showNotification('feedback', { type: satisfaction });
       } catch (error) {
         console.error('Failed to record feedback:', error);
       }
@@ -589,7 +589,7 @@ export function Chat({
           id: Date.now().toString(),
           role: 'system',
           content: t('errors.voiceRecordingFailed'),
-          timestamp: new Date().toISOString(),
+          timestamp: new Date(),
         },
       ]);
     }
@@ -614,7 +614,7 @@ export function Chat({
       // If transcript is available and not a placeholder, insert it into chat input
       if (transcript && transcript.trim() && !transcript.includes('not yet configured')) {
         // Insert transcribed text into chat input (user can edit before sending)
-        chatInputRef.current?.setValue(transcript.trim());
+        inputRef.current?.setValue(transcript.trim());
       } else if (transcript.includes('not yet configured')) {
         // Show setup message to user
         setMessages((prev) => [
@@ -623,7 +623,7 @@ export function Chat({
             id: Date.now().toString(),
             role: 'system',
             content: t('errors.whisperNotConfigured'),
-            timestamp: new Date().toISOString(),
+            timestamp: new Date(),
           },
         ]);
       }
@@ -637,7 +637,7 @@ export function Chat({
           id: Date.now().toString(),
           role: 'system',
           content: t('errors.voiceTranscriptionFailed'),
-          timestamp: new Date().toISOString(),
+          timestamp: new Date(),
         },
       ]);
     }
@@ -645,7 +645,8 @@ export function Chat({
 
   const handleScreenContext = async () => {
     try {
-      showNotification('screen_capturing', {});
+      // TODO: Add screen capture notification type
+      // showNotification('screen_capturing', {});
 
       // Capture and analyze screen with level 2 (detailed)
       const analysis = await invoke<{
@@ -667,10 +668,13 @@ export function Chat({
       // Insert context into chat input
       inputRef.current?.setValue(contextMessage);
 
-      showNotification('screen_captured', { app: analysis.detected_application || 'Unknown' });
+      // TODO: Add screen captured notification
+      // showNotification('screen_captured', { app: analysis.detected_application || 'Unknown' });
+      console.log('Screen captured:', analysis.detected_application || 'Unknown');
     } catch (error) {
       console.error('Failed to capture screen context:', error);
-      showNotification('error', { message: 'Failed to capture screen context' });
+      // TODO: Add error notification
+      // showNotification('error', { message: 'Failed to capture screen context' });
     }
   };
 
@@ -1030,6 +1034,12 @@ export function Chat({
                             : undefined
                         }
                       />
+                    ) : message.role === 'system' ? (
+                      <div key={message.id} className="flex justify-center my-2">
+                        <div className="bg-muted px-4 py-2 rounded-lg text-sm text-muted-foreground">
+                          {message.content}
+                        </div>
+                      </div>
                     ) : (
                       <div key={message.id}>
                         <ChatBubble

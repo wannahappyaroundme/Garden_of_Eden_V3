@@ -255,7 +255,7 @@ export function useCrashReportDialog() {
 
   const handleSendReport = async (report: CrashReport) => {
     // Check if crash reporting is enabled
-    const settings = await invoke('crash_reporter_get_settings');
+    const settings = await invoke<{ enabled: boolean }>('crash_reporter_get_settings');
     if (!settings.enabled) {
       throw new Error('Crash reporting is disabled. Enable it in Settings > Privacy.');
     }

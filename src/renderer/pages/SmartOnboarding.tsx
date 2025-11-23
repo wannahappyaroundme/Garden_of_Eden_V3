@@ -29,10 +29,10 @@ interface SmartOnboardingProps {
 export default function SmartOnboarding({ onComplete }: SmartOnboardingProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('system');
   const [systemSpecs, setSystemSpecs] = useState<SystemSpecs | null>(null);
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [_selectedModel, setSelectedModel] = useState<string>('');
   const [requiredModels, setRequiredModels] = useState<RequiredModels | null>(null);
   const [surveyResults, setSurveyResults] = useState<SurveyResults | null>(null);
-  const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [_customPrompt, setCustomPrompt] = useState<string>('');
 
   // Step 1: System Check Complete
   const handleSystemCheckComplete = (specs: SystemSpecs) => {

@@ -57,6 +57,7 @@ export default function ShortcutHelp({ isOpen, onClose }: ShortcutHelpProps) {
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
+    return undefined;
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;

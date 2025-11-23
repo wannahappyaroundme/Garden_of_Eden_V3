@@ -110,6 +110,9 @@ export interface WindowAPI {
     limit?: number;
   }) => Promise<unknown>;
   conversationGetCount: () => Promise<number>;
+  getConversations: () => Promise<any[]>;
+  deleteConversation: (id: string) => Promise<void>;
+  updateConversationTitle: (id: string, title: string) => Promise<void>;
 
   // Screen tracking APIs
   screenStartTracking: (args?: { interval?: number }) => Promise<{ started: boolean; interval: number }>;
@@ -130,7 +133,7 @@ export interface WindowAPI {
     captureInterval: number;
   }) => void) => () => void;
   onScreenTrackingNotification: (callback: (data: {
-    action: 'started' | 'stopped';
+    action: 'started' | 'stopped' | 'idle-warning' | 'screen_capturing' | 'screen_captured' | 'error';
     interval: number;
     timestamp: number;
   }) => void) => () => void;
@@ -193,6 +196,18 @@ export interface WindowAPI {
     proactive_frequency: string;
     interests: string;
   }) => Promise<any>;
+  checkOllamaInstalled: () => Promise<boolean>;
+  checkModelExists: (modelName: string) => Promise<boolean>;
+  installOllama: () => Promise<void>;
+  startModelDownload: (modelName: string, modelType?: string) => Promise<void>;
+  getDownloadProgress: () => Promise<any>;
+  getRequiredModels: (modelName: string, voiceEnabled: boolean) => Promise<{ llm: string; llava: string; whisper?: string; total_size_gb: number; total_ram_usage_gb: number; voice_enabled: boolean }>;
+  getAvailableModelsForSystem: () => Promise<any[]>;
+  generateCustomPrompt: (surveyData: any) => Promise<string>;
+  detectSystemSpecs: () => Promise<any>;
+  saveSurveyResults: (results: string, prompt?: string) => Promise<void>;
+  saveOnboardingState: (specs: string, model: string, recommendedModel?: string) => Promise<void>;
+  markOnboardingCompleted: () => Promise<void>;
 
   // Settings operations
   getSettings: () => Promise<unknown>;
@@ -229,6 +244,9 @@ export interface WindowAPI {
 
   // Download event listeners
   onDownloadProgress: (callback: (status: any) => void) => () => void;
+
+  // Generic Tauri invoke method (for direct command access)
+  invoke: <T = any>(command: string, args?: Record<string, any>) => Promise<T>;
 
   // Platform info
   platform: string;
