@@ -329,11 +329,10 @@ pub async fn get_model_recommendation(specs: SystemSpecs) -> Result<ModelRecomme
 
 /// Get required models list
 #[tauri::command]
-pub async fn get_required_models(llm_model: String, voice_enabled: Option<bool>) -> Result<RequiredModels, String> {
-    let voice = voice_enabled.unwrap_or(true); // Default to true for backward compatibility
-    log::info!("Getting required models for LLM: {} (voice enabled: {})", llm_model, voice);
+pub async fn get_required_models(llm_model: String) -> Result<RequiredModels, String> {
+    log::info!("Getting required models for LLM: {}", llm_model);
 
-    let models = ModelRecommenderService::get_required_models(&llm_model, voice)
+    let models = ModelRecommenderService::get_required_models(&llm_model)
         .map_err(|e| e.to_string())?;
 
     Ok(models)
@@ -387,7 +386,6 @@ pub async fn start_model_download(
     let model_type_enum = match model_type.as_str() {
         "llm" => crate::services::model_installer::ModelType::LLM,
         "llava" => crate::services::model_installer::ModelType::LLaVA,
-        "whisper" => crate::services::model_installer::ModelType::Whisper,
         _ => return Err(format!("Invalid model type: {}", model_type)),
     };
 

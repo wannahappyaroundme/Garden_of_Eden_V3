@@ -56,17 +56,11 @@ pub struct RequiredModels {
     /// LLaVA vision model
     pub llava: String,
 
-    /// Whisper speech-to-text model (optional - only if voice features enabled)
-    pub whisper: Option<String>,
-
     /// Total download size in GB
     pub total_size_gb: f32,
 
     /// Total expected RAM usage in GB
     pub total_ram_usage_gb: u32,
-
-    /// Whether voice features are enabled
-    pub voice_enabled: bool,
 }
 
 /// Model option with detailed information
@@ -473,7 +467,7 @@ impl ModelRecommenderService {
     }
 
     /// Get all required models for full functionality
-    pub fn get_required_models(llm_model: &str, voice_enabled: bool) -> Result<RequiredModels> {
+    pub fn get_required_models(llm_model: &str) -> Result<RequiredModels> {
         // Determine LLM size based on model
         let llm_size = if llm_model.contains("phi3:mini") {
             2.2
@@ -520,20 +514,11 @@ impl ModelRecommenderService {
             4 // Default to Phi-3 Mini RAM (fast model)
         };
 
-        // Calculate total size and RAM based on voice features
-        let (whisper_model, whisper_size, whisper_ram) = if voice_enabled {
-            (Some("whisper:large-v3".to_string()), 3.1, 3)
-        } else {
-            (None, 0.0, 0)
-        };
-
         let models = RequiredModels {
             llm: llm_model.to_string(),
             llava: "llava:7b".to_string(),
-            whisper: whisper_model,
-            total_size_gb: llm_size + 4.4 + whisper_size, // LLM + LLaVA + optional Whisper
-            total_ram_usage_gb: llm_ram + 4 + whisper_ram, // During simultaneous use
-            voice_enabled,
+            total_size_gb: llm_size + 4.4, // LLM + LLaVA
+            total_ram_usage_gb: llm_ram + 4, // During simultaneous use
         };
 
         Ok(models)
@@ -655,12 +640,11 @@ mod tests {
 
     #[test]
     fn test_get_required_models() {
-        let models = ModelRecommenderService::get_required_models("qwen2.5:14b", true).unwrap();
+        let models = ModelRecommenderService::get_required_models("qwen2.5:14b").unwrap();
 
         assert_eq!(models.llm, "qwen2.5:14b");
         assert_eq!(models.llava, "llava:7b");
-        assert_eq!(models.whisper, Some("whisper:large-v3".to_string()));
-        assert!(models.total_size_gb > 15.0); // 9 + 4.4 + 3.1 = 16.5GB
+        assert!(models.total_size_gb > 13.0); // 9 + 4.4 = 13.4GB
     }
 
     #[test]

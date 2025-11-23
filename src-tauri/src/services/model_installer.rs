@@ -33,7 +33,6 @@ pub struct DownloadProgress {
 pub struct ModelDownloadState {
     pub llm_model: DownloadProgress,
     pub llava_model: DownloadProgress,
-    pub whisper_model: DownloadProgress,
 }
 
 /// Model Installer Service
@@ -57,15 +56,6 @@ impl ModelInstallerService {
             },
             llava_model: DownloadProgress {
                 model_name: "llava:7b".to_string(),
-                status: DownloadStatus::NotStarted,
-                downloaded_bytes: 0,
-                total_bytes: None,
-                progress_percent: 0.0,
-                speed_mbps: None,
-                eta_seconds: None,
-            },
-            whisper_model: DownloadProgress {
-                model_name: "whisper:large-v3".to_string(),
                 status: DownloadStatus::NotStarted,
                 downloaded_bytes: 0,
                 total_bytes: None,
@@ -478,7 +468,6 @@ impl ModelInstallerService {
             let progress = match model_type {
                 ModelType::LLM => &mut state.llm_model,
                 ModelType::LLaVA => &mut state.llava_model,
-                ModelType::Whisper => &mut state.whisper_model,
             };
             progress.model_name = model_name.clone();
             progress.status = DownloadStatus::Downloading { progress: 0.0 };
@@ -505,7 +494,6 @@ impl ModelInstallerService {
                     let progress = match model_type_clone {
                         ModelType::LLM => &mut state.llm_model,
                         ModelType::LLaVA => &mut state.llava_model,
-                        ModelType::Whisper => &mut state.whisper_model,
                     };
                     progress.status = DownloadStatus::Completed;
                     progress.progress_percent = 100.0;
@@ -517,7 +505,6 @@ impl ModelInstallerService {
                     let progress = match model_type_clone {
                         ModelType::LLM => &mut state.llm_model,
                         ModelType::LLaVA => &mut state.llava_model,
-                        ModelType::Whisper => &mut state.whisper_model,
                     };
                     progress.status = DownloadStatus::Failed {
                         error: e.to_string(),
@@ -559,7 +546,6 @@ impl ModelInstallerService {
                 let download_progress = match model_type {
                     ModelType::LLM => &mut state_lock.llm_model,
                     ModelType::LLaVA => &mut state_lock.llava_model,
-                    ModelType::Whisper => &mut state_lock.whisper_model,
                 };
                 download_progress.progress_percent = progress;
                 download_progress.status = DownloadStatus::Downloading { progress: progress / 100.0 };
@@ -638,7 +624,6 @@ impl ModelInstallerService {
         let state = self.state.lock().unwrap();
         state.llm_model.status == DownloadStatus::Completed
             && state.llava_model.status == DownloadStatus::Completed
-            && state.whisper_model.status == DownloadStatus::Completed
     }
 
     /// Download all required models sequentially
@@ -653,10 +638,6 @@ impl ModelInstallerService {
         self.start_model_download("llava:7b".to_string(), ModelType::LLaVA).await?;
         self.wait_for_download(ModelType::LLaVA).await?;
 
-        // 3. Download Whisper
-        self.start_model_download("whisper:large-v3".to_string(), ModelType::Whisper).await?;
-        self.wait_for_download(ModelType::Whisper).await?;
-
         info!("All models downloaded successfully!");
         Ok(())
     }
@@ -670,7 +651,6 @@ impl ModelInstallerService {
             let progress = match model_type {
                 ModelType::LLM => &state.llm_model,
                 ModelType::LLaVA => &state.llava_model,
-                ModelType::Whisper => &state.whisper_model,
             };
 
             match &progress.status {
@@ -693,7 +673,6 @@ impl ModelInstallerService {
 pub enum ModelType {
     LLM,
     LLaVA,
-    Whisper,
 }
 
 #[cfg(test)]
