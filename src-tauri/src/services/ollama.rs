@@ -94,10 +94,11 @@ pub async fn generate_response_with_rag_and_persona_ref(
 
     // 🎯 STEP 2: RAG - Retrieve relevant past conversations
     if let Some(rag) = &rag_service {
+        let rag_start = std::time::Instant::now();
         match rag.retrieve_relevant(user_message, RAG_TOP_K).await {
             Ok(episodes) => {
                 if !episodes.is_empty() {
-                    log::info!("Retrieved {} relevant memories from RAG", episodes.len());
+                    log::info!("⏱️  [PERF] RAG Retrieval: {:?} ({} memories)", rag_start.elapsed(), episodes.len());
                     let memory_context = format_episodes_for_context(&episodes);
                     system_prompt.push_str("\n\n# Relevant Past Conversations\n");
                     system_prompt.push_str(&memory_context);
@@ -133,6 +134,7 @@ pub async fn generate_response_with_rag_and_persona_ref(
     log::debug!("Sending request to Ollama: {:?}", request);
 
     // Send request to Ollama
+    let inference_start = std::time::Instant::now();
     let response = client
         .post(OLLAMA_API_URL)
         .json(&request)
@@ -160,6 +162,7 @@ pub async fn generate_response_with_rag_and_persona_ref(
         error_msg
     })?;
 
+    log::info!("⏱️  [PERF] Ollama LLM Inference: {:?}", inference_start.elapsed());
     log::info!("Successfully generated AI response (done: {})", ollama_response.done);
     Ok(ollama_response.response.trim().to_string())
 }

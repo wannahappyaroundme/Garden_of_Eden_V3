@@ -26,6 +26,7 @@ pub async fn chat(
     request: ChatRequest,
 ) -> Result<ChatResponse, String> {
     log::info!("Chat command called with message: {}", request.message);
+    let start_time = std::time::Instant::now();
 
     // Generate IDs
     let conversation_id = request.conversation_id.unwrap_or_else(|| {
@@ -83,6 +84,7 @@ pub async fn chat(
         )
         .map_err(|e| e.to_string())?;
     } // db lock is released here
+    log::info!("⏱️  [PERF] DB Save (user message): {:?}", start_time.elapsed());
 
     // Trigger webhooks for conversation start (if new)
     if is_new_conversation {
@@ -112,7 +114,9 @@ pub async fn chat(
     // Generate AI response using Ollama with RAG v2 (LanceDB) and Persona (v3.4.0)
     // Note: Pass database reference without cloning Mutex
     // v3.4.0: RAG v2 with LanceDB for 10-100x faster retrieval (100ms → 30ms)
+    let llm_start = std::time::Instant::now();
     let ai_response = ollama::generate_response_with_rag_and_persona_ref(&request.message, Some(state.rag.clone()), Some(&state.db)).await?;
+    log::info!("⏱️  [PERF] LLM Response (RAG + Persona + Inference): {:?}", llm_start.elapsed());
     let ai_message_id = format!("msg_{}", chrono::Utc::now().timestamp_millis());
 
     // Block 2: Save AI response to database
@@ -141,6 +145,12 @@ pub async fn chat(
         )
         .map_err(|e| e.to_string())?;
     } // db lock is released here
+
+    let total_time = start_time.elapsed();
+    log::info!("⏱️  [PERF] TOTAL Chat Response Time: {:?}", total_time);
+    log::info!("📊 [PERF] Performance Breakdown:");
+    log::info!("   - LLM (RAG + Persona + Inference): {:?}", llm_start.elapsed());
+    log::info!("   - Other (DB + Webhooks): {:?}", total_time - llm_start.elapsed());
 
     // Trigger webhook for message received (AI response)
     {
