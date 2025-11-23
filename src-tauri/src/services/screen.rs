@@ -22,7 +22,7 @@ impl Default for ScreenTrackingState {
             is_tracking: false,
             last_capture_time: 0,
             capture_count: 0,
-            capture_interval: 30, // Default: 30 seconds
+            capture_interval: 60, // Default: 60 seconds (optimized for performance)
         }
     }
 }

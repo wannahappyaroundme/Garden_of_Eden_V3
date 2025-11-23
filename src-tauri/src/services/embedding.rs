@@ -60,16 +60,45 @@ impl EmbeddingService {
                 .map_err(|e| anyhow!("Failed to load tokenizer: {}", e))?,
         );
 
-        // Load ONNX model with ORT 2.0 API
-        log::info!("Loading BGE-M3 ONNX model (quantized INT8)...");
-        let session = Arc::new(Mutex::new(
-            Session::builder()
-                .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?
-                .with_intra_threads(4)
-                .map_err(|e| anyhow!("Failed to set intra_threads: {:?}", e))?
-                .commit_from_file(&model_path)
-                .map_err(|e| anyhow!("Failed to load BGE-M3 model: {:?}", e))?,
-        ));
+        // Load ONNX model with ORT 2.0 API + CoreML acceleration (M3 Max GPU)
+        log::info!("Loading BGE-M3 ONNX model (quantized INT8) with CoreML acceleration...");
+
+        // Try to create session with CoreML first, fallback to CPU if unavailable
+        // ORT 2.0 API: Use execution provider directly in SessionBuilder
+        let session_result = {
+            #[cfg(target_vendor = "apple")]
+            {
+                use ort::execution_providers::{CoreMLExecutionProvider, ExecutionProvider};
+
+                let mut builder = Session::builder()
+                    .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?;
+
+                // Register CoreML execution provider (M3 Max GPU)
+                let coreml_ep = CoreMLExecutionProvider::default();
+                if let Err(e) = coreml_ep.register(&mut builder) {
+                    log::warn!("⚠ CoreML registration failed: {:?}, falling back to CPU", e);
+                } else {
+                    log::info!("✓ CoreML execution provider registered");
+                }
+
+                builder
+                    .with_intra_threads(4)
+                    .map_err(|e| anyhow!("Failed to set intra_threads: {:?}", e))?
+                    .commit_from_file(&model_path)
+                    .map_err(|e| anyhow!("Failed to load BGE-M3 model: {:?}", e))
+            }
+            #[cfg(not(target_vendor = "apple"))]
+            {
+                Session::builder()
+                    .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?
+                    .with_intra_threads(4)
+                    .map_err(|e| anyhow!("Failed to set intra_threads: {:?}", e))?
+                    .commit_from_file(&model_path)
+                    .map_err(|e| anyhow!("Failed to load BGE-M3 model: {:?}", e))
+            }
+        };
+
+        let session = Arc::new(Mutex::new(session_result?));
 
         log::info!("BGE-M3 Embedding Service initialized successfully");
         Ok(Self {

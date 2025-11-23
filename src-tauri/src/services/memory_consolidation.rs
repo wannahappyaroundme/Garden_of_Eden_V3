@@ -229,7 +229,7 @@ impl MemoryConsolidationService {
                AND COALESCE(is_consolidated, 0) = 0
                AND embedding_id IS NOT NULL
              ORDER BY retention_score ASC
-             LIMIT 200"
+             LIMIT 500"  // Process up to 500 candidates (optimized for performance)
         )?;
 
         let candidates = stmt

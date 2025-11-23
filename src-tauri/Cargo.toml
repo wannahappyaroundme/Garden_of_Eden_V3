@@ -35,7 +35,7 @@ futures-util = "0.3"
 screenshots = "0.8"
 base64 = "0.22"
 # RAG & Vector DB dependencies (Phase 1) - PRODUCTION LEVEL
-ort = { version = "2.0.0-rc.10", features = ["download-binaries", "ndarray"] }  # ONNX Runtime for BGE-M3 (includes std by default)
+ort = { version = "2.0.0-rc.10", features = ["download-binaries", "ndarray", "coreml"] }  # ONNX Runtime for BGE-M3 with CoreML acceleration (M3 Max GPU)
 tokenizers = "0.15"     # Tokenization for embedding model
 ndarray = "0.16"        # N-dimensional arrays for ML
 # LanceDB postponed - API changed significantly in 0.22, complex migration

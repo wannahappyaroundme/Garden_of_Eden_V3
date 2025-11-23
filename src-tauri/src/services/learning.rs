@@ -456,7 +456,7 @@ impl LearningService {
              FROM episodic_memory
              WHERE retention_score > ?1
              ORDER BY retention_score DESC
-             LIMIT 100"  // Focus on top 100 high-retention memories
+             LIMIT 250"  // Focus on top 250 high-retention memories (optimized for performance)
         )?;
 
         let high_retention_memories: Vec<(String, String, f32, i32, f32)> = stmt
