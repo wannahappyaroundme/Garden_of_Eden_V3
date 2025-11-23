@@ -523,32 +523,103 @@ impl ModelInstallerService {
         model_name: String,
         model_type: ModelType,
     ) -> Result<()> {
-        info!("Executing ollama pull for: {}", model_name);
+        info!("[{}] Executing ollama pull for: {}",
+            if cfg!(target_os = "windows") { "Windows" }
+            else if cfg!(target_os = "macos") { "macOS" }
+            else { "Linux" },
+            model_name
+        );
 
-        let mut child = TokioCommand::new("ollama")
-            .args(&["pull", &model_name])
+        // Build command with platform-specific settings
+        let mut command = TokioCommand::new("ollama");
+        command.args(&["pull", &model_name])
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
+            .stderr(Stdio::piped());
+
+        // Windows: Hide console window
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            command.creation_flags(CREATE_NO_WINDOW);
+            info!("[Windows] Command will run with CREATE_NO_WINDOW flag (hidden terminal)");
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            info!("[macOS] Running ollama pull in background (no visible terminal)");
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            info!("[Linux] Running ollama pull in background (no visible terminal)");
+        }
+
+        let mut child = command.spawn()
             .context("Failed to spawn ollama pull")?;
 
+        // Capture both stdout AND stderr concurrently
         let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to capture stdout"))?;
-        let mut reader = BufReader::new(stdout).lines();
+        let stderr = child.stderr.take().ok_or_else(|| anyhow!("Failed to capture stderr"))?;
 
-        // Parse progress from ollama output
-        while let Some(line) = reader.next_line().await? {
-            info!("Ollama output: {}", line);
+        let mut stdout_reader = BufReader::new(stdout).lines();
+        let mut stderr_reader = BufReader::new(stderr).lines();
 
-            // Try to parse progress percentage
-            // Ollama output format: "pulling manifest... 45%"
-            if let Some(progress) = Self::parse_progress(&line) {
-                let mut state_lock = state.lock().unwrap();
-                let download_progress = match model_type {
-                    ModelType::LLM => &mut state_lock.llm_model,
-                    ModelType::LLaVA => &mut state_lock.llava_model,
-                };
-                download_progress.progress_percent = progress;
-                download_progress.status = DownloadStatus::Downloading { progress: progress / 100.0 };
+        info!("Reading ollama output from both stdout and stderr...");
+
+        // Read from both streams concurrently using tokio::select!
+        loop {
+            tokio::select! {
+                result = stdout_reader.next_line() => {
+                    match result {
+                        Ok(Some(line)) => {
+                            info!("[STDOUT] {}", line);
+                            if let Some(progress) = Self::parse_progress(&line) {
+                                let mut state_lock = state.lock().unwrap();
+                                let download_progress = match model_type {
+                                    ModelType::LLM => &mut state_lock.llm_model,
+                                    ModelType::LLaVA => &mut state_lock.llava_model,
+                                };
+                                download_progress.progress_percent = progress;
+                                download_progress.status = DownloadStatus::Downloading { progress: progress / 100.0 };
+                                info!("Progress updated: {}%", progress);
+                            }
+                        }
+                        Ok(None) => {
+                            info!("stdout stream ended");
+                            break;
+                        }
+                        Err(e) => {
+                            warn!("Error reading stdout: {}", e);
+                            return Err(e.into());
+                        }
+                    }
+                }
+                result = stderr_reader.next_line() => {
+                    match result {
+                        Ok(Some(line)) => {
+                            info!("[STDERR] {}", line);
+                            // Ollama often outputs progress to stderr
+                            if let Some(progress) = Self::parse_progress(&line) {
+                                let mut state_lock = state.lock().unwrap();
+                                let download_progress = match model_type {
+                                    ModelType::LLM => &mut state_lock.llm_model,
+                                    ModelType::LLaVA => &mut state_lock.llava_model,
+                                };
+                                download_progress.progress_percent = progress;
+                                download_progress.status = DownloadStatus::Downloading { progress: progress / 100.0 };
+                                info!("Progress updated from stderr: {}%", progress);
+                            }
+                        }
+                        Ok(None) => {
+                            info!("stderr stream ended");
+                        }
+                        Err(e) => {
+                            warn!("Error reading stderr: {}", e);
+                            // Don't fail on stderr errors, just log
+                        }
+                    }
+                }
             }
         }
 
@@ -558,6 +629,7 @@ impl ModelInstallerService {
             return Err(anyhow!("Ollama pull failed with status: {}", status));
         }
 
+        info!("Model download completed successfully: {}", model_name);
         Ok(())
     }
 
