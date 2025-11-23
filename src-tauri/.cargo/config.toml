@@ -1,0 +1,4 @@
+# Windows: Use dynamic CRT to match ort_sys prebuilt binaries
+# This fixes the LNK2038 RuntimeLibrary mismatch error
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=-crt-static"]

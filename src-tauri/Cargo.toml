@@ -124,3 +124,9 @@ windows = { version = "0.58", features = [
 # By default, Tauri runs in production mode when `tauri build` is run
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+# Build optimization for release
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
