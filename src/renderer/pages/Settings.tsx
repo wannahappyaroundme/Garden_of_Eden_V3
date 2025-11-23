@@ -18,6 +18,7 @@ import { UpdateSettingsPanel } from '../components/settings/UpdateSettingsPanel'
 import { RaftSettings } from '../components/settings/RaftSettings'; // v3.4.0 Phase 7
 import LLMSettingsPanel from '../components/settings/LLMSettings'; // v3.5.0
 import { Phase5Settings } from '../components/settings/Phase5Settings'; // v3.9.0
+import { IntegrationsSettingsPanel } from '../components/settings/IntegrationsSettings'; // v3.4.0 Performance
 
 interface SettingsProps {
   onClose: () => void;
@@ -26,7 +27,7 @@ interface SettingsProps {
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'phase5' | 'app' | 'raft' | 'updates' | 'crashes' | 'about'>('persona'); // v3.4.0 Phase 7: Added raft tab, v3.9.0: Added phase5 tab
+  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'phase5' | 'app' | 'integrations' | 'raft' | 'updates' | 'crashes' | 'about'>('persona'); // v3.4.0 Phase 7: Added raft tab, v3.9.0: Added phase5 tab, v3.4.0: Added integrations tab
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -255,6 +256,17 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           >
             ⚙️ 앱 설정
           </button>
+          {/* v3.4.0 Performance: Integrations Tab */}
+          <button
+            onClick={() => setActiveTab('integrations')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'integrations'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🔌 통합 기능
+          </button>
           {/* v3.4.0 Phase 7: RAFT Tab */}
           <button
             onClick={() => setActiveTab('raft')}
@@ -478,6 +490,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                   </div>
                 </section>
               </div>
+            </div>
+          )}
+
+          {/* Integrations Tab (v3.4.0 Performance) */}
+          {activeTab === 'integrations' && (
+            <div className="max-w-4xl">
+              <IntegrationsSettingsPanel />
             </div>
           )}
 
