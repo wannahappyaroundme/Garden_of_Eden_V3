@@ -63,7 +63,7 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
 
 ---
 
-## ✨ Current Features (v3.4.0 - Phase 5 COMPLETE)
+## ✨ Current Features (v3.4.0 - Phases 1-5 COMPLETE + v3.8.0 Advanced Features)
 
 ### 🤖 AI Intelligence
 - **Local LLM**: Qwen 2.5 14B (9.0GB Q4_K_M) via Ollama - excellent reasoning, Korean support, fast inference
@@ -81,6 +81,43 @@ Built with **Tauri 2.9** (Rust + React), powered by **Qwen 2.5 14B** via **Ollam
     - **Task Planner**: Autonomous task decomposition with dependency tracking and execution planning
     - **Learning Style Adapter**: VARK learning style detection and personalized response adaptation
     - **Goal Tracker**: Long-term goal monitoring with milestone tracking and automatic progress detection
+
+### 🤖 LAM (Large Action Model) Integration ✨ NEW (v3.8.0 Phase 1)
+- **Computer Control**: Vision-guided mouse/keyboard automation with safety constraints
+  - **Vision-Guided Clicking**: Uses LLaVA 7B to locate UI elements by description ("click the blue Submit button")
+  - **Safety System**: 3-tier approval (auto/prompt/deny), dangerous action blocking, rate limiting
+  - **Action Types**: Click, type, scroll, screenshot capture
+  - **macOS Accessibility API**: Native control via `accessibility` crate
+- **LAM Tools**: 8 high-level actions (open app, close app, navigate, fill form, etc.)
+- **Multi-step Workflows**: Chain actions with validation between steps
+- **Context-Aware Execution**: Integrates with visual analysis for smart UI interaction
+
+### 📹 Streaming Vision ✨ NEW (v3.8.0 Phase 2)
+- **Continuous Screen Monitoring**: Real-time screen analysis at configurable intervals (1-60s)
+- **Intelligent Change Detection**: Only process frames when significant UI changes detected
+- **Multi-level Analysis**: Quick (objects only), Standard (objects + text), Detailed (full analysis)
+- **Event-Driven Architecture**: Emit events for UI changes, errors, warnings, opportunities
+- **Resource Efficient**: Adaptive frame rate based on activity level, lazy model loading
+- **Privacy Controls**: Pause/resume monitoring, exclude sensitive apps
+
+### 🧠 Advanced Temporal Memory ✨ NEW (v3.8.0 Phase 3-4)
+- **Contextual Retrieval**: Multi-dimensional memory search (temporal, spatial, semantic, causal)
+  - Time-aware queries ("what did we discuss last Tuesday?")
+  - Spatial context ("memories from when I was at the coffee shop")
+  - Causal chains ("why did we decide to use Rust?")
+- **Memory Consolidation**: Automatic clustering of related memories to prevent fragmentation
+  - Periodic consolidation (configurable intervals)
+  - Semantic clustering using BGE-M3 embeddings
+  - Importance-based retention (high-importance memories preserved)
+- **Retention Forecasting**: Predict future memory retention states
+  - ML-based forgetting curve prediction
+  - Per-memory decay rate adaptation
+  - Proactive reinforcement suggestions
+- **Pattern Detection**: Discover recurring themes and behavioral patterns
+  - Topic modeling across memory corpus
+  - Temporal pattern recognition (daily/weekly cycles)
+  - Anomaly detection for unusual events
+
 - **Tool Calling System**: AI can use 6 production tools (web search, file ops, system info, calculator)
 - **Internet Access**: Privacy-preserving web search (DuckDuckGo/SearX) and URL fetching
 - **Plugin System**: V8 JavaScript runtime for extensible plugins
@@ -369,6 +406,12 @@ The onboarding wizard will guide you through:
 - **[Auto-Updater Guide](docs/guides/AUTO_UPDATER_GUIDE.md)** - In-app update system
 - **[Claude Development](docs/CLAUDE.md)** - Using Claude Code for development
 - **[Contributing](CONTRIBUTING.md)** - How to contribute
+
+### Phase Documentation (v3.8.0)
+- **[Phase 1: LAM Integration](docs/phases/V3.8.0_PHASE1_LAM_INTEGRATION.md)** - Computer control & vision-guided automation
+- **[Phase 2: Streaming Vision](docs/phases/V3.8.0_PHASE2_STREAMING_VISION.md)** - Continuous screen monitoring
+- **[Phase 3: Temporal Memory](docs/phases/V3.8.0_PHASE3_TEMPORAL_MEMORY.md)** - Advanced memory system
+- **[Phase 4: Advanced Features](docs/phases/V3.8.0_PHASE4_ADVANCED_FEATURES.md)** - Contextual retrieval, consolidation, forecasting
 
 ### Deployment & Operations
 - **[Release Workflow](docs/deployment/RELEASE_WORKFLOW.md)** - Release process and deployment
