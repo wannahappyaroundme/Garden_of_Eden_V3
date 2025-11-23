@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { cn } from '../../lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -30,7 +29,6 @@ export function ChatBubble({
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
   const [currentSatisfaction, setCurrentSatisfaction] = useState<'positive' | 'negative' | null>(satisfaction || null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Format timestamp to HH:MM
@@ -70,28 +68,6 @@ export function ChatBubble({
 
     setCurrentSatisfaction(feedbackType);
     onFeedback(messageId, feedbackType);
-  };
-
-  const handleSpeak = async () => {
-    if (isSpeaking) {
-      // Stop speaking
-      try {
-        await invoke('tts_stop');
-        setIsSpeaking(false);
-      } catch (error) {
-        console.error('Failed to stop TTS:', error);
-      }
-    } else {
-      // Start speaking
-      try {
-        setIsSpeaking(true);
-        await invoke('tts_speak', { text: message });
-        setIsSpeaking(false);
-      } catch (error) {
-        console.error('Failed to speak message:', error);
-        setIsSpeaking(false);
-      }
-    }
   };
 
   return (
@@ -137,33 +113,8 @@ export function ChatBubble({
           {/* Action buttons for AI messages - Full width below bubble */}
           {!isUser && message && !isStreaming && (
             <div className="w-full flex justify-between items-center mt-2 px-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {/* Left side: TTS + Copy */}
+              {/* Left side: Copy */}
               <div className="flex gap-1.5">
-                {/* TTS Speak Button */}
-                <button
-                  onClick={handleSpeak}
-                  className={cn(
-                    'p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150 hover:scale-110 active:scale-95 text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur-sm shadow-sm',
-                    isSpeaking && 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
-                  )}
-                  title={isSpeaking ? '말하기 중지' : '메시지 읽기'}
-                  aria-label={isSpeaking ? '말하기 중지' : '메시지 읽기'}
-                >
-                  {isSpeaking ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                      <rect x="6" y="4" width="4" height="16" rx="1" />
-                      <rect x="14" y="4" width="4" height="16" rx="1" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                      <line x1="12" y1="19" x2="12" y2="23" />
-                      <line x1="8" y1="23" x2="16" y2="23" />
-                    </svg>
-                  )}
-                </button>
-
                 {/* Copy button */}
                 <button
                   onClick={handleCopy}

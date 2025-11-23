@@ -4,19 +4,15 @@
  */
 
 import { useState, useRef, useEffect, KeyboardEvent, forwardRef, useImperativeHandle } from 'react';
-import { Mic, MicOff, Send, Monitor } from 'lucide-react';
+import { Send, Monitor } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { cn } from '../../lib/utils';
-import VoiceVisualizer from '../VoiceVisualizer';
 import ReasoningModeToggle from './ReasoningModeToggle'; // v3.5.0
 
 export interface ChatInputProps {
   onSendMessage: (message: string) => void;
-  onVoiceStart?: () => void;
-  onVoiceStop?: () => void;
   onScreenContext?: () => void;
-  isRecording?: boolean;
   isLoading?: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -31,10 +27,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   (
     {
       onSendMessage,
-      onVoiceStart,
-      onVoiceStop,
       onScreenContext,
-      isRecording = false,
       isLoading = false,
       disabled = false,
       placeholder = '메시지를 입력하세요...',
@@ -85,14 +78,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }
   };
 
-  const handleVoiceToggle = () => {
-    if (isRecording) {
-      onVoiceStop?.();
-    } else {
-      onVoiceStart?.();
-    }
-  };
-
   const handleScreenContext = async () => {
     if (!onScreenContext) return;
     setIsCapturingScreen(true);
@@ -106,25 +91,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   return (
     <div className="border-t border-border bg-background p-4">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
-        {/* Voice button with visualizer */}
-        <div className="flex-shrink-0 flex flex-col items-center gap-2">
-          {isRecording && (
-            <div className="animate-in fade-in zoom-in duration-200">
-              <VoiceVisualizer isRecording={isRecording} size="sm" />
-            </div>
-          )}
-          <Button
-            variant={isRecording ? 'destructive' : 'outline'}
-            size="icon"
-            onClick={handleVoiceToggle}
-            disabled={disabled || isLoading}
-            className={cn('flex-shrink-0', isRecording && 'ring-2 ring-destructive ring-offset-2')}
-            title={isRecording ? '녹음 중지' : '음성 입력'}
-          >
-            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </Button>
-        </div>
-
         {/* Screen context button */}
         <div className="flex-shrink-0">
           <Button
@@ -146,8 +112,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isRecording ? '녹음 중...' : placeholder}
-            disabled={disabled || isLoading || isRecording}
+            placeholder={placeholder}
+            disabled={disabled || isLoading}
             className="min-h-[44px] max-h-[200px] resize-none pr-12"
             rows={1}
             aria-label="메시지 입력"
@@ -158,7 +124,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         {/* Send button */}
         <Button
           onClick={handleSend}
-          disabled={!message.trim() || isLoading || disabled || isRecording}
+          disabled={!message.trim() || isLoading || disabled}
           size="icon"
           className="flex-shrink-0"
           title="전송 (Enter)"

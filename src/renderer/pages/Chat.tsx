@@ -62,7 +62,6 @@ export function Chat({
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
   const [isTyping, setIsTyping] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [suggestionsPanelCollapsed, setSuggestionsPanelCollapsed] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false); // Hidden by default
@@ -575,74 +574,6 @@ export function Chat({
     [messages, currentConversationId, showNotification]
   );
 
-  const handleVoiceStart = async () => {
-    try {
-      const audioPath = await invoke<string>('whisper_start_recording');
-      console.log('Recording started:', audioPath);
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Failed to start voice recording:', error);
-      // Show error notification to user
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          role: 'system',
-          content: t('errors.voiceRecordingFailed'),
-          timestamp: new Date(),
-        },
-      ]);
-    }
-  };
-
-  const handleVoiceStop = async () => {
-    try {
-      // Stop recording and get the audio file path
-      const audioPath = await invoke<string>('whisper_stop_recording');
-      setIsRecording(false);
-
-      console.log('Recording stopped:', audioPath);
-
-      // Transcribe the audio file
-      const transcript = await invoke<string>('whisper_transcribe', {
-        audioPath,
-        language: i18n.language === 'ko' ? 'ko' : 'en',
-      });
-
-      console.log('Transcription result:', transcript);
-
-      // If transcript is available and not a placeholder, insert it into chat input
-      if (transcript && transcript.trim() && !transcript.includes('not yet configured')) {
-        // Insert transcribed text into chat input (user can edit before sending)
-        inputRef.current?.setValue(transcript.trim());
-      } else if (transcript.includes('not yet configured')) {
-        // Show setup message to user
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            role: 'system',
-            content: t('errors.whisperNotConfigured'),
-            timestamp: new Date(),
-          },
-        ]);
-      }
-    } catch (error) {
-      console.error('Failed to stop voice recording or transcribe:', error);
-      setIsRecording(false);
-      // Show error notification to user
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          role: 'system',
-          content: t('errors.voiceTranscriptionFailed'),
-          timestamp: new Date(),
-        },
-      ]);
-    }
-  };
-
   const handleScreenContext = async () => {
     try {
       // TODO: Add screen capture notification type
@@ -1086,10 +1017,7 @@ export function Chat({
         <ChatInput
           ref={inputRef}
           onSendMessage={handleSendMessage}
-          onVoiceStart={handleVoiceStart}
-          onVoiceStop={handleVoiceStop}
           onScreenContext={handleScreenContext}
-          isRecording={isRecording}
           isLoading={isTyping}
           placeholder="메시지를 입력하세요..."
         />

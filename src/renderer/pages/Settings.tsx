@@ -53,34 +53,12 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const [theme, setTheme] = useState('light');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [ttsRate, setTtsRate] = useState(1.0); // 0.1 to 10.0
-  const [ttsVolume, setTtsVolume] = useState(1.0); // 0.0 to 1.0
 
   // Handle language change
   const handleLanguageChange = (newLang: string) => {
     i18n.changeLanguage(newLang);
     updatePersona('languagePreference', newLang);
     toast.success(newLang === 'ko' ? '언어가 변경되었습니다' : 'Language changed successfully');
-  };
-
-  // Handle TTS rate change
-  const handleTtsRateChange = async (rate: number) => {
-    setTtsRate(rate);
-    try {
-      await window.api.invoke('tts_set_rate', { rate });
-    } catch (error) {
-      console.error('Failed to set TTS rate:', error);
-    }
-  };
-
-  // Handle TTS volume change
-  const handleTtsVolumeChange = async (volume: number) => {
-    setTtsVolume(volume);
-    try {
-      await window.api.invoke('tts_set_volume', { volume });
-    } catch (error) {
-      console.error('Failed to set TTS volume:', error);
-    }
   };
 
   // Load settings on mount
@@ -430,63 +408,6 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
                         <option value="go">Go</option>
                       </select>
                     </div>
-                  </div>
-                </section>
-
-                {/* TTS (Text-to-Speech) Section */}
-                <section className="bg-card p-6 rounded-lg border border-border">
-                  <h3 className="text-lg font-semibold mb-4">🔊 음성 출력 (TTS)</h3>
-                  <div className="space-y-4">
-                    {/* TTS Rate */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium">
-                          말하기 속도
-                        </label>
-                        <span className="text-xs text-muted-foreground">{ttsRate.toFixed(1)}x</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="2.0"
-                        step="0.1"
-                        value={ttsRate}
-                        onChange={(e) => handleTtsRateChange(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>느리게 (0.5x)</span>
-                        <span>보통 (1.0x)</span>
-                        <span>빠르게 (2.0x)</span>
-                      </div>
-                    </div>
-
-                    {/* TTS Volume */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium">
-                          음량
-                        </label>
-                        <span className="text-xs text-muted-foreground">{Math.round(ttsVolume * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={ttsVolume}
-                        onChange={(e) => handleTtsVolumeChange(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>음소거 (0%)</span>
-                        <span>기본 (100%)</span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground">
-                      💡 AI 메시지에 마우스를 올리면 마이크 아이콘이 나타납니다. 클릭하여 메시지를 들을 수 있습니다.
-                    </p>
                   </div>
                 </section>
               </div>
