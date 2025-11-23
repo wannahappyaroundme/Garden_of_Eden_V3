@@ -35,7 +35,7 @@ futures-util = "0.3"
 screenshots = "0.8"
 base64 = "0.22"
 # RAG & Vector DB dependencies (Phase 1) - PRODUCTION LEVEL
-ort = { version = "2.0.0-rc.10", features = ["download-binaries", "ndarray", "coreml"] }  # ONNX Runtime for BGE-M3 with CoreML acceleration (M3 Max GPU)
+ort = { version = "2.0.0-rc.10", features = ["download-binaries", "ndarray"] }  # ONNX Runtime for BGE-M3 (CPU fallback for all platforms)
 tokenizers = "0.15"     # Tokenization for embedding model
 ndarray = "0.16"        # N-dimensional arrays for ML
 # LanceDB postponed - API changed significantly in 0.22, complex migration
@@ -92,6 +92,11 @@ imageproc = "0.23"      # Template matching and image analysis
 cocoa = "0.25"          # macOS NSWorkspace API
 objc = "0.2"            # Objective-C runtime
 accessibility = "0.2"   # macOS Accessibility API for LAM
+
+# CoreML GPU acceleration (Apple Silicon only - M1/M2/M3 Max)
+[target.'cfg(target_vendor = "apple")'.dependencies.ort]
+version = "2.0.0-rc.10"
+features = ["download-binaries", "ndarray", "coreml"]  # CoreML for M1/M2/M3 Max GPU acceleration
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [

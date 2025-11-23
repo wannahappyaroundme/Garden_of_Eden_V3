@@ -42,6 +42,13 @@ impl EmbeddingService {
     pub fn new() -> Result<Self> {
         log::info!("Initializing BGE-M3 ONNX Embedding Service");
 
+        // Log platform and execution provider info
+        #[cfg(target_vendor = "apple")]
+        log::info!("Platform: Apple ({}) - CoreML GPU acceleration available", std::env::consts::ARCH);
+
+        #[cfg(not(target_vendor = "apple"))]
+        log::info!("Platform: {} ({}) - CPU-only execution", std::env::consts::OS, std::env::consts::ARCH);
+
         // Get model paths
         let model_dir = Self::get_model_dir()?;
         let model_path = model_dir.join("model_quantized.onnx");
