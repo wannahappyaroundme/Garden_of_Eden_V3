@@ -428,7 +428,7 @@ Rules:
 
     /// Generate execution plan with dependency ordering
     pub fn generate_execution_plan(&self, root_task_id: &str) -> Result<ExecutionPlan> {
-        let root_task = self.get_task(root_task_id)?;
+        let _root_task = self.get_task(root_task_id)?;
 
         // Get all subtasks
         let subtasks = self.get_subtasks(root_task_id)?;

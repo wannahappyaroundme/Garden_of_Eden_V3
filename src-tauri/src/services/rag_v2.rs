@@ -6,7 +6,12 @@
  * - Stores embeddings in LanceDB vector store
  * - Maintains backward compatibility with existing API
  * - v3.4.0 Phase 7: RAFT integration for hallucination reduction
+ *
+ * NOTE: This module is only compiled when the `lancedb-support` feature is enabled.
+ * To enable: cargo build --features lancedb-support
  */
+
+#![cfg(feature = "lancedb-support")]
 
 use anyhow::{anyhow, Result};
 use crate::database::Database;

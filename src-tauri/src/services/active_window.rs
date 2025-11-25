@@ -88,7 +88,7 @@ impl ActiveWindowService {
 
     /// Get window title using macOS Accessibility API
     #[cfg(target_os = "macos")]
-    fn get_window_title_macos(&self, pid: i32) -> Result<String> {
+    fn get_window_title_macos(&self, _pid: i32) -> Result<String> {
         // This is a simplified implementation
         // For production, you'd need to use the Accessibility API (AXUIElement)
         // which requires additional dependencies and permissions

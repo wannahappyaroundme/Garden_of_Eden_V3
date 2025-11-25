@@ -19,6 +19,11 @@ import { RaftSettings } from '../components/settings/RaftSettings'; // v3.4.0 Ph
 import LLMSettingsPanel from '../components/settings/LLMSettings'; // v3.5.0
 import { Phase5Settings } from '../components/settings/Phase5Settings'; // v3.9.0
 import { IntegrationsSettingsPanel } from '../components/settings/IntegrationsSettings'; // v3.4.0 Performance
+import MemoryVisualization from './MemoryVisualization'; // Settings integration
+import { TaskPlannerPanel } from '../components/task-planner/TaskPlannerPanel'; // Settings integration
+import { GoalTrackerPanel } from '../components/goal-tracker/GoalTrackerPanel'; // Settings integration
+import { LearningStylePanel } from '../components/learning-style/LearningStylePanel'; // Settings integration
+import ShortcutHelp from '../components/ShortcutHelp'; // Settings integration
 
 interface SettingsProps {
   onClose: () => void;
@@ -27,7 +32,7 @@ interface SettingsProps {
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'phase5' | 'app' | 'integrations' | 'raft' | 'updates' | 'crashes' | 'about'>('persona'); // v3.4.0 Phase 7: Added raft tab, v3.9.0: Added phase5 tab, v3.4.0: Added integrations tab
+  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'phase5' | 'app' | 'integrations' | 'raft' | 'updates' | 'crashes' | 'about' | 'shortcuts' | 'memory' | 'taskplanner' | 'goaltracker' | 'learning'>('persona'); // Added: shortcuts, memory, taskplanner, goaltracker, learning
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -279,6 +284,56 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
             🐛 충돌 리포트
           </button>
           <button
+            onClick={() => setActiveTab('shortcuts')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'shortcuts'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            ⌨️ 단축키
+          </button>
+          <button
+            onClick={() => setActiveTab('memory')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'memory'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🧠 메모리 시각화
+          </button>
+          <button
+            onClick={() => setActiveTab('taskplanner')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'taskplanner'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🎯 작업 계획
+          </button>
+          <button
+            onClick={() => setActiveTab('goaltracker')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'goaltracker'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🏆 목표 추적
+          </button>
+          <button
+            onClick={() => setActiveTab('learning')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'learning'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🎓 학습 추적
+          </button>
+          <button
             onClick={() => setActiveTab('about')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'about'
@@ -439,6 +494,41 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           {activeTab === 'crashes' && (
             <div className="max-w-5xl">
               <CrashReportsPanel />
+            </div>
+          )}
+
+          {/* Keyboard Shortcuts Tab */}
+          {activeTab === 'shortcuts' && (
+            <div className="max-w-4xl mx-auto">
+              <ShortcutHelp isOpen={true} onClose={() => {}} />
+            </div>
+          )}
+
+          {/* Memory Visualization Tab */}
+          {activeTab === 'memory' && (
+            <div className="max-w-7xl mx-auto">
+              <MemoryVisualization onClose={() => {}} />
+            </div>
+          )}
+
+          {/* Task Planner Tab */}
+          {activeTab === 'taskplanner' && (
+            <div className="max-w-6xl mx-auto">
+              <TaskPlannerPanel />
+            </div>
+          )}
+
+          {/* Goal Tracker Tab */}
+          {activeTab === 'goaltracker' && (
+            <div className="max-w-6xl mx-auto">
+              <GoalTrackerPanel />
+            </div>
+          )}
+
+          {/* Learning Style Tab */}
+          {activeTab === 'learning' && (
+            <div className="max-w-5xl mx-auto">
+              <LearningStylePanel />
             </div>
           )}
 

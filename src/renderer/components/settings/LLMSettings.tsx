@@ -17,6 +17,8 @@ interface LLMSettings {
   reasoning_mode: 'quick' | 'deep';
   auto_select_model: boolean;
   vram_capacity: number | null;
+  context_window_size: number;
+  max_ram_usage_gb: number;
 }
 
 const LLMSettingsPanel: React.FC = () => {
@@ -68,6 +70,34 @@ const LLMSettingsPanel: React.FC = () => {
       setSettings({ ...settings, reasoning_mode: mode });
     } catch (error) {
       console.error('Failed to set reasoning mode:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleContextWindowChange = async (size: number) => {
+    if (!settings) return;
+
+    try {
+      setSaving(true);
+      await invoke('llm_set_context_window', { size });
+      setSettings({ ...settings, context_window_size: size });
+    } catch (error) {
+      console.error('Failed to set context window:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMaxRAMChange = async (maxGb: number) => {
+    if (!settings) return;
+
+    try {
+      setSaving(true);
+      await invoke('llm_set_max_ram', { maxGb });
+      setSettings({ ...settings, max_ram_usage_gb: maxGb });
+    } catch (error) {
+      console.error('Failed to set max RAM:', error);
     } finally {
       setSaving(false);
     }
@@ -163,6 +193,58 @@ const LLMSettingsPanel: React.FC = () => {
               <span className="mode-icon">🧠</span>
               <span className="mode-label">Deep</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>Performance & Memory</h3>
+        <div className="performance-settings">
+          <div className="setting-item">
+            <div className="setting-header">
+              <label htmlFor="context-window">Context Window Size</label>
+              <span className="setting-value">{settings.context_window_size.toLocaleString()} tokens</span>
+            </div>
+            <input
+              id="context-window"
+              type="range"
+              min="2048"
+              max="32768"
+              step="2048"
+              value={settings.context_window_size}
+              onChange={(e) => handleContextWindowChange(parseInt(e.target.value))}
+              disabled={saving}
+              className="slider"
+            />
+            <div className="setting-description">
+              Controls conversation memory length. Higher values use more RAM but remember more context.
+            </div>
+          </div>
+
+          <div className="setting-item">
+            <div className="setting-header">
+              <label htmlFor="max-ram">Maximum RAM Usage</label>
+              <span className="setting-value">{settings.max_ram_usage_gb} GB</span>
+            </div>
+            <input
+              id="max-ram"
+              type="range"
+              min="4"
+              max="32"
+              step="2"
+              value={settings.max_ram_usage_gb}
+              onChange={(e) => handleMaxRAMChange(parseInt(e.target.value))}
+              disabled={saving}
+              className="slider"
+            />
+            <div className="setting-description">
+              Limits maximum RAM usage. Lower values reduce memory footprint but may affect performance.
+            </div>
+          </div>
+
+          <div className="setting-info">
+            <p>💡 <strong>Tip:</strong> If you experience slowdowns or crashes, try reducing these values.</p>
+            <p>📊 Recommended: 8GB RAM limit with 8192 token context for most systems</p>
           </div>
         </div>
       </div>
@@ -332,6 +414,107 @@ const LLMSettingsPanel: React.FC = () => {
 
         .error-message {
           color: var(--error-color, #f44336);
+        }
+
+        .performance-settings {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .setting-item {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .setting-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 4px;
+        }
+
+        .setting-header label {
+          font-weight: 600;
+          color: var(--text-primary, #333);
+          font-size: 1em;
+        }
+
+        .setting-value {
+          font-weight: 600;
+          color: var(--accent-color, #4CAF50);
+          font-size: 1.1em;
+        }
+
+        .slider {
+          width: 100%;
+          height: 8px;
+          border-radius: 4px;
+          background: linear-gradient(to right, #e0e0e0 0%, var(--accent-color, #4CAF50) 100%);
+          outline: none;
+          -webkit-appearance: none;
+          appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: var(--accent-color, #4CAF50);
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          transition: transform 0.2s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+          transform: scale(1.1);
+        }
+
+        .slider::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: var(--accent-color, #4CAF50);
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          transition: transform 0.2s;
+        }
+
+        .slider::-moz-range-thumb:hover {
+          transform: scale(1.1);
+        }
+
+        .slider:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .setting-description {
+          font-size: 0.9em;
+          color: var(--text-secondary, #666);
+          line-height: 1.4;
+        }
+
+        .setting-info {
+          margin-top: 8px;
+          padding: 16px;
+          background: #fff9e6;
+          border-left: 4px solid #ffd700;
+          border-radius: 4px;
+        }
+
+        .setting-info p {
+          margin: 0 0 8px 0;
+          color: var(--text-primary, #333);
+          font-size: 0.95em;
+        }
+
+        .setting-info p:last-child {
+          margin-bottom: 0;
         }
       `}</style>
     </div>
