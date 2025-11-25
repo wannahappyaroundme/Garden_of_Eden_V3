@@ -12,10 +12,16 @@
  * RRF Formula:
  * RRF_score(d) = Σ 1 / (k + rank(d))
  * where k = 60 (default constant)
+ *
+ * NOTE: This module is only compiled when the `lancedb-support` feature is enabled.
+ * To enable: cargo build --features lancedb-support
  */
+
+#![cfg(feature = "lancedb-support")]
 
 use super::bm25::{BM25Index, ScoredDocument as BM25ScoredDocument};
 use super::embedding::EmbeddingService;
+#[cfg(feature = "lancedb-support")]
 use super::rag_v2::{RagServiceV2, Episode};  // v3.4.0: Migrated to LanceDB for 10-100x faster search
 use super::reranker::HeuristicReranker;
 use log::{debug, info};

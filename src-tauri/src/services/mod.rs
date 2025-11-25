@@ -9,9 +9,11 @@ pub mod prompt_customizer;
 // Phase 1: RAG & Episodic Memory
 pub mod embedding;
 pub mod rag;  // v3.2.0: Original RAG with SQLite JSON embeddings
-pub mod rag_v2;  // v3.4.0 Phase 6: RAG with LanceDB (10-100x faster)
+#[cfg(feature = "lancedb-support")]
+pub mod rag_v2;  // v3.4.0 Phase 6: RAG with LanceDB (10-100x faster, optional)
 pub mod raft;  // v3.2.0: RAFT hallucination reduction
-pub mod vector_store;  // v3.4.0 Phase 6: LanceDB vector database
+#[cfg(feature = "lancedb-support")]
+pub mod vector_store;  // v3.4.0 Phase 6: LanceDB vector database (optional)
 
 // Phase 2: Screen Context & Vision
 pub mod active_window;
@@ -62,7 +64,8 @@ pub mod conversation_memory; // v3.5.0: Summary Buffer Memory for multi-turn con
 
 // Phase 13: Hybrid Search (v3.6.0)
 pub mod bm25;  // v3.6.0: BM25 lexical search for hybrid retrieval
-pub mod hybrid_search;  // v3.6.0: Hybrid search combining BM25 + BGE-M3 with RRF fusion
+#[cfg(feature = "lancedb-support")]
+pub mod hybrid_search;  // v3.6.0: Hybrid search combining BM25 + BGE-M3 with RRF fusion (requires LanceDB)
 pub mod reranker;  // v3.6.0: Cross-encoder re-ranking for improved relevance
 
 // Phase 14: Attention Sink (v3.6.0)
@@ -88,12 +91,15 @@ pub mod streaming_vision;  // v3.8.0 Phase 2: Continuous screen monitoring with 
 pub mod temporal_memory;   // v3.8.0 Phase 3: Ebbinghaus forgetting curve with gradual decay
 pub mod decay_worker;      // v3.8.0 Phase 3: 24h background worker for memory retention updates
 pub mod pattern_detector;  // v3.8.0 Phase 4: ML-based trait extraction using Ollama/Qwen
+#[cfg(feature = "phase4")]
 pub mod contextual_retrieval;  // v3.8.0 Phase 4: Topic-based retention boosting for active conversations
+#[cfg(feature = "phase4")]
 pub mod memory_consolidation;  // v3.8.0 Phase 4: Intelligent merging of similar low-retention memories
 
 // Phase 5: Reasoning Engine 2.0 (v3.9.0)
 pub mod chain_of_thought;  // v3.9.0: Step-by-step reasoning with self-correction
 pub mod visual_analyzer;   // v3.9.0 Stage 1: Image understanding with LLaVA (lazy loading)
+#[cfg(feature = "phase5")]
 pub mod context_enricher;  // v3.9.0 Stage 1: Multi-source context aggregation
 pub mod semantic_wiki;     // v3.9.0 Stage 2: Fact extraction and knowledge base
 pub mod memory_enhancer;   // v3.9.0 Stage 2: Memory quality scoring and enhancement

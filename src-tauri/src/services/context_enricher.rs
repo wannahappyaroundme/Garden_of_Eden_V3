@@ -15,11 +15,17 @@
  * - Relevance scoring for each context piece
  * - Automatic context pruning (keeps under token limit)
  * - Configurable context priority
+ *
+ * NOTE: This module is only compiled when Phase 5 features are enabled.
+ * To enable: cargo build --features phase5
  */
+
+#![cfg(feature = "phase5")]
 
 use crate::database::Database;
 use crate::services::active_window::ActiveWindowService;
 use crate::services::visual_analyzer::VisualAnalyzerService;
+#[cfg(feature = "lancedb-support")]
 use crate::services::rag_v2::RagServiceV2;  // v3.4.0: LanceDB migration
 use anyhow::{Context, Result};
 use chrono::{Datelike, Timelike};

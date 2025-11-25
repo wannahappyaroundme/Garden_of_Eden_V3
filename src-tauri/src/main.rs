@@ -20,7 +20,11 @@ use services::tool_implementations::{
 use services::tool_history::ToolHistoryService;
 use services::tool_settings::ToolSettingsService;
 use services::embedding::EmbeddingService;
+#[cfg(feature = "lancedb-support")]
 use services::rag_v2::RagServiceV2;  // v3.4.0 Phase 6: LanceDB-powered RAG (10-100x faster)
+#[cfg(not(feature = "lancedb-support"))]
+use services::rag::RagService as RagServiceV2;  // Fallback to SQLite-based RAG
+#[cfg(feature = "lancedb-support")]
 use services::hybrid_search::HybridSearchEngine;
 use services::entity_extractor::EntityExtractor;
 use services::graph_builder::GraphBuilder;
@@ -33,10 +37,13 @@ use services::streaming_vision::StreamingVisionService;
 use services::temporal_memory::TemporalMemoryService;
 use services::decay_worker::DecayWorker;
 use services::pattern_detector::LlmPatternDetector;
+#[cfg(feature = "phase4")]
 use services::contextual_retrieval::ContextualRetrievalService;
+#[cfg(feature = "phase4")]
 use services::memory_consolidation::MemoryConsolidationService;
 use services::chain_of_thought::ChainOfThoughtEngine;
 use services::visual_analyzer::VisualAnalyzerService;
+#[cfg(feature = "phase5")]
 use services::context_enricher::ContextEnricherService;
 use services::semantic_wiki::SemanticWikiService;
 use services::memory_enhancer::MemoryEnhancerService;
@@ -64,6 +71,7 @@ pub struct AppState {
     tool_settings_service: Arc<TokioMutex<ToolSettingsService>>,  // v3.3.0: Tool configuration
     embedding: Arc<EmbeddingService>,  // v3.6.0: BGE-M3 embeddings
     rag: Arc<RagServiceV2>,  // v3.4.0 Phase 6: LanceDB-powered RAG (10-100x faster)
+    #[cfg(feature = "lancedb-support")]
     hybrid_search: Arc<TokioMutex<HybridSearchEngine>>,  // v3.6.0: Hybrid search (BM25 + semantic)
     attention_sink: Arc<services::attention_sink::AttentionSinkManager>,  // v3.6.0: Long context handling
     prompt_cache: Arc<Mutex<services::prompt_cache::PromptCache>>,  // v3.6.0: Prompt caching
@@ -214,13 +222,17 @@ fn main() {
     let rag_service_arc = Arc::new(rag_service);
     log::info!("✓ RAG Service initialized with LanceDB - 10-100x faster vector search! 🚀");
 
-    // Initialize Hybrid Search Engine (v3.6.0)
-    log::info!("Initializing Hybrid Search Engine...");
-    let hybrid_search_engine = HybridSearchEngine::new(
-        Arc::clone(&embedding_service),
-        Arc::clone(&rag_service_arc),
-    );
-    log::info!("✓ Hybrid Search Engine initialized");
+    // Initialize Hybrid Search Engine (v3.6.0) - only when LanceDB is enabled
+    #[cfg(feature = "lancedb-support")]
+    let hybrid_search_engine = {
+        log::info!("Initializing Hybrid Search Engine...");
+        let engine = HybridSearchEngine::new(
+            Arc::clone(&embedding_service),
+            Arc::clone(&rag_service_arc),
+        );
+        log::info!("✓ Hybrid Search Engine initialized");
+        engine
+    };
 
     // Initialize Attention Sink Manager (v3.6.0)
     log::info!("Initializing Attention Sink Manager...");
@@ -336,24 +348,30 @@ fn main() {
     let pattern_detector_arc = Arc::new(pattern_detector);
     log::info!("✓ Pattern Detector initialized");
 
-    // Initialize Contextual Retrieval Service (v3.8.0 Phase 4)
-    log::info!("Initializing Contextual Retrieval Service...");
-    let contextual_retrieval = ContextualRetrievalService::new(
-        Arc::clone(&db_arc),
-        Arc::clone(&rag_service_arc)
-    ).expect("Failed to initialize Contextual Retrieval Service");
-    let contextual_retrieval_arc = Arc::new(contextual_retrieval);
-    log::info!("✓ Contextual Retrieval Service initialized");
+    // Initialize Contextual Retrieval Service (v3.8.0 Phase 4) - only when phase4 is enabled
+    #[cfg(feature = "phase4")]
+    let contextual_retrieval_arc = {
+        log::info!("Initializing Contextual Retrieval Service...");
+        let service = ContextualRetrievalService::new(
+            Arc::clone(&db_arc),
+            Arc::clone(&rag_service_arc)
+        ).expect("Failed to initialize Contextual Retrieval Service");
+        log::info!("✓ Contextual Retrieval Service initialized");
+        Arc::new(service)
+    };
 
-    // Initialize Memory Consolidation Service (v3.8.0 Phase 4)
-    log::info!("Initializing Memory Consolidation Service...");
-    let memory_consolidation = MemoryConsolidationService::new(
-        Arc::clone(&db_arc),
-        Arc::clone(&rag_service_arc),
-        Arc::clone(&embedding_service)
-    ).expect("Failed to initialize Memory Consolidation Service");
-    let memory_consolidation_arc = Arc::new(memory_consolidation);
-    log::info!("✓ Memory Consolidation Service initialized");
+    // Initialize Memory Consolidation Service (v3.8.0 Phase 4) - only when phase4 is enabled
+    #[cfg(feature = "phase4")]
+    let memory_consolidation_arc = {
+        log::info!("Initializing Memory Consolidation Service...");
+        let service = MemoryConsolidationService::new(
+            Arc::clone(&db_arc),
+            Arc::clone(&rag_service_arc),
+            Arc::clone(&embedding_service)
+        ).expect("Failed to initialize Memory Consolidation Service");
+        log::info!("✓ Memory Consolidation Service initialized");
+        Arc::new(service)
+    };
 
     // Initialize Chain-of-Thought Engine (v3.9.0 Phase 5)
     log::info!("Initializing Chain-of-Thought Engine...");
@@ -371,15 +389,18 @@ fn main() {
     let visual_analyzer_arc = Arc::new(TokioMutex::new(visual_analyzer));
     log::info!("✓ Visual Analyzer initialized (lazy LLaVA loading)");
 
-    // Initialize Context Enricher (v3.9.0 Phase 5 - Stage 1)
-    log::info!("Initializing Context Enricher...");
-    let context_enricher = ContextEnricherService::new(
-        Arc::clone(&db_arc),
-        Arc::clone(&rag_service_arc),
-        Some(Arc::clone(&visual_analyzer_arc))
-    ).expect("Failed to initialize Context Enricher");
-    let context_enricher_arc = Arc::new(context_enricher);
-    log::info!("✓ Context Enricher initialized");
+    // Initialize Context Enricher (v3.9.0 Phase 5 - Stage 1) - only when phase5 is enabled
+    #[cfg(feature = "phase5")]
+    let context_enricher_arc = {
+        log::info!("Initializing Context Enricher...");
+        let service = ContextEnricherService::new(
+            Arc::clone(&db_arc),
+            Arc::clone(&rag_service_arc),
+            Some(Arc::clone(&visual_analyzer_arc))
+        ).expect("Failed to initialize Context Enricher");
+        log::info!("✓ Context Enricher initialized");
+        Arc::new(service)
+    };
 
     // Initialize Semantic Wiki (v3.9.0 Phase 5 - Stage 2)
     log::info!("Initializing Semantic Wiki...");
@@ -451,6 +472,7 @@ fn main() {
         tool_settings_service,  // v3.3.0: Tool configuration
         embedding: embedding_service,  // v3.6.0: BGE-M3 embeddings
         rag: rag_service_arc,  // v3.4.0 Phase 6: LanceDB-powered RAG (10-100x faster)
+        #[cfg(feature = "lancedb-support")]
         hybrid_search: Arc::new(TokioMutex::new(hybrid_search_engine)),  // v3.6.0: Hybrid search
         attention_sink: attention_sink_arc,  // v3.6.0: Attention sink for long contexts
         prompt_cache: prompt_cache_arc,  // v3.6.0: Prompt caching
@@ -465,24 +487,41 @@ fn main() {
         computer_control: Arc::clone(&computer_control_arc),  // v3.8.0: LAM (Large Action Model) for computer use
     };
 
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .manage(app_state)
         .manage(crash_reporter_state)
         .manage(computer_control_arc)  // v3.8.0: LAM service for commands
         .manage(streaming_vision_arc)  // v3.8.0 Phase 2: Streaming vision service
         .manage(temporal_memory_arc)  // v3.8.0 Phase 3: Temporal memory service
-        .manage(pattern_detector_arc)  // v3.8.0 Phase 4: Pattern detector service
-        .manage(contextual_retrieval_arc)  // v3.8.0 Phase 4: Contextual retrieval service
-        .manage(memory_consolidation_arc)  // v3.8.0 Phase 4: Memory consolidation service
+        .manage(pattern_detector_arc);  // v3.8.0 Phase 4: Pattern detector service
+
+    // Phase 4 services - only when feature is enabled
+    #[cfg(feature = "phase4")]
+    {
+        builder = builder
+            .manage(contextual_retrieval_arc)  // v3.8.0 Phase 4: Contextual retrieval service
+            .manage(memory_consolidation_arc);  // v3.8.0 Phase 4: Memory consolidation service
+    }
+
+    // Phase 5 services - always enabled base services + optional context enricher
+    builder = builder
         .manage(cot_engine_arc)  // v3.9.0 Phase 5: Chain-of-Thought engine
-        .manage(visual_analyzer_arc)  // v3.9.0 Phase 5 Stage 1: Visual analyzer (lazy LLaVA)
-        .manage(context_enricher_arc)  // v3.9.0 Phase 5 Stage 1: Context enricher
+        .manage(visual_analyzer_arc);  // v3.9.0 Phase 5 Stage 1: Visual analyzer (lazy LLaVA)
+
+    #[cfg(feature = "phase5")]
+    {
+        builder = builder.manage(context_enricher_arc);  // v3.9.0 Phase 5 Stage 1: Context enricher
+    }
+
+    builder = builder
         .manage(semantic_wiki_arc)  // v3.9.0 Phase 5 Stage 2: Semantic knowledge base
         .manage(memory_enhancer_arc)  // v3.9.0 Phase 5 Stage 2: Memory quality scoring and enhancement
         .manage(task_planner_arc)  // v3.9.0 Phase 5 Stage 4: Task planning and execution
         .manage(learning_style_adapter_arc)  // v3.9.0 Phase 5 Stage 4: Learning style adaptation
         .manage(goal_tracker_arc)  // v3.9.0 Phase 5 Stage 4: Goal tracking and achievement
-        .plugin(tauri_plugin_updater::Builder::new().build())  // v3.4.0: Auto-updater
+        .plugin(tauri_plugin_updater::Builder::new().build());  // v3.4.0: Auto-updater
+
+    builder
         .invoke_handler(tauri::generate_handler![
             commands::ai::chat,
             commands::ai::chat_stream,
@@ -605,14 +644,22 @@ fn main() {
             commands::conversation_memory::memory_get_summary,
             commands::conversation_memory::memory_delete_summary,
             commands::conversation_memory::memory_format_context,
-            // Hybrid Search Commands (v3.6.0)
+            // Hybrid Search Commands (v3.6.0) - only when LanceDB is enabled
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_init,
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_rebuild_index,
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_query,
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_set_weights,
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_set_rrf_k,
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_stats,
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_compare,
+            #[cfg(feature = "lancedb-support")]
             commands::hybrid_search::hybrid_search_toggle_reranking,
             // Attention Sink Commands (v3.6.0)
             commands::attention_sink::attention_sink_manage_context,
@@ -734,16 +781,25 @@ fn main() {
             // Advanced Pattern Detection (Phase 4)
             commands::pattern_detection::pattern_analyze_traits,
             commands::pattern_detection::pattern_analyze_single_trait,
-            // Contextual Retrieval (Phase 4)
+            // Contextual Retrieval (Phase 4) - only when phase4 is enabled
+            #[cfg(feature = "phase4")]
             commands::contextual_retrieval::contextual_boost_memories,
+            #[cfg(feature = "phase4")]
             commands::contextual_retrieval::contextual_decay_old_boosts,
+            #[cfg(feature = "phase4")]
             commands::contextual_retrieval::contextual_get_boost_stats,
+            #[cfg(feature = "phase4")]
             commands::contextual_retrieval::contextual_update_config,
+            #[cfg(feature = "phase4")]
             commands::contextual_retrieval::contextual_get_config,
-            // Memory Consolidation (Phase 4)
+            // Memory Consolidation (Phase 4) - only when phase4 is enabled
+            #[cfg(feature = "phase4")]
             commands::memory_consolidation::consolidation_run,
+            #[cfg(feature = "phase4")]
             commands::memory_consolidation::consolidation_get_stats,
+            #[cfg(feature = "phase4")]
             commands::memory_consolidation::consolidation_update_config,
+            #[cfg(feature = "phase4")]
             commands::memory_consolidation::consolidation_get_config,
             // Chain-of-Thought (Phase 5)
             commands::chain_of_thought::cot_reason,
@@ -758,9 +814,12 @@ fn main() {
             commands::visual_analyzer::visual_get_config,
             commands::visual_analyzer::visual_is_loaded,
             commands::visual_analyzer::visual_get_recent,
-            // Context Enricher (Phase 5 - Stage 1)
+            // Context Enricher (Phase 5 - Stage 1) - only when phase5 is enabled
+            #[cfg(feature = "phase5")]
             commands::context_enricher::context_enrich,
+            #[cfg(feature = "phase5")]
             commands::context_enricher::context_update_config,
+            #[cfg(feature = "phase5")]
             commands::context_enricher::context_get_config,
             // Semantic Wiki (Phase 5 - Stage 2)
             commands::semantic_wiki::wiki_extract_facts,

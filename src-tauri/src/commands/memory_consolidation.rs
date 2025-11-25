@@ -2,7 +2,12 @@
  * Phase 4: Memory Consolidation Commands (v3.8.0)
  *
  * Tauri commands for intelligent memory merging.
+ *
+ * NOTE: This module is only compiled when Phase 4 features are enabled.
+ * To enable: cargo build --features phase4
  */
+
+#![cfg(feature = "phase4")]
 
 use crate::services::memory_consolidation::{
     ConsolidationConfig, ConsolidationResult, ConsolidationStats,

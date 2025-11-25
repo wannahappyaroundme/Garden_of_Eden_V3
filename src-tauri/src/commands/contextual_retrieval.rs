@@ -2,7 +2,12 @@
  * Phase 4: Contextual Retrieval Commands (v3.8.0)
  *
  * Tauri commands for topic-based retention boosting.
+ *
+ * NOTE: This module is only compiled when Phase 4 features are enabled.
+ * To enable: cargo build --features phase4
  */
+
+#![cfg(feature = "phase4")]
 
 use crate::services::contextual_retrieval::{
     ContextualBoost, ContextualRetrievalConfig, ContextualRetrievalService, BoostStats,

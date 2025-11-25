@@ -14,10 +14,16 @@
  * - Called during conversation processing
  * - Runs before memory retrieval to keep context alive
  * - Prevents important memories from decaying mid-conversation
+ *
+ * NOTE: This module is only compiled when Phase 4 features are enabled.
+ * To enable: cargo build --features phase4
  */
+
+#![cfg(feature = "phase4")]
 
 use crate::database::Database;
 use crate::services::embedding::EmbeddingService;
+#[cfg(feature = "lancedb-support")]
 use crate::services::rag_v2::RagServiceV2;  // v3.4.0: LanceDB migration
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

@@ -6,7 +6,12 @@
  * - Disk-based storage with ACID guarantees
  * - Native ANN (Approximate Nearest Neighbor) search
  * - Optimized for BGE-M3 1024-dimensional embeddings
+ *
+ * NOTE: This module is only compiled when the `lancedb-support` feature is enabled.
+ * To enable: cargo build --features lancedb-support
  */
+
+#![cfg(feature = "lancedb-support")]
 
 use anyhow::{anyhow, Result};
 use arrow_array::{Array, Float32Array, RecordBatch, RecordBatchIterator, StringArray};

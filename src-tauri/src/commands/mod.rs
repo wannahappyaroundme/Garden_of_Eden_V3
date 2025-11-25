@@ -15,6 +15,7 @@ pub mod tool_history;
 pub mod tool_settings;
 pub mod llm;
 pub mod conversation_memory;
+#[cfg(feature = "lancedb-support")]
 pub mod hybrid_search;
 pub mod attention_sink;
 pub mod prompt_cache;
@@ -25,10 +26,13 @@ pub mod computer_control;
 pub mod streaming_vision;
 pub mod temporal_memory;
 pub mod pattern_detection;
+#[cfg(feature = "phase4")]
 pub mod contextual_retrieval;
+#[cfg(feature = "phase4")]
 pub mod memory_consolidation;
 pub mod chain_of_thought;
 pub mod visual_analyzer;
+#[cfg(feature = "phase5")]
 pub mod context_enricher;
 pub mod semantic_wiki;
 pub mod memory_enhancer;

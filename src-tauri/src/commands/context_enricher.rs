@@ -2,7 +2,12 @@
  * Phase 5: Context Enricher Commands (v3.9.0 - Stage 1)
  *
  * Tauri commands for context enrichment.
+ *
+ * NOTE: This module is only compiled when Phase 5 features are enabled.
+ * To enable: cargo build --features phase5
  */
+
+#![cfg(feature = "phase5")]
 
 use crate::services::context_enricher::{
     ContextEnricherConfig, ContextEnricherService, EnrichedContext,

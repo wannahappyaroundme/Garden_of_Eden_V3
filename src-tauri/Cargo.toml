@@ -59,11 +59,11 @@ async-trait = "0.1"     # Async trait support for ToolExecutor
 unicode-segmentation = "1.12"  # Text tokenization for BM25
 sha2 = "0.10"  # SHA-256 hashing for prompt cache
 
-# LanceDB Vector Database (v3.4.0 - Phase 6)
-lancedb = "0.22"        # Vector database for fast similarity search
-arrow-array = "56"      # Apache Arrow arrays for LanceDB
-arrow-schema = "56"     # Apache Arrow schema for LanceDB
-futures = "0.3"         # Async utilities for LanceDB
+# LanceDB Vector Database (v3.4.0 - Phase 6) - Optional, only compile with lancedb-support feature
+lancedb = { version = "0.22", optional = true }        # Vector database for fast similarity search
+arrow-array = { version = "56", optional = true }      # Apache Arrow arrays for LanceDB
+arrow-schema = { version = "56", optional = true }     # Apache Arrow schema for LanceDB
+futures = "0.3"         # Async utilities for LanceDB (also used by other features)
 
 # Proactive Mode dependencies (Phase 4)
 notify = "6.1"          # File system watching
@@ -124,6 +124,37 @@ windows = { version = "0.58", features = [
 # By default, Tauri runs in production mode when `tauri build` is run
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+# Phase-based feature flags for conditional compilation
+# Phases 1-3 are always enabled (core functionality)
+
+# Phase 4: Advanced Learning & Memory (Adaptive Decay, Pattern Detection, Retention Forecasting)
+phase4 = []
+
+# Phase 5: Reasoning Engine (ReAct Agent, Planner, Chain of Thought)
+phase5 = ["react-agent", "planner"]
+react-agent = []
+planner = []
+
+# Phase 6: Advanced RAG & Vector Database (LanceDB, Knowledge Graph, Plugin System)
+phase6 = ["lancedb-support", "knowledge-graph", "plugin-system", "semantic-wiki"]
+lancedb-support = ["dep:lancedb", "dep:arrow-array", "dep:arrow-schema"]  # LanceDB vector database integration
+knowledge-graph = []   # Entity extraction & graph building
+plugin-system = []     # JavaScript plugin runtime
+semantic-wiki = []     # Personal wiki system
+
+# Phase 7: LoRA Training & Advanced Tools (Fine-tuning, Advanced BM25)
+phase7 = ["lora-training", "advanced-tools"]
+lora-training = []     # LoRA data collection & adapter management
+advanced-tools = []    # Advanced tool calling system
+
+# Phase 8: LAM Tools (Large Action Model - Computer Control)
+phase8 = ["lam-tools"]
+lam-tools = []         # Computer vision & automation
+
+# Convenience features
+full = ["phase4", "phase5", "phase6", "phase7", "phase8"]  # Enable all features
+dev = ["full"]  # Development mode with all features
 
 # Build optimization for release
 [profile.release]

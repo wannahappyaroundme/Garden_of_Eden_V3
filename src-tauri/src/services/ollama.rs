@@ -4,7 +4,10 @@ use futures_util::StreamExt;
 use std::sync::Arc;
 use tauri::{Manager, Emitter};  // v3.3.0: For emit() method
 
+#[cfg(feature = "lancedb-support")]
 use super::rag_v2::{RagServiceV2, format_episodes_for_context};  // v3.4.0: LanceDB for 10-100x faster RAG
+#[cfg(not(feature = "lancedb-support"))]
+use super::rag::{RagService as RagServiceV2, format_episodes_for_context};  // Fallback to SQLite-based RAG
 use super::tool_calling::{ToolService, ToolCall, ToolDefinition};
 use super::learning::LearningService;
 use crate::database::Database;
@@ -196,6 +199,8 @@ where
                          - Only respond in English when the question is in English\n\
                          - Never respond in English to Korean questions\n\n\
                          Response format:\n\
+                         - Keep responses concise (보통 5줄 이내, 일반적으로 2-3줄)\n\
+                         - Only provide detailed explanations when user explicitly asks (\"자세히\", \"more details\", etc.)\n\
                          - Emphasize important parts with **bold**\n\
                          - Use *italics* for parts that need emphasis\n\
                          - Use - or 1. for lists\n\
@@ -783,6 +788,8 @@ fn get_default_system_prompt() -> String {
      - Only respond in English when the question is in English\n\
      - Never respond in English to Korean questions\n\n\
      Response format:\n\
+     - Keep responses concise (보통 5줄 이내, 일반적으로 2-3줄)\n\
+     - Only provide detailed explanations when user explicitly asks (\"자세히\", \"more details\", etc.)\n\
      - Emphasize important parts with **bold**\n\
      - Use *italics* for parts that need emphasis\n\
      - Use - or 1. for lists\n\

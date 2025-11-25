@@ -16,10 +16,16 @@
  * - Preserves knowledge from multiple similar conversations
  * - Improves query performance (fewer memories to search)
  * - Creates higher-quality consolidated memories
+ *
+ * NOTE: This module is only compiled when Phase 4 features are enabled.
+ * To enable: cargo build --features phase4
  */
+
+#![cfg(feature = "phase4")]
 
 use crate::database::Database;
 use crate::services::embedding::EmbeddingService;
+#[cfg(feature = "lancedb-support")]
 use crate::services::rag_v2::RagServiceV2;  // v3.4.0: LanceDB migration
 use crate::services::ollama;
 use anyhow::{Context, Result};
@@ -259,7 +265,7 @@ impl MemoryConsolidationService {
         let mut used_memory_ids = std::collections::HashSet::new();
 
         // For each candidate, find similar memories
-        for (id, user_msg, ai_resp, retention, satisfaction, access_count, timestamp) in candidates {
+        for (id, user_msg, ai_resp, _retention, _satisfaction, _access_count, _timestamp) in candidates {
             // Skip if already in a cluster
             if used_memory_ids.contains(id) {
                 continue;

@@ -28,7 +28,8 @@ pub struct RagService {
 
 impl RagService {
     /// Create new RAG service
-    pub fn new(
+    /// NOTE: Made async to match RagServiceV2 API for feature-flag compatibility
+    pub async fn new(
         db: Arc<Mutex<Database>>,
         embedding_service: Arc<EmbeddingService>,
         lance_db_path: PathBuf,
@@ -310,6 +311,23 @@ impl RagService {
             average_satisfaction: avg_satisfaction,
             most_accessed_topic: most_accessed,
         })
+    }
+
+    // === RAFT Configuration Methods (Stub for API compatibility) ===
+    // NOTE: These are stub methods to match RagServiceV2 API when lancedb-support is disabled
+    // RAFT functionality is not available in the SQLite-based RagService
+
+    /// Get RAFT configuration (stub - returns default config)
+    pub fn get_raft_config(&self) -> Result<super::raft::RaftConfig> {
+        use super::raft::RaftConfig;
+        log::warn!("RAFT configuration is not available in SQLite-based RAG - returning defaults");
+        Ok(RaftConfig::default())
+    }
+
+    /// Update RAFT configuration (stub - no-op)
+    pub fn update_raft_config(&self, _config: super::raft::RaftConfig) -> Result<()> {
+        log::warn!("RAFT configuration cannot be updated in SQLite-based RAG - ignoring");
+        Ok(())
     }
 
     // === Private helper methods ===

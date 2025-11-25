@@ -13,7 +13,10 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "lancedb-support")]
 use super::rag_v2::Episode;  // v3.4.0 Phase 7: Updated to use LanceDB-based RAG v2
+#[cfg(not(feature = "lancedb-support"))]
+use super::rag::Episode;  // Fallback to SQLite-based RAG
 
 /// RAFT configuration for hallucination reduction
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,7 +85,7 @@ impl RaftService {
         let mut raft_episodes = Vec::new();
 
         // Step 1: Filter by relevance threshold
-        let mut relevant_episodes: Vec<(Episode, f32)> = episodes
+        let relevant_episodes: Vec<(Episode, f32)> = episodes
             .into_iter()
             .filter(|(_, score)| *score >= self.config.relevance_threshold)
             .collect();
