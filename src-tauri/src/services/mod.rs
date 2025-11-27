@@ -110,5 +110,8 @@ pub mod goal_tracker;      // v3.9.0 Stage 4: Long-term goal monitoring and prog
 // Service Lifecycle Management (v3.5.2)
 pub mod lifecycle;  // v3.5.2: Graceful shutdown handling for all services
 
+// Memory Management (v3.6.0)
+pub mod memory_pressure;  // v3.6.0: Memory pressure monitoring and automatic cleanup
+
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests
