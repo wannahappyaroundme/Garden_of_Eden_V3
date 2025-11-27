@@ -122,7 +122,8 @@ windows = { version = "0.58", features = [
 
 [features]
 # By default, Tauri runs in production mode when `tauri build` is run
-default = ["custom-protocol"]
+# v3.5.2: LanceDB enabled by default for better RAG accuracy and 10-100x faster vector search
+default = ["custom-protocol", "lancedb-support"]
 custom-protocol = ["tauri/custom-protocol"]
 
 # Phase-based feature flags for conditional compilation

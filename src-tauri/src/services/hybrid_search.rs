@@ -1,21 +1,19 @@
-/**
- * Hybrid Search Engine (v3.6.0)
- *
- * Combines BM25 lexical search + BGE-M3 semantic search using RRF fusion
- *
- * Pipeline:
- * 1. BM25 search (keyword-based) → top-20 results
- * 2. BGE-M3 search (semantic) → top-20 results
- * 3. RRF (Reciprocal Rank Fusion) → combine scores
- * 4. Return top-K results
- *
- * RRF Formula:
- * RRF_score(d) = Σ 1 / (k + rank(d))
- * where k = 60 (default constant)
- *
- * NOTE: This module is only compiled when the `lancedb-support` feature is enabled.
- * To enable: cargo build --features lancedb-support
- */
+//! Hybrid Search Engine (v3.6.0)
+//!
+//! Combines BM25 lexical search + BGE-M3 semantic search using RRF fusion
+//!
+//! Pipeline:
+//! 1. BM25 search (keyword-based) → top-20 results
+//! 2. BGE-M3 search (semantic) → top-20 results
+//! 3. RRF (Reciprocal Rank Fusion) → combine scores
+//! 4. Return top-K results
+//!
+//! RRF Formula:
+//! RRF_score(d) = Σ 1 / (k + rank(d))
+//! where k = 60 (default constant)
+//!
+//! NOTE: This module is only compiled when the `lancedb-support` feature is enabled.
+//! To enable: cargo build --features lancedb-support
 
 #![cfg(feature = "lancedb-support")]
 

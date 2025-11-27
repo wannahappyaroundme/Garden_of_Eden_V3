@@ -1,11 +1,9 @@
-/**
- * Hybrid Search Commands (v3.6.0)
- *
- * Commands for hybrid search combining BM25 + BGE-M3 semantic search
- *
- * NOTE: This module is only compiled when the `lancedb-support` feature is enabled.
- * To enable: cargo build --features lancedb-support
- */
+//! Hybrid Search Commands (v3.6.0)
+//!
+//! Commands for hybrid search combining BM25 + BGE-M3 semantic search
+//!
+//! NOTE: This module is only compiled when the `lancedb-support` feature is enabled.
+//! To enable: cargo build --features lancedb-support
 
 #![cfg(feature = "lancedb-support")]
 
