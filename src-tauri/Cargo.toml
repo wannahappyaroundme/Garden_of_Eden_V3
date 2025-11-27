@@ -26,6 +26,11 @@ tokio = { version = "1", features = ["full"] }
 anyhow = "1.0"
 log = "0.4"
 env_logger = "0.11"
+
+# Structured Logging (v3.6.0 P3)
+tracing = "0.1"                    # Core instrumentation API
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }  # Subscriber with JSON output
+tracing-appender = "0.2"           # File appender for log rotation
 chrono = "0.4"
 sys-info = "0.9"
 sysinfo = "0.33"

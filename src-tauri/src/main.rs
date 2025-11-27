@@ -116,8 +116,19 @@ pub struct AppState {
 }
 
 fn main() {
-    env_logger::init();
-    log::info!("Starting Garden of Eden V3 (Tauri)...");
+    // Initialize structured logging (v3.6.0 P3)
+    // Falls back to env_logger if tracing init fails
+    if let Err(e) = services::structured_logging::init_logging_auto() {
+        // Fallback to env_logger
+        env_logger::init();
+        log::warn!("Failed to initialize structured logging: {}, using env_logger", e);
+    }
+
+    // Use tracing macros for structured logging
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        "Starting Garden of Eden V3 (Tauri)"
+    );
 
     // Initialize database
     let db = Database::new().expect("Failed to initialize database");

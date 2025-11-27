@@ -113,5 +113,8 @@ pub mod lifecycle;  // v3.5.2: Graceful shutdown handling for all services
 // Memory Management (v3.6.0)
 pub mod memory_pressure;  // v3.6.0: Memory pressure monitoring and automatic cleanup
 
+// Structured Logging (v3.6.0 P3)
+pub mod structured_logging;  // v3.6.0: JSON structured logging with tracing
+
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests

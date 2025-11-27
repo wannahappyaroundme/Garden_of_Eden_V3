@@ -15,6 +15,7 @@ use ort::session::Session;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tokenizers::Tokenizer;
+use tracing::{debug, info, warn, instrument};
 
 /// BGE-M3 model configuration
 const MODEL_MAX_LENGTH: usize = 512;  // Maximum sequence length
@@ -39,21 +40,22 @@ impl EmbeddingService {
     /// Create new BGE-M3 embedding service
     ///
     /// Downloads model on first run if not present
+    #[instrument(name = "embedding_init")]
     pub fn new() -> Result<Self> {
-        log::info!("Initializing BGE-M3 ONNX Embedding Service");
+        info!("Initializing BGE-M3 ONNX Embedding Service");
 
         // Log platform and execution provider info
         #[cfg(target_vendor = "apple")]
-        log::info!("Platform: Apple ({}) - CoreML GPU acceleration available", std::env::consts::ARCH);
+        info!(platform = "Apple", arch = std::env::consts::ARCH, "CoreML GPU acceleration available");
 
         #[cfg(target_os = "windows")]
-        log::info!("Platform: Windows ({}) - DirectML GPU acceleration available (AMD/NVIDIA/Intel)", std::env::consts::ARCH);
+        info!(platform = "Windows", arch = std::env::consts::ARCH, "DirectML GPU acceleration available (AMD/NVIDIA/Intel)");
 
         #[cfg(target_os = "linux")]
-        log::info!("Platform: Linux ({}) - CUDA GPU acceleration available (NVIDIA)", std::env::consts::ARCH);
+        info!(platform = "Linux", arch = std::env::consts::ARCH, "CUDA GPU acceleration available (NVIDIA)");
 
         #[cfg(not(any(target_vendor = "apple", target_os = "windows", target_os = "linux")))]
-        log::info!("Platform: {} ({}) - CPU-only execution", std::env::consts::OS, std::env::consts::ARCH);
+        info!(platform = std::env::consts::OS, arch = std::env::consts::ARCH, "CPU-only execution");
 
         // Get model paths
         let model_dir = Self::get_model_dir()?;
@@ -62,19 +64,19 @@ impl EmbeddingService {
 
         // Download model if not present
         if !model_path.exists() || !tokenizer_path.exists() {
-            log::info!("BGE-M3 model not found, downloading (~543MB quantized)...");
+            info!("BGE-M3 model not found, downloading (~543MB quantized)...");
             Self::download_model(&model_dir)?;
         }
 
         // Load tokenizer
-        log::info!("Loading BGE-M3 tokenizer...");
+        info!("Loading BGE-M3 tokenizer...");
         let tokenizer = Arc::new(
             Tokenizer::from_file(&tokenizer_path)
                 .map_err(|e| anyhow!("Failed to load tokenizer: {}", e))?,
         );
 
         // Load ONNX model with ORT 2.0 API + GPU acceleration
-        log::info!("Loading BGE-M3 ONNX model (quantized INT8) with GPU acceleration...");
+        info!("Loading BGE-M3 ONNX model (quantized INT8) with GPU acceleration...");
 
         // Try to create session with GPU acceleration, fallback to CPU if unavailable
         // ORT 2.0 API: Use execution provider directly in SessionBuilder
@@ -89,9 +91,9 @@ impl EmbeddingService {
                 // Register CoreML execution provider (Apple Silicon GPU)
                 let coreml_ep = CoreMLExecutionProvider::default();
                 if let Err(e) = coreml_ep.register(&mut builder) {
-                    log::warn!("⚠ CoreML registration failed: {:?}, falling back to CPU", e);
+                    warn!(error = ?e, "CoreML registration failed, falling back to CPU");
                 } else {
-                    log::info!("✓ CoreML execution provider registered (Apple GPU)");
+                    info!("CoreML execution provider registered (Apple GPU)");
                 }
 
                 builder
@@ -110,9 +112,9 @@ impl EmbeddingService {
                 // Register DirectML execution provider (Windows GPU - AMD/NVIDIA/Intel)
                 let directml_ep = DirectMLExecutionProvider::default();
                 if let Err(e) = directml_ep.register(&mut builder) {
-                    log::warn!("⚠ DirectML registration failed: {:?}, falling back to CPU", e);
+                    warn!(error = ?e, "DirectML registration failed, falling back to CPU");
                 } else {
-                    log::info!("✓ DirectML execution provider registered (Windows GPU)");
+                    info!("DirectML execution provider registered (Windows GPU)");
                 }
 
                 builder
@@ -131,10 +133,10 @@ impl EmbeddingService {
                 // Register CUDA execution provider (NVIDIA GPU on Linux)
                 let cuda_ep = CUDAExecutionProvider::default();
                 if let Err(e) = cuda_ep.register(&mut builder) {
-                    log::warn!("⚠ CUDA registration failed: {:?}, falling back to CPU", e);
-                    log::info!("→ Make sure CUDA/cuDNN is installed for GPU acceleration");
+                    warn!(error = ?e, "CUDA registration failed, falling back to CPU");
+                    info!("Make sure CUDA/cuDNN is installed for GPU acceleration");
                 } else {
-                    log::info!("✓ CUDA execution provider registered (NVIDIA GPU)");
+                    info!("CUDA execution provider registered (NVIDIA GPU)");
                 }
 
                 builder
@@ -145,7 +147,7 @@ impl EmbeddingService {
             }
             #[cfg(not(any(target_vendor = "apple", target_os = "windows", target_os = "linux")))]
             {
-                log::info!("CPU-only execution (no GPU acceleration available)");
+                info!("CPU-only execution (no GPU acceleration available)");
                 Session::builder()
                     .map_err(|e| anyhow!("Failed to create SessionBuilder: {:?}", e))?
                     .with_intra_threads(4)
@@ -157,7 +159,7 @@ impl EmbeddingService {
 
         let session = Arc::new(Mutex::new(session_result?));
 
-        log::info!("BGE-M3 Embedding Service initialized successfully");
+        info!("BGE-M3 Embedding Service initialized successfully");
         Ok(Self {
             session,
             tokenizer,
@@ -165,8 +167,9 @@ impl EmbeddingService {
     }
 
     /// Generate embedding for text
+    #[instrument(skip(self, text), fields(text_len = text.len()))]
     pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
-        log::debug!("Generating embedding for text: {}", &text[..text.len().min(50)]);
+        debug!("Generating embedding for text: {}", &text[..text.len().min(50)]);
 
         // Tokenize input
         let encoding = self
@@ -216,7 +219,7 @@ impl EmbeddingService {
         // Normalize to unit length
         let normalized = Self::normalize(&embedding);
 
-        log::debug!("Embedding generated: {} dimensions", normalized.len());
+        debug!(dimensions = normalized.len(), "Embedding generated");
         Ok(normalized)
     }
 
@@ -288,7 +291,7 @@ impl EmbeddingService {
     /// Calculate cosine similarity between two embeddings
     pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         if a.len() != b.len() {
-            log::error!("Embedding dimension mismatch: {} vs {}", a.len(), b.len());
+            tracing::error!(a_len = a.len(), b_len = b.len(), "Embedding dimension mismatch");
             return 0.0;
         }
 
@@ -306,29 +309,30 @@ impl EmbeddingService {
     }
 
     /// Download BGE-M3 model from Hugging Face (Xenova optimized ONNX)
+    #[instrument(skip(model_dir))]
     fn download_model(model_dir: &PathBuf) -> Result<()> {
-        log::info!("Downloading BGE-M3 model from Hugging Face...");
-        log::warn!("This is a one-time download (~543MB quantized). Please wait...");
+        info!("Downloading BGE-M3 model from Hugging Face...");
+        warn!("This is a one-time download (~543MB quantized). Please wait...");
 
         // URLs for BGE-M3 ONNX model (Xenova/optimum quantized INT8 version)
         const MODEL_URL: &str = "https://huggingface.co/Xenova/bge-m3/resolve/main/onnx/model_quantized.onnx";
         const TOKENIZER_URL: &str = "https://huggingface.co/Xenova/bge-m3/resolve/main/tokenizer.json";
 
         // Download model (quantized INT8 for faster inference)
-        log::info!("Downloading model_quantized.onnx (~543MB)...");
+        info!("Downloading model_quantized.onnx (~543MB)...");
         let model_bytes = reqwest::blocking::get(MODEL_URL)?
             .bytes()?;
-        log::info!("Downloaded {} bytes ({:.1} MB)", model_bytes.len(), model_bytes.len() as f64 / 1024.0 / 1024.0);
+        info!(bytes = model_bytes.len(), mb = model_bytes.len() as f64 / 1024.0 / 1024.0, "Model downloaded");
         std::fs::write(model_dir.join("model_quantized.onnx"), model_bytes)?;
 
         // Download tokenizer
-        log::info!("Downloading tokenizer.json...");
+        info!("Downloading tokenizer.json...");
         let tokenizer_bytes = reqwest::blocking::get(TOKENIZER_URL)?
             .bytes()?;
-        log::info!("Downloaded {} bytes ({:.1} KB)", tokenizer_bytes.len(), tokenizer_bytes.len() as f64 / 1024.0);
+        info!(bytes = tokenizer_bytes.len(), kb = tokenizer_bytes.len() as f64 / 1024.0, "Tokenizer downloaded");
         std::fs::write(model_dir.join("tokenizer.json"), tokenizer_bytes)?;
 
-        log::info!("BGE-M3 model downloaded successfully!");
+        info!("BGE-M3 model downloaded successfully!");
         Ok(())
     }
 
@@ -336,6 +340,7 @@ impl EmbeddingService {
     ///
     /// Processes multiple texts in a single inference call when possible,
     /// falling back to sequential processing if batching fails.
+    #[instrument(skip(self, texts), fields(batch_size = texts.len()))]
     pub fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
         if texts.is_empty() {
             return Ok(vec![]);
@@ -346,16 +351,16 @@ impl EmbeddingService {
             return Ok(vec![self.embed(texts[0])?]);
         }
 
-        log::debug!("Batch embedding {} texts", texts.len());
+        debug!(count = texts.len(), "Batch embedding texts");
 
         // Try true batch processing first
         match self.embed_batch_internal(texts) {
             Ok(embeddings) => {
-                log::debug!("Batch processing succeeded for {} texts", embeddings.len());
+                debug!(count = embeddings.len(), "Batch processing succeeded");
                 Ok(embeddings)
             }
             Err(e) => {
-                log::warn!("Batch processing failed: {:?}, falling back to sequential", e);
+                warn!(error = ?e, "Batch processing failed, falling back to sequential");
                 // Fallback to sequential processing
                 texts.iter().map(|text| self.embed(text)).collect()
             }
@@ -451,7 +456,7 @@ impl EmbeddingService {
             results.push(normalized);
         }
 
-        log::debug!("Batch embedding complete: {} embeddings of {} dimensions", results.len(), hidden_dim);
+        debug!(count = results.len(), dimensions = hidden_dim, "Batch embedding complete");
         Ok(results)
     }
 
@@ -504,7 +509,7 @@ pub struct FallbackEmbeddingService {
 impl FallbackEmbeddingService {
     /// Create new fallback embedding service
     pub fn new() -> Self {
-        log::warn!("⚠ Using fallback TF-IDF embedding service (reduced accuracy)");
+        warn!("Using fallback TF-IDF embedding service (reduced accuracy)");
         Self {
             embedding_dim: 256, // Smaller dimension for TF-IDF hashes
         }
@@ -614,21 +619,22 @@ pub struct UnifiedEmbeddingService {
 impl UnifiedEmbeddingService {
     /// Create new unified embedding service
     /// Tries BGE-M3 first, falls back to TF-IDF if it fails
+    #[instrument(name = "unified_embedding_init")]
     pub fn new() -> Self {
         match EmbeddingService::new() {
             Ok(service) => {
-                log::info!("✓ Using BGE-M3 neural embeddings (high accuracy)");
+                info!("Using BGE-M3 neural embeddings (high accuracy)");
                 Self {
                     mode: EmbeddingMode::BgeM3(service),
                 }
             }
             Err(e) => {
-                log::error!("⚠ BGE-M3 initialization failed: {}", e);
-                log::warn!("→ Falling back to TF-IDF embedding service");
-                log::warn!("→ RAG accuracy will be reduced, but app remains functional");
-                log::info!("→ To restore full accuracy, delete the corrupted model:");
-                log::info!("   rm -rf ~/Library/Application\\ Support/garden-of-eden-v3/models/bge-m3");
-                log::info!("   Then restart the app to re-download BGE-M3 (~543MB)");
+                tracing::error!(error = %e, "BGE-M3 initialization failed");
+                warn!("Falling back to TF-IDF embedding service");
+                warn!("RAG accuracy will be reduced, but app remains functional");
+                info!("To restore full accuracy, delete the corrupted model:");
+                info!("   rm -rf ~/Library/Application\\ Support/garden-of-eden-v3/models/bge-m3");
+                info!("   Then restart the app to re-download BGE-M3 (~543MB)");
 
                 Self {
                     mode: EmbeddingMode::Fallback(FallbackEmbeddingService::new()),
@@ -670,7 +676,7 @@ impl UnifiedEmbeddingService {
     pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         if a.len() != b.len() {
             // Handle dimension mismatch gracefully
-            log::warn!("Embedding dimension mismatch: {} vs {}", a.len(), b.len());
+            warn!(a_len = a.len(), b_len = b.len(), "Embedding dimension mismatch");
             return keyword_similarity(
                 &format!("{:?}", a),
                 &format!("{:?}", b),

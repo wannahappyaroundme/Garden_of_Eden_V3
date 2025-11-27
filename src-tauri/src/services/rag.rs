@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use crate::database::Database;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use tracing::{info, debug, warn, instrument};
 
 use super::embedding::UnifiedEmbeddingService;
 
@@ -47,13 +48,14 @@ impl RagService {
     }
 
     /// Store a conversation episode with embedding
+    #[instrument(skip(self, user_message, ai_response), fields(msg_len = user_message.len()))]
     pub async fn store_episode(
         &self,
         user_message: &str,
         ai_response: &str,
         satisfaction: f32,
     ) -> Result<String> {
-        log::info!("Storing episode: user_message length = {}", user_message.len());
+        info!(satisfaction = satisfaction, "Storing episode");
 
         // Generate embedding for the conversation
         let combined_text = format!("{}\n{}", user_message, ai_response);
@@ -87,13 +89,14 @@ impl RagService {
             ],
         )?;
 
-        log::info!("Stored episode with ID: {}", id);
+        info!(episode_id = %id, "Episode stored successfully");
         Ok(id)
     }
 
     /// Retrieve relevant episodes for a query
+    #[instrument(skip(self, query), fields(query_len = query.len()))]
     pub async fn retrieve_relevant(&self, query: &str, top_k: usize) -> Result<Vec<Episode>> {
-        log::info!("Retrieving {} relevant episodes for query", top_k);
+        debug!(top_k = top_k, "Retrieving relevant episodes");
 
         // Generate query embedding
         let query_embedding = self.embedding_service.embed(query)?;
@@ -129,7 +132,7 @@ impl RagService {
         let ids: Vec<String> = top_episodes.iter().map(|e| e.id.clone()).collect();
         self.increment_access_counts(&ids)?;
 
-        log::info!("Retrieved {} relevant episodes", top_episodes.len());
+        info!(results = top_episodes.len(), "Retrieved relevant episodes");
         Ok(top_episodes)
     }
 

@@ -12,6 +12,7 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tracing::{info, warn, debug, instrument};
 
 /// Tool parameter definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,7 +102,7 @@ impl ToolService {
     /// Register a tool executor
     pub fn register_tool(&mut self, executor: Box<dyn ToolExecutor>) {
         let name = executor.definition().name.clone();
-        log::info!("Registering tool: {}", name);
+        info!(tool = %name, "Registering tool");
         self.tools.insert(name, executor);
     }
 
@@ -114,8 +115,10 @@ impl ToolService {
     }
 
     /// Execute a tool call (now async)
+    #[instrument(skip(self), fields(tool = %tool_call.tool_name))]
     pub async fn execute_tool(&self, tool_call: &ToolCall) -> ToolResult {
-        log::info!("Executing tool: {} with args: {:?}", tool_call.tool_name, tool_call.arguments);
+        info!(tool = %tool_call.tool_name, "Executing tool");
+        debug!(arguments = ?tool_call.arguments, "Tool arguments");
 
         match self.tools.get(&tool_call.tool_name) {
             Some(executor) => {
