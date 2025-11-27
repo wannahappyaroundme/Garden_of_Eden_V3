@@ -221,23 +221,28 @@ impl EmbeddingService {
     }
 
     /// Pool token embeddings into a single sentence embedding
+    /// Input shape: [seq_len, hidden_dim] - each row is a token's embedding
     fn pool_embeddings(
         &self,
         token_embeddings: &Array2<f32>,
         attention_mask: &[u32],
     ) -> Result<Vec<f32>> {
+        let seq_len = token_embeddings.nrows();
+        let hidden_dim = token_embeddings.ncols();
+
         match POOLING_STRATEGY {
             PoolingStrategy::Mean => {
                 // Mean pooling with attention mask
-                let mut pooled = vec![0.0f32; EMBEDDING_DIM];
+                let mut pooled = vec![0.0f32; hidden_dim];
                 let mut total_weight = 0.0f32;
 
-                for (i, &mask_value) in attention_mask.iter().enumerate() {
+                for (i, &mask_value) in attention_mask.iter().take(seq_len).enumerate() {
                     if mask_value == 1 {
-                        for j in 0..EMBEDDING_DIM {
-                            pooled[j] += token_embeddings[[0, i]] * mask_value as f32;
+                        for j in 0..hidden_dim {
+                            // token_embeddings[i, j] = i-th token's j-th dimension
+                            pooled[j] += token_embeddings[[i, j]];
                         }
-                        total_weight += mask_value as f32;
+                        total_weight += 1.0;
                     }
                 }
 
@@ -250,14 +255,14 @@ impl EmbeddingService {
                 Ok(pooled)
             }
             PoolingStrategy::Cls => {
-                // Use [CLS] token embedding (first token)
+                // Use [CLS] token embedding (first token row)
                 let cls_embedding: Vec<f32> = token_embeddings
                     .index_axis(Axis(0), 0)
                     .to_vec();
                 Ok(cls_embedding)
             }
             PoolingStrategy::Max => {
-                // Max pooling across all tokens
+                // Max pooling across all tokens (columns)
                 let max_pooled = token_embeddings
                     .axis_iter(Axis(1))
                     .map(|col| {
@@ -327,9 +332,127 @@ impl EmbeddingService {
         Ok(())
     }
 
-    /// Batch embed multiple texts (more efficient)
+    /// Batch embed multiple texts (true batch processing for better GPU utilization)
+    ///
+    /// Processes multiple texts in a single inference call when possible,
+    /// falling back to sequential processing if batching fails.
     pub fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
-        texts.iter().map(|text| self.embed(text)).collect()
+        if texts.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // For single text, use regular embed
+        if texts.len() == 1 {
+            return Ok(vec![self.embed(texts[0])?]);
+        }
+
+        log::debug!("Batch embedding {} texts", texts.len());
+
+        // Try true batch processing first
+        match self.embed_batch_internal(texts) {
+            Ok(embeddings) => {
+                log::debug!("Batch processing succeeded for {} texts", embeddings.len());
+                Ok(embeddings)
+            }
+            Err(e) => {
+                log::warn!("Batch processing failed: {:?}, falling back to sequential", e);
+                // Fallback to sequential processing
+                texts.iter().map(|text| self.embed(text)).collect()
+            }
+        }
+    }
+
+    /// Internal true batch processing implementation
+    fn embed_batch_internal(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        let batch_size = texts.len();
+
+        // Tokenize all texts
+        let encodings: Vec<_> = texts
+            .iter()
+            .map(|text| {
+                self.tokenizer
+                    .encode(*text, true)
+                    .map_err(|e| anyhow!("Tokenization failed: {}", e))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        // Find max sequence length in batch (capped at MODEL_MAX_LENGTH)
+        let max_seq_len = encodings
+            .iter()
+            .map(|enc| enc.get_ids().len().min(MODEL_MAX_LENGTH))
+            .max()
+            .unwrap_or(0);
+
+        if max_seq_len == 0 {
+            return Err(anyhow!("All texts are empty"));
+        }
+
+        // Prepare padded batch tensors
+        let mut input_ids_batch: Vec<i64> = vec![0; batch_size * max_seq_len];
+        let mut attention_mask_batch: Vec<i64> = vec![0; batch_size * max_seq_len];
+        let mut actual_lengths: Vec<usize> = Vec::with_capacity(batch_size);
+
+        for (i, encoding) in encodings.iter().enumerate() {
+            let ids = encoding.get_ids();
+            let mask = encoding.get_attention_mask();
+            let seq_len = ids.len().min(MODEL_MAX_LENGTH);
+            actual_lengths.push(seq_len);
+
+            // Copy to batch tensor (row-major: batch_idx * max_seq_len + seq_idx)
+            for j in 0..seq_len {
+                input_ids_batch[i * max_seq_len + j] = ids[j] as i64;
+                attention_mask_batch[i * max_seq_len + j] = mask[j] as i64;
+            }
+            // Remaining positions are already 0 (padding)
+        }
+
+        // Create ORT tensors for batch
+        let input_ids_tensor = ort::value::Tensor::from_array((vec![batch_size, max_seq_len], input_ids_batch))
+            .map_err(|e| anyhow!("Failed to create batch input_ids tensor: {:?}", e))?;
+        let attention_mask_tensor = ort::value::Tensor::from_array((vec![batch_size, max_seq_len], attention_mask_batch))
+            .map_err(|e| anyhow!("Failed to create batch attention_mask tensor: {:?}", e))?;
+
+        // Run batch inference
+        let mut session_guard = self.session.lock().map_err(|e| anyhow!("Lock failed: {}", e))?;
+        let outputs = session_guard.run(ort::inputs![input_ids_tensor, attention_mask_tensor])
+            .map_err(|e| anyhow!("Batch model inference failed: {:?}", e))?;
+
+        // Extract output tensor [batch_size, max_seq_len, hidden_dim]
+        let output_value = &outputs[0];
+        let output_tensor_dyn = output_value.try_extract_array::<f32>()
+            .map_err(|e| anyhow!("Failed to extract batch output tensor: {:?}", e))?;
+
+        // Convert to ndarray and process each sample in batch
+        let output_shape = output_tensor_dyn.shape();
+        let hidden_dim = output_shape.get(2).copied().unwrap_or(EMBEDDING_DIM);
+
+        let mut results: Vec<Vec<f32>> = Vec::with_capacity(batch_size);
+
+        for i in 0..batch_size {
+            // Extract embeddings for this sample
+            let sample_embeddings = output_tensor_dyn.index_axis(ndarray::Axis(0), i);
+
+            // Convert to Array2 for pooling [seq_len, hidden_dim]
+            let token_embeddings: Array2<f32> = sample_embeddings
+                .into_dimensionality()
+                .map_err(|e| anyhow!("Dimension conversion failed: {:?}", e))?
+                .to_owned();
+
+            // Create attention mask slice for this sample
+            let actual_len = actual_lengths[i];
+            let mut attention_mask_slice: Vec<u32> = vec![1; actual_len];
+            attention_mask_slice.resize(max_seq_len, 0); // Pad with 0s
+
+            // Apply pooling
+            let embedding = self.pool_embeddings(&token_embeddings, &attention_mask_slice)?;
+
+            // Normalize
+            let normalized = Self::normalize(&embedding);
+            results.push(normalized);
+        }
+
+        log::debug!("Batch embedding complete: {} embeddings of {} dimensions", results.len(), hidden_dim);
+        Ok(results)
     }
 
     /// Calculate semantic similarity between two texts
