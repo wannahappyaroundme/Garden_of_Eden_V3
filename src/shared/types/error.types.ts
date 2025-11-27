@@ -1,7 +1,122 @@
 /**
- * Error Types
+ * Error Types (v3.5.2)
  * Actionable error messages with user guidance
+ *
+ * This module provides:
+ * - ErrorCode enum matching Rust backend error codes
+ * - ActionableError for user-friendly error display
+ * - Utility functions for error conversion and parsing
  */
+
+// ============================================================================
+// ERROR CODES (matching Rust backend)
+// ============================================================================
+
+/** Error codes matching Rust ErrorCode enum */
+export enum ErrorCode {
+  // Connection errors (1xxx)
+  OLLAMA_NOT_RUNNING = 1001,
+  OLLAMA_CONNECTION_FAILED = 1002,
+  NETWORK_TIMEOUT = 1003,
+  NETWORK_UNAVAILABLE = 1004,
+
+  // Model errors (2xxx)
+  MODEL_NOT_FOUND = 2001,
+  MODEL_DOWNLOAD_FAILED = 2002,
+  MODEL_INCOMPATIBLE = 2003,
+  MODEL_LOAD_FAILED = 2004,
+  INSUFFICIENT_VRAM = 2005,
+
+  // Database errors (3xxx)
+  DATABASE_CONNECTION_FAILED = 3001,
+  DATABASE_QUERY_FAILED = 3002,
+  DATABASE_CORRUPTED = 3003,
+  DATABASE_LOCKED = 3004,
+  MIGRATION_FAILED = 3005,
+
+  // File system errors (4xxx)
+  FILE_NOT_FOUND = 4001,
+  FILE_READ_FAILED = 4002,
+  FILE_WRITE_FAILED = 4003,
+  PERMISSION_DENIED = 4004,
+  DISK_FULL = 4005,
+
+  // AI/Inference errors (5xxx)
+  INFERENCE_FAILED = 5001,
+  CONTEXT_TOO_LONG = 5002,
+  TOKEN_LIMIT_EXCEEDED = 5003,
+  EMBEDDING_FAILED = 5004,
+  RAG_RETRIEVAL_FAILED = 5005,
+
+  // User input errors (6xxx)
+  INVALID_INPUT = 6001,
+  MISSING_REQUIRED_FIELD = 6002,
+  VALIDATION_FAILED = 6003,
+
+  // Authentication errors (7xxx)
+  OAUTH_FAILED = 7001,
+  TOKEN_EXPIRED = 7002,
+  UNAUTHORIZED = 7003,
+
+  // System errors (9xxx)
+  INTERNAL_ERROR = 9001,
+  UNKNOWN = 9999,
+}
+
+// ============================================================================
+// STRUCTURED ERROR FROM BACKEND
+// ============================================================================
+
+/** Structured application error from Rust backend */
+export interface AppError {
+  /** Error code for programmatic handling */
+  code: ErrorCode;
+  /** Human-readable error message */
+  message: string;
+  /** Recovery suggestion for the user */
+  recovery: string;
+  /** Optional technical details for debugging */
+  details?: string;
+  /** Error timestamp (Unix milliseconds) */
+  timestamp: number;
+}
+
+/** Check if an error is an AppError from backend */
+export function isAppError(error: unknown): error is AppError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    'message' in error &&
+    'recovery' in error &&
+    'timestamp' in error
+  );
+}
+
+/** Parse error from backend response */
+export function parseBackendError(error: unknown): AppError | null {
+  if (isAppError(error)) {
+    return error;
+  }
+
+  // Try to parse as JSON string
+  if (typeof error === 'string') {
+    try {
+      const parsed = JSON.parse(error);
+      if (isAppError(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // Not JSON, continue to return null
+    }
+  }
+
+  return null;
+}
+
+// ============================================================================
+// ACTIONABLE ERROR (UI-friendly format)
+// ============================================================================
 
 export type ErrorCategory =
   | 'network'

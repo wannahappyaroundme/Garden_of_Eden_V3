@@ -20,7 +20,7 @@
  */
 
 use crate::database::Database;
-use crate::services::embedding::EmbeddingService;
+use crate::services::embedding::UnifiedEmbeddingService;
 use crate::services::ollama;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -122,7 +122,7 @@ impl Default for SemanticWikiConfig {
 /// Semantic Wiki Service
 pub struct SemanticWikiService {
     db: Arc<Mutex<Database>>,
-    embedding: Arc<EmbeddingService>,
+    embedding: Arc<UnifiedEmbeddingService>,
     config: Arc<Mutex<SemanticWikiConfig>>,
 }
 
@@ -130,7 +130,7 @@ impl SemanticWikiService {
     /// Create new semantic wiki
     pub fn new(
         db: Arc<Mutex<Database>>,
-        embedding: Arc<EmbeddingService>,
+        embedding: Arc<UnifiedEmbeddingService>,
     ) -> Result<Self> {
         let service = Self {
             db,
@@ -443,7 +443,7 @@ Respond with JSON only (no other text):
             .filter_map(|result| result.ok())
             .map(|(fact, embedding)| {
                 // Calculate cosine similarity
-                let similarity = EmbeddingService::cosine_similarity(&query_embedding, &embedding);
+                let similarity = UnifiedEmbeddingService::cosine_similarity(&query_embedding, &embedding);
                 (fact, similarity)
             })
             .collect();

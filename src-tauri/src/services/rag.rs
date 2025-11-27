@@ -3,7 +3,7 @@ use crate::database::Database;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use super::embedding::EmbeddingService;
+use super::embedding::UnifiedEmbeddingService;
 
 /// Episodic memory entry
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ pub struct Episode {
 /// Stores and retrieves past conversations using semantic search
 pub struct RagService {
     db: Arc<Mutex<Database>>,
-    embedding_service: Arc<EmbeddingService>,
+    embedding_service: Arc<UnifiedEmbeddingService>,
     _lance_db_path: PathBuf,
 }
 
@@ -31,7 +31,7 @@ impl RagService {
     /// NOTE: Made async to match RagServiceV2 API for feature-flag compatibility
     pub async fn new(
         db: Arc<Mutex<Database>>,
-        embedding_service: Arc<EmbeddingService>,
+        embedding_service: Arc<UnifiedEmbeddingService>,
         lance_db_path: PathBuf,
     ) -> Result<Self> {
         log::info!("Initializing RAG service with SQLite embeddings at {:?}", lance_db_path);
@@ -67,7 +67,8 @@ impl RagService {
         let embedding_json = serde_json::to_string(&embedding)?;
 
         // Store metadata and embedding in SQLite
-        let db_guard = self.db.lock().unwrap();
+        let db_guard = self.db.lock()
+            .map_err(|e| anyhow!("Database lock failed: {}", e))?;
         let db = db_guard.conn();
         db.execute(
             "INSERT INTO episodic_memory (
@@ -106,7 +107,7 @@ impl RagService {
             .filter_map(|(episode, embedding_json)| {
                 // Parse embedding
                 if let Ok(embedding) = serde_json::from_str::<Vec<f32>>(&embedding_json) {
-                    let similarity = EmbeddingService::cosine_similarity(&query_embedding, &embedding);
+                    let similarity = UnifiedEmbeddingService::cosine_similarity(&query_embedding, &embedding);
                     Some((episode, similarity))
                 } else {
                     None
@@ -153,7 +154,7 @@ impl RagService {
             .filter_map(|(episode, embedding_json, retention_score)| {
                 // Parse embedding
                 if let Ok(embedding) = serde_json::from_str::<Vec<f32>>(&embedding_json) {
-                    let semantic_similarity = EmbeddingService::cosine_similarity(&query_embedding, &embedding);
+                    let semantic_similarity = UnifiedEmbeddingService::cosine_similarity(&query_embedding, &embedding);
 
                     // Weighted combination: 70% semantic, 30% temporal
                     // This balances relevance with recency/importance
@@ -211,7 +212,7 @@ impl RagService {
             .filter_map(|(episode, embedding_json)| {
                 // Parse embedding
                 if let Ok(embedding) = serde_json::from_str::<Vec<f32>>(&embedding_json) {
-                    let similarity = EmbeddingService::cosine_similarity(&query_embedding, &embedding);
+                    let similarity = UnifiedEmbeddingService::cosine_similarity(&query_embedding, &embedding);
                     Some((episode, similarity))
                 } else {
                     None
@@ -233,7 +234,8 @@ impl RagService {
 
     /// Get recent episodes (fallback when embeddings fail)
     pub fn get_recent_episodes(&self, limit: usize) -> Result<Vec<Episode>> {
-        let db_guard = self.db.lock().unwrap();
+        let db_guard = self.db.lock()
+            .map_err(|e| anyhow!("Database lock failed: {}", e))?;
         let db = db_guard.conn();
 
         let mut stmt = db.prepare(
@@ -266,7 +268,8 @@ impl RagService {
     pub fn cleanup_old_memories(&self) -> Result<usize> {
         let threshold_timestamp = chrono::Utc::now().timestamp() - (30 * 24 * 60 * 60); // 30 days
 
-        let db_guard = self.db.lock().unwrap();
+        let db_guard = self.db.lock()
+            .map_err(|e| anyhow!("Database lock failed: {}", e))?;
         let db = db_guard.conn();
         let deleted = db.execute(
             "DELETE FROM episodic_memory
@@ -280,7 +283,8 @@ impl RagService {
 
     /// Get memory statistics
     pub fn get_statistics(&self) -> Result<MemoryStats> {
-        let db_guard = self.db.lock().unwrap();
+        let db_guard = self.db.lock()
+            .map_err(|e| anyhow!("Database lock failed: {}", e))?;
         let db = db_guard.conn();
 
         let total_memories: i64 = db.query_row(
@@ -332,20 +336,37 @@ impl RagService {
 
     // === Private helper methods ===
 
-    /// Get all episodes with their embeddings
+    /// Maximum number of episodes to load for similarity search
+    /// This prevents loading 10,000+ episodes into memory
+    /// Higher importance and more recent episodes are prioritized
+    const MAX_EPISODES_FOR_SEARCH: usize = 500;
+
+    /// Get candidate episodes for similarity search
+    ///
+    /// Performance optimized:
+    /// - Limits to MAX_EPISODES_FOR_SEARCH (default: 500) instead of loading all
+    /// - Prioritizes by: (importance DESC, created_at DESC)
+    /// - Only loads episodes with valid embeddings
+    ///
+    /// This reduces memory usage and computation time from O(n) to O(k) where k=500
     fn get_all_episodes_with_embeddings(&self) -> Result<Vec<(Episode, String)>> {
-        let db_guard = self.db.lock().unwrap();
+        let db_guard = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let db = db_guard.conn();
 
+        // Optimized query: Load only top candidates by importance + recency
+        // This prevents loading 10,000+ episodes for similarity computation
         let mut stmt = db.prepare(
             "SELECT id, user_message, ai_response, satisfaction, created_at,
                     access_count, importance, embedding_id
              FROM episodic_memory
-             WHERE embedding_id IS NOT NULL"
+             WHERE embedding_id IS NOT NULL
+             ORDER BY importance DESC, created_at DESC
+             LIMIT ?1"
         )?;
 
         let episodes = stmt
-            .query_map([], |row| {
+            .query_map([Self::MAX_EPISODES_FOR_SEARCH], |row| {
                 let episode = Episode {
                     id: row.get(0)?,
                     user_message: row.get(1)?,
@@ -361,24 +382,34 @@ impl RagService {
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
+        log::debug!("Loaded {} candidate episodes for similarity search (max: {})",
+                   episodes.len(), Self::MAX_EPISODES_FOR_SEARCH);
+
         Ok(episodes)
     }
 
-    /// Get all episodes with their embeddings and retention scores (v3.8.0 Phase 3)
+    /// Get candidate episodes with temporal scores for similarity search (v3.8.0 Phase 3)
+    ///
+    /// Performance optimized: Limits to MAX_EPISODES_FOR_SEARCH candidates
+    /// Prioritized by: retention_score (temporal importance) + importance + recency
     fn get_all_episodes_with_temporal(&self) -> Result<Vec<(Episode, String, f32)>> {
-        let db_guard = self.db.lock().unwrap();
+        let db_guard = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let db = db_guard.conn();
 
+        // Optimized query: Prioritize by retention score + importance + recency
         let mut stmt = db.prepare(
             "SELECT id, user_message, ai_response, satisfaction, created_at,
                     access_count, importance, embedding_id,
                     COALESCE(retention_score, 1.0) as retention_score
              FROM episodic_memory
-             WHERE embedding_id IS NOT NULL"
+             WHERE embedding_id IS NOT NULL
+             ORDER BY retention_score DESC, importance DESC, created_at DESC
+             LIMIT ?1"
         )?;
 
         let episodes = stmt
-            .query_map([], |row| {
+            .query_map([Self::MAX_EPISODES_FOR_SEARCH], |row| {
                 let episode = Episode {
                     id: row.get(0)?,
                     user_message: row.get(1)?,
@@ -395,6 +426,9 @@ impl RagService {
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
+        log::debug!("Loaded {} candidate episodes with temporal scores (max: {})",
+                   episodes.len(), Self::MAX_EPISODES_FOR_SEARCH);
+
         Ok(episodes)
     }
 
@@ -404,7 +438,8 @@ impl RagService {
             return Ok(());
         }
 
-        let db_guard = self.db.lock().unwrap();
+        let db_guard = self.db.lock()
+            .map_err(|e| anyhow!("Database lock failed: {}", e))?;
         let db = db_guard.conn();
 
         for id in ids {

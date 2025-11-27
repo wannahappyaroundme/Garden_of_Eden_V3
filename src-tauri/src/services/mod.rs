@@ -107,5 +107,8 @@ pub mod task_planner;      // v3.9.0 Stage 4: Autonomous task breakdown and exec
 pub mod learning_style_adapter;  // v3.9.0 Stage 4: Learning style detection and response adaptation
 pub mod goal_tracker;      // v3.9.0 Stage 4: Long-term goal monitoring and progress tracking
 
+// Service Lifecycle Management (v3.5.2)
+pub mod lifecycle;  // v3.5.2: Graceful shutdown handling for all services
+
 #[cfg(test)]
 mod computer_control_tests;  // v3.8.0: Phase 1 LAM integration tests

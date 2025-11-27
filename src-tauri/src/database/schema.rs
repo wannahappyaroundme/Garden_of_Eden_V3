@@ -419,6 +419,20 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Composite index for optimized RAG retrieval (importance + recency)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_episodic_memory_importance_created
+         ON episodic_memory(importance DESC, created_at DESC)",
+        [],
+    )?;
+
+    // Index for temporal retrieval (retention score + importance)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_episodic_memory_retention
+         ON episodic_memory(retention_score DESC, importance DESC)",
+        [],
+    )?;
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_learning_data_timestamp
          ON learning_data(timestamp DESC)",

@@ -18,7 +18,7 @@ use crate::database::Database;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use super::embedding::EmbeddingService;
+use super::embedding::UnifiedEmbeddingService;
 use super::vector_store::{VectorStoreService, VectorRecord, SearchResult};
 use super::raft::{RaftService, RaftConfig, RaftEpisode};
 
@@ -38,7 +38,7 @@ pub struct Episode {
 /// RAG Service v2 for episodic memory retrieval using LanceDB
 pub struct RagServiceV2 {
     db: Arc<Mutex<Database>>,
-    embedding_service: Arc<EmbeddingService>,
+    embedding_service: Arc<UnifiedEmbeddingService>,
     vector_store: Arc<VectorStoreService>,
     raft_service: Arc<Mutex<RaftService>>,
 }
@@ -47,7 +47,7 @@ impl RagServiceV2 {
     /// Create new RAG service with LanceDB
     pub async fn new(
         db: Arc<Mutex<Database>>,
-        embedding_service: Arc<EmbeddingService>,
+        embedding_service: Arc<UnifiedEmbeddingService>,
         lance_db_path: PathBuf,
     ) -> Result<Self> {
         log::info!("Initializing RAG v2 service with LanceDB at {:?}", lance_db_path);

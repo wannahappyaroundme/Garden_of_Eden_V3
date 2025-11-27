@@ -15,6 +15,9 @@ pub struct ConversationSummary {
 }
 
 /// Get all conversations ordered by most recent
+///
+/// Performance optimized: Uses a single query with LEFT JOIN instead of N+1 subqueries.
+/// The ROW_NUMBER() window function finds the most recent message per conversation efficiently.
 #[tauri::command]
 pub async fn get_conversations(state: State<'_, AppState>) -> Result<Vec<ConversationSummary>, String> {
     log::info!("Getting all conversations");
@@ -22,15 +25,30 @@ pub async fn get_conversations(state: State<'_, AppState>) -> Result<Vec<Convers
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.conn();
 
-    // Query conversations with last message preview
+    // Optimized query: Single pass using window function instead of N+1 subqueries
+    // ROW_NUMBER() ranks messages per conversation by timestamp DESC
+    // We then filter to get only the most recent message (rn = 1)
     let mut stmt = conn
         .prepare(
-            "SELECT c.id, c.title, c.mode, c.created_at, c.updated_at, c.message_count,
-                    (SELECT content FROM messages WHERE conversation_id = c.id
-                     ORDER BY timestamp DESC LIMIT 1) as last_message
-             FROM conversations c
-             ORDER BY c.updated_at DESC
-             LIMIT 100",
+            "WITH ranked_messages AS (
+                SELECT
+                    conversation_id,
+                    content,
+                    ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY timestamp DESC) as rn
+                FROM messages
+            )
+            SELECT
+                c.id,
+                c.title,
+                c.mode,
+                c.created_at,
+                c.updated_at,
+                c.message_count,
+                rm.content as last_message
+            FROM conversations c
+            LEFT JOIN ranked_messages rm ON c.id = rm.conversation_id AND rm.rn = 1
+            ORDER BY c.updated_at DESC
+            LIMIT 100",
         )
         .map_err(|e| e.to_string())?;
 

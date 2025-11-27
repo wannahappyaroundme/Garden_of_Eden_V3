@@ -20,7 +20,7 @@
 #![cfg(feature = "lancedb-support")]
 
 use super::bm25::{BM25Index, ScoredDocument as BM25ScoredDocument};
-use super::embedding::EmbeddingService;
+use super::embedding::UnifiedEmbeddingService;
 #[cfg(feature = "lancedb-support")]
 use super::rag_v2::{RagServiceV2, Episode};  // v3.4.0: Migrated to LanceDB for 10-100x faster search
 use super::reranker::HeuristicReranker;
@@ -61,7 +61,7 @@ pub struct HybridSearchResult {
 /// Hybrid Search Engine combining BM25 + BGE-M3
 pub struct HybridSearchEngine {
     bm25_index: BM25Index,
-    embedding_service: Arc<EmbeddingService>,
+    embedding_service: Arc<UnifiedEmbeddingService>,
     rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB-powered RAG
     reranker: HeuristicReranker,  // Re-ranker for improved relevance
     fusion_weights: FusionWeights,
@@ -72,7 +72,7 @@ pub struct HybridSearchEngine {
 impl HybridSearchEngine {
     /// Create a new hybrid search engine
     pub fn new(
-        embedding_service: Arc<EmbeddingService>,
+        embedding_service: Arc<UnifiedEmbeddingService>,
         rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB for performance
     ) -> Self {
         HybridSearchEngine {
@@ -88,7 +88,7 @@ impl HybridSearchEngine {
 
     /// Create with custom fusion weights
     pub fn with_weights(
-        embedding_service: Arc<EmbeddingService>,
+        embedding_service: Arc<UnifiedEmbeddingService>,
         rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
         weights: FusionWeights,
     ) -> Self {

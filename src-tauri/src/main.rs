@@ -4,6 +4,16 @@
 mod database;
 mod commands;
 mod services;
+mod app_state;
+mod errors;
+
+// Re-export error types for command usage
+pub use errors::{AppError, AppResult, ErrorCode};
+
+// Re-export domain service groups for command usage
+pub use app_state::{
+    CoreServices, AiServices, ToolServices, MemoryServices, IntegrationServices,
+};
 
 use database::Database;
 use services::screen::ScreenCaptureService;
@@ -19,7 +29,7 @@ use services::tool_implementations::{
 };
 use services::tool_history::ToolHistoryService;
 use services::tool_settings::ToolSettingsService;
-use services::embedding::EmbeddingService;
+use services::embedding::UnifiedEmbeddingService;
 #[cfg(feature = "lancedb-support")]
 use services::rag_v2::RagServiceV2;  // v3.4.0 Phase 6: LanceDB-powered RAG (10-100x faster)
 #[cfg(not(feature = "lancedb-support"))]
@@ -57,33 +67,52 @@ use std::collections::HashMap;
 use tokio::sync::Mutex as TokioMutex;
 use rusqlite::Connection;
 
-/// Application state shared across Tauri commands
+/// Application state shared across Tauri commands (v3.5.2)
+///
+/// Organized by domain (comments) for clarity while maintaining flat structure
+/// for backwards compatibility. See app_state.rs for grouped types.
+///
+/// Domain Groups:
+/// - Core: db, screen_service, llava_service, model_installer, learning_service
+/// - AI: embedding, rag, hybrid_search, react_agent, planner, approved_plans, plan_history
+/// - Tools: tool_service, tool_history_service, tool_settings_service, computer_control
+/// - Memory: attention_sink, prompt_cache, entity_extractor, graph_builder, graph_storage, graph_retrieval
+/// - Integrations: webhook_trigger_manager, calendar_service
 pub struct AppState {
-    db: Mutex<Database>,
-    screen_service: ScreenCaptureService,
-    llava_service: Mutex<LlavaService>,
-    model_installer: Arc<ModelInstallerService>,
-    learning_service: LearningService,
-    webhook_trigger_manager: Arc<WebhookTriggerManager>,
-    calendar_service: CalendarServiceWrapper,
-    tool_service: Arc<ToolService>,  // v3.6.0: Tool calling system
-    tool_history_service: Arc<TokioMutex<ToolHistoryService>>,  // v3.3.0: Tool execution tracking
-    tool_settings_service: Arc<TokioMutex<ToolSettingsService>>,  // v3.3.0: Tool configuration
-    embedding: Arc<EmbeddingService>,  // v3.6.0: BGE-M3 embeddings
-    rag: Arc<RagServiceV2>,  // v3.4.0 Phase 6: LanceDB-powered RAG (10-100x faster)
+    // === Core Services ===
+    pub db: Mutex<Database>,
+    pub screen_service: ScreenCaptureService,
+    pub llava_service: Mutex<LlavaService>,
+    pub model_installer: Arc<ModelInstallerService>,
+    pub learning_service: LearningService,
+
+    // === AI Services ===
+    pub embedding: Arc<UnifiedEmbeddingService>,  // v3.6.0: BGE-M3 embeddings (with fallback)
+    pub rag: Arc<RagServiceV2>,  // v3.4.0 Phase 6: LanceDB-powered RAG (10-100x faster)
     #[cfg(feature = "lancedb-support")]
-    hybrid_search: Arc<TokioMutex<HybridSearchEngine>>,  // v3.6.0: Hybrid search (BM25 + semantic)
-    attention_sink: Arc<services::attention_sink::AttentionSinkManager>,  // v3.6.0: Long context handling
-    prompt_cache: Arc<Mutex<services::prompt_cache::PromptCache>>,  // v3.6.0: Prompt caching
-    entity_extractor: Arc<EntityExtractor>,  // v3.7.0: Entity extraction for GraphRAG
-    graph_builder: Arc<TokioMutex<GraphBuilder>>,  // v3.7.0: Knowledge graph construction
-    graph_storage: Arc<GraphStorage>,  // v3.7.0: SQLite-based graph storage
-    graph_retrieval: Arc<GraphRetrievalEngine>,  // v3.7.0: Graph-based retrieval
-    react_agent: Arc<ReActAgent>,  // v3.7.0: ReAct agent (Reasoning + Acting)
-    planner: Arc<Planner>,  // v3.7.0: Plan-and-Solve agent with user confirmation
-    approved_plans: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: User-approved plans awaiting execution
-    plan_history: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: Executed plan history
-    computer_control: Arc<ComputerControlService>,  // v3.8.0: LAM (Large Action Model) for computer use
+    pub hybrid_search: Arc<TokioMutex<HybridSearchEngine>>,  // v3.6.0: Hybrid search (BM25 + semantic)
+    pub react_agent: Arc<ReActAgent>,  // v3.7.0: ReAct agent (Reasoning + Acting)
+    pub planner: Arc<Planner>,  // v3.7.0: Plan-and-Solve agent with user confirmation
+    pub approved_plans: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: User-approved plans awaiting execution
+    pub plan_history: Arc<TokioMutex<HashMap<String, Plan>>>,  // v3.7.0: Executed plan history
+
+    // === Tool Services ===
+    pub tool_service: Arc<ToolService>,  // v3.6.0: Tool calling system
+    pub tool_history_service: Arc<TokioMutex<ToolHistoryService>>,  // v3.3.0: Tool execution tracking
+    pub tool_settings_service: Arc<TokioMutex<ToolSettingsService>>,  // v3.3.0: Tool configuration
+    pub computer_control: Arc<ComputerControlService>,  // v3.8.0: LAM (Large Action Model) for computer use
+
+    // === Memory Services ===
+    pub attention_sink: Arc<services::attention_sink::AttentionSinkManager>,  // v3.6.0: Long context handling
+    pub prompt_cache: Arc<Mutex<services::prompt_cache::PromptCache>>,  // v3.6.0: Prompt caching
+    pub entity_extractor: Arc<EntityExtractor>,  // v3.7.0: Entity extraction for GraphRAG
+    pub graph_builder: Arc<TokioMutex<GraphBuilder>>,  // v3.7.0: Knowledge graph construction
+    pub graph_storage: Arc<GraphStorage>,  // v3.7.0: SQLite-based graph storage
+    pub graph_retrieval: Arc<GraphRetrievalEngine>,  // v3.7.0: Graph-based retrieval
+
+    // === Integration Services ===
+    pub webhook_trigger_manager: Arc<WebhookTriggerManager>,
+    pub calendar_service: CalendarServiceWrapper,
 }
 
 fn main() {
@@ -170,41 +199,19 @@ fn main() {
     let tool_settings_service = Arc::new(TokioMutex::new(tool_settings_service));
     log::info!("✓ Tool Settings Service initialized");
 
-    // Initialize Embedding Service (v3.6.0 - BGE-M3 quantized INT8)
-    log::info!("Initializing Embedding Service (BGE-M3)...");
-    let embedding_service = match EmbeddingService::new() {
-        Ok(service) => {
-            log::info!("✓ Embedding Service initialized");
-            Arc::new(service)
-        }
-        Err(e) => {
-            log::error!("⚠ Failed to initialize Embedding Service: {}", e);
-            log::error!("⚠ This is a known issue with ONNX Runtime on some systems.");
-            log::error!("⚠ To fix:");
-            log::error!("   1. Delete: ~/Library/Application Support/garden-of-eden-v3/models/bge-m3");
-            log::error!("   2. Restart the app (BGE-M3 will re-download, ~543MB)");
-            log::error!("   3. If issue persists, check ONNX Runtime installation");
-
-            panic!("\n╔════════════════════════════════════════════════════════════════╗\n\
-                    ║  CRITICAL ERROR: Embedding Service Failed to Initialize       ║\n\
-                    ╚════════════════════════════════════════════════════════════════╝\n\
-                    \n\
-                    Error: {}\n\
-                    \n\
-                    🔧 QUICK FIX:\n\
-                    Run this command to reset the BGE-M3 model:\n\
-                    \n\
-                    rm -rf ~/Library/Application\\ Support/garden-of-eden-v3/models/bge-m3\n\
-                    \n\
-                    Then restart the app. BGE-M3 will re-download automatically (~543MB quantized).\n\
-                    \n\
-                    📝 This is usually caused by corrupted model files or ONNX Runtime issues.\n\
-                    The app requires BGE-M3 embeddings for RAG and semantic search features.\n\
-                    \n\
-                    ⚠️  Note: The app WILL crash until this is fixed.\n\
-                    ", e);
-        }
-    };
+    // Initialize Embedding Service (v3.6.0 - BGE-M3 with graceful fallback to TF-IDF)
+    log::info!("Initializing Embedding Service (BGE-M3 with fallback)...");
+    let embedding_service = Arc::new(UnifiedEmbeddingService::new());
+    log::info!("✓ Embedding Service initialized: {}", embedding_service.mode_description());
+    if !embedding_service.is_full_mode() {
+        log::warn!("╔════════════════════════════════════════════════════════════════╗");
+        log::warn!("║  WARNING: Running in reduced accuracy mode (TF-IDF fallback)  ║");
+        log::warn!("╚════════════════════════════════════════════════════════════════╝");
+        log::warn!("RAG and semantic search will have reduced accuracy.");
+        log::warn!("To restore full accuracy, run:");
+        log::warn!("  rm -rf ~/Library/Application\\ Support/garden-of-eden-v3/models/bge-m3");
+        log::warn!("Then restart the app to re-download BGE-M3 (~543MB).");
+    }
 
     // Initialize RAG Service v2 (v3.4.0 Phase 6 - LanceDB for maximum performance)
     log::info!("Initializing RAG Service with LanceDB (10-100x faster)...");
@@ -457,7 +464,10 @@ fn main() {
         service: crash_reporter_arc,
     };
 
+    // Build AppState organized by domain groups (v3.5.2)
+    log::info!("Building AppState with domain-grouped services...");
     let app_state = AppState {
+        // === Core Services ===
         db: Mutex::new(
             Database::new().expect("Failed to initialize database for app state")
         ),
@@ -465,27 +475,36 @@ fn main() {
         llava_service: Mutex::new(llava_service),
         model_installer,
         learning_service,
+
+        // === AI Services ===
+        embedding: embedding_service,
+        rag: rag_service_arc,
+        #[cfg(feature = "lancedb-support")]
+        hybrid_search: Arc::new(TokioMutex::new(hybrid_search_engine)),
+        react_agent: react_agent_arc,
+        planner: planner_arc,
+        approved_plans,
+        plan_history,
+
+        // === Tool Services ===
+        tool_service,
+        tool_history_service,
+        tool_settings_service,
+        computer_control: Arc::clone(&computer_control_arc),
+
+        // === Memory Services ===
+        attention_sink: attention_sink_arc,
+        prompt_cache: prompt_cache_arc,
+        entity_extractor: entity_extractor_arc,
+        graph_builder: graph_builder_arc,
+        graph_storage: graph_storage_arc,
+        graph_retrieval: graph_retrieval_arc,
+
+        // === Integration Services ===
         webhook_trigger_manager,
         calendar_service,
-        tool_service,  // v3.6.0: Tool calling system
-        tool_history_service,  // v3.3.0: Tool execution tracking
-        tool_settings_service,  // v3.3.0: Tool configuration
-        embedding: embedding_service,  // v3.6.0: BGE-M3 embeddings
-        rag: rag_service_arc,  // v3.4.0 Phase 6: LanceDB-powered RAG (10-100x faster)
-        #[cfg(feature = "lancedb-support")]
-        hybrid_search: Arc::new(TokioMutex::new(hybrid_search_engine)),  // v3.6.0: Hybrid search
-        attention_sink: attention_sink_arc,  // v3.6.0: Attention sink for long contexts
-        prompt_cache: prompt_cache_arc,  // v3.6.0: Prompt caching
-        entity_extractor: entity_extractor_arc,  // v3.7.0: Entity extraction for GraphRAG
-        graph_builder: graph_builder_arc,  // v3.7.0: Knowledge graph construction
-        graph_storage: graph_storage_arc,  // v3.7.0: SQLite-based graph storage
-        graph_retrieval: graph_retrieval_arc,  // v3.7.0: Graph-based retrieval
-        react_agent: react_agent_arc,  // v3.7.0: ReAct agent (Reasoning + Acting)
-        planner: planner_arc,  // v3.7.0: Plan-and-Solve agent with user confirmation
-        approved_plans,  // v3.7.0: User-approved plans awaiting execution
-        plan_history,  // v3.7.0: Executed plan history
-        computer_control: Arc::clone(&computer_control_arc),  // v3.8.0: LAM (Large Action Model) for computer use
     };
+    log::info!("✓ AppState built with {} domain groups", 5);
 
     let mut builder = tauri::Builder::default()
         .manage(app_state)

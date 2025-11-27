@@ -24,7 +24,7 @@
 #![cfg(feature = "phase4")]
 
 use crate::database::Database;
-use crate::services::embedding::EmbeddingService;
+use crate::services::embedding::UnifiedEmbeddingService;
 #[cfg(feature = "lancedb-support")]
 use crate::services::rag_v2::RagServiceV2;  // v3.4.0: LanceDB migration
 use crate::services::ollama;
@@ -100,7 +100,7 @@ pub struct ConsolidationStats {
 pub struct MemoryConsolidationService {
     db: Arc<Mutex<Database>>,
     rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
-    embedding_service: Arc<EmbeddingService>,
+    embedding_service: Arc<UnifiedEmbeddingService>,
     config: Arc<Mutex<ConsolidationConfig>>,
 }
 
@@ -109,7 +109,7 @@ impl MemoryConsolidationService {
     pub fn new(
         db: Arc<Mutex<Database>>,
         rag_service: Arc<RagServiceV2>,  // v3.4.0: LanceDB
-        embedding_service: Arc<EmbeddingService>,
+        embedding_service: Arc<UnifiedEmbeddingService>,
     ) -> Result<Self> {
         let service = Self {
             db,

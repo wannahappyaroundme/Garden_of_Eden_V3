@@ -365,6 +365,205 @@ pub fn keyword_similarity(text1: &str, text2: &str) -> f32 {
     intersection / union // Jaccard similarity
 }
 
+// ============================================================================
+// FALLBACK EMBEDDING SERVICE (TF-IDF based, no external dependencies)
+// ============================================================================
+
+use std::collections::HashMap;
+
+/// Fallback TF-IDF based embedding service when BGE-M3 fails to load
+/// Provides basic semantic similarity without neural networks
+pub struct FallbackEmbeddingService {
+    /// Dimension of generated pseudo-embeddings (for API compatibility)
+    embedding_dim: usize,
+}
+
+impl FallbackEmbeddingService {
+    /// Create new fallback embedding service
+    pub fn new() -> Self {
+        log::warn!("⚠ Using fallback TF-IDF embedding service (reduced accuracy)");
+        Self {
+            embedding_dim: 256, // Smaller dimension for TF-IDF hashes
+        }
+    }
+
+    /// Generate pseudo-embedding using TF-IDF hashing
+    /// Returns a fixed-size vector based on word hashes
+    pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
+        let mut embedding = vec![0.0f32; self.embedding_dim];
+        let text_lower = text.to_lowercase();
+
+        // Tokenize and compute word frequencies
+        let words: Vec<&str> = text_lower
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|w| w.len() > 1)
+            .collect();
+
+        if words.is_empty() {
+            return Ok(embedding);
+        }
+
+        // Compute term frequencies
+        let mut term_freq: HashMap<&str, f32> = HashMap::new();
+        for word in &words {
+            *term_freq.entry(word).or_insert(0.0) += 1.0;
+        }
+
+        // Hash each word to embedding dimension and accumulate
+        for (word, freq) in term_freq {
+            // Use multiple hash functions for better distribution
+            let hash1 = Self::hash_word(word, 0) % self.embedding_dim;
+            let hash2 = Self::hash_word(word, 1) % self.embedding_dim;
+            let hash3 = Self::hash_word(word, 2) % self.embedding_dim;
+
+            // TF-IDF-like weighting (log term frequency)
+            let weight = (1.0 + freq.ln()) / (words.len() as f32).sqrt();
+
+            embedding[hash1] += weight;
+            embedding[hash2] -= weight * 0.5; // Sign alternation for better separation
+            embedding[hash3] += weight * 0.3;
+        }
+
+        // Normalize to unit length
+        let norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+        if norm > 1e-10 {
+            for val in &mut embedding {
+                *val /= norm;
+            }
+        }
+
+        Ok(embedding)
+    }
+
+    /// Simple hash function for word to index mapping
+    fn hash_word(word: &str, seed: usize) -> usize {
+        let mut hash: usize = seed.wrapping_mul(31);
+        for byte in word.bytes() {
+            hash = hash.wrapping_mul(31).wrapping_add(byte as usize);
+        }
+        hash
+    }
+
+    /// Batch embed multiple texts
+    pub fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        texts.iter().map(|text| self.embed(text)).collect()
+    }
+
+    /// Calculate cosine similarity between two embeddings
+    pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+        if a.len() != b.len() {
+            return 0.0;
+        }
+        a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+    }
+
+    /// Calculate semantic similarity between two texts
+    pub fn semantic_similarity(&self, text1: &str, text2: &str) -> Result<f32> {
+        let emb1 = self.embed(text1)?;
+        let emb2 = self.embed(text2)?;
+        Ok(Self::cosine_similarity(&emb1, &emb2))
+    }
+}
+
+impl Default for FallbackEmbeddingService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// UNIFIED EMBEDDING SERVICE (wraps either BGE-M3 or Fallback)
+// ============================================================================
+
+/// Embedding mode - either full BGE-M3 or fallback TF-IDF
+pub enum EmbeddingMode {
+    /// Full BGE-M3 neural embeddings (1024 dimensions, high accuracy)
+    BgeM3(EmbeddingService),
+    /// Fallback TF-IDF hashing (256 dimensions, reduced accuracy)
+    Fallback(FallbackEmbeddingService),
+}
+
+/// Unified embedding service that gracefully degrades
+pub struct UnifiedEmbeddingService {
+    mode: EmbeddingMode,
+}
+
+impl UnifiedEmbeddingService {
+    /// Create new unified embedding service
+    /// Tries BGE-M3 first, falls back to TF-IDF if it fails
+    pub fn new() -> Self {
+        match EmbeddingService::new() {
+            Ok(service) => {
+                log::info!("✓ Using BGE-M3 neural embeddings (high accuracy)");
+                Self {
+                    mode: EmbeddingMode::BgeM3(service),
+                }
+            }
+            Err(e) => {
+                log::error!("⚠ BGE-M3 initialization failed: {}", e);
+                log::warn!("→ Falling back to TF-IDF embedding service");
+                log::warn!("→ RAG accuracy will be reduced, but app remains functional");
+                log::info!("→ To restore full accuracy, delete the corrupted model:");
+                log::info!("   rm -rf ~/Library/Application\\ Support/garden-of-eden-v3/models/bge-m3");
+                log::info!("   Then restart the app to re-download BGE-M3 (~543MB)");
+
+                Self {
+                    mode: EmbeddingMode::Fallback(FallbackEmbeddingService::new()),
+                }
+            }
+        }
+    }
+
+    /// Check if using full BGE-M3 or fallback
+    pub fn is_full_mode(&self) -> bool {
+        matches!(self.mode, EmbeddingMode::BgeM3(_))
+    }
+
+    /// Get mode description
+    pub fn mode_description(&self) -> &'static str {
+        match &self.mode {
+            EmbeddingMode::BgeM3(_) => "BGE-M3 Neural Embeddings (1024d)",
+            EmbeddingMode::Fallback(_) => "TF-IDF Fallback (256d, reduced accuracy)",
+        }
+    }
+
+    /// Generate embedding for text
+    pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
+        match &self.mode {
+            EmbeddingMode::BgeM3(service) => service.embed(text),
+            EmbeddingMode::Fallback(service) => service.embed(text),
+        }
+    }
+
+    /// Batch embed multiple texts
+    pub fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        match &self.mode {
+            EmbeddingMode::BgeM3(service) => service.embed_batch(texts),
+            EmbeddingMode::Fallback(service) => service.embed_batch(texts),
+        }
+    }
+
+    /// Calculate cosine similarity between two embeddings
+    pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+        if a.len() != b.len() {
+            // Handle dimension mismatch gracefully
+            log::warn!("Embedding dimension mismatch: {} vs {}", a.len(), b.len());
+            return keyword_similarity(
+                &format!("{:?}", a),
+                &format!("{:?}", b),
+            );
+        }
+        a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+    }
+
+    /// Calculate semantic similarity between two texts
+    pub fn semantic_similarity(&self, text1: &str, text2: &str) -> Result<f32> {
+        let emb1 = self.embed(text1)?;
+        let emb2 = self.embed(text2)?;
+        Ok(Self::cosine_similarity(&emb1, &emb2))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
