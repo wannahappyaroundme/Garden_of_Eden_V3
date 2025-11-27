@@ -563,6 +563,28 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // v3.6.0 P3: Composite index for optimized message retrieval by conversation
+    // Fixes N+1 query issues when loading conversation with messages
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_messages_conversation_timestamp
+         ON messages(conversation_id, timestamp DESC)",
+        [],
+    )?;
+
+    // v3.6.0 P3: Index for tool history by name and date (analytics queries)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tool_history_name_date
+         ON tool_call_history(tool_name, created_at DESC)",
+        [],
+    )?;
+
+    // v3.6.0 P3: Index for episodic memory full-text search optimization
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_episodic_memory_user_message
+         ON episodic_memory(user_message)",
+        [],
+    )?;
+
     Ok(())
 }
 

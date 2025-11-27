@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next'; // Available for future localization
 import { ChatBubble, ChatDateDivider } from '../components/chat/ChatBubble';
 import { ChatInput, ChatInputHandle } from '../components/chat/ChatInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
@@ -48,7 +48,6 @@ interface ChatProps {
 }
 
 export function Chat({ onOpenSettings }: ChatProps) {
-  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
   const [isTyping, setIsTyping] = useState(false);

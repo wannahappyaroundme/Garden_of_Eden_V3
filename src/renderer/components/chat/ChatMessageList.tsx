@@ -1,11 +1,16 @@
 /**
- * Chat Message List Component (v3.5.2)
+ * Chat Message List Component (v3.6.0)
  *
  * Extracted from Chat.tsx for better maintainability.
  * Renders the list of messages with date dividers.
+ *
+ * Performance optimizations (P3):
+ * - useMemo for message grouping by date
+ * - React.memo for MessageRenderer to prevent unnecessary re-renders
+ * - React.memo for ToolCallRenderer for tool call updates
  */
 
-import { forwardRef, useMemo } from 'react';
+import { forwardRef, useMemo, memo, useCallback } from 'react';
 import { ChatBubble, ChatDateDivider } from './ChatBubble';
 import { ErrorBubble } from './ErrorBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -80,7 +85,7 @@ export const ChatMessageList = forwardRef<HTMLDivElement, ChatMessageListProps>(
 
 ChatMessageList.displayName = 'ChatMessageList';
 
-// Individual message renderer for cleaner code
+// Individual message renderer - memoized for performance (P3 optimization)
 interface MessageRendererProps {
   message: Message;
   activeToolCalls: Map<string, ToolCall[]>;
@@ -88,17 +93,25 @@ interface MessageRendererProps {
   onFeedback: (messageId: string, satisfaction: 'positive' | 'negative') => void;
 }
 
-function MessageRenderer({ message, activeToolCalls, onRetry, onFeedback }: MessageRendererProps) {
+const MessageRenderer = memo(function MessageRenderer({
+  message,
+  activeToolCalls,
+  onRetry,
+  onFeedback,
+}: MessageRendererProps) {
+  // Memoize retry handler to prevent unnecessary re-renders
+  const handleRetry = useCallback(() => {
+    if (message.errorRetryContent) {
+      onRetry(message.errorRetryContent);
+    }
+  }, [message.errorRetryContent, onRetry]);
+
   if (message.role === 'error') {
     return (
       <ErrorBubble
         message={message.content}
         timestamp={message.timestamp}
-        onRetry={
-          message.errorRetryContent
-            ? () => onRetry(message.errorRetryContent!)
-            : undefined
-        }
+        onRetry={message.errorRetryContent ? handleRetry : undefined}
       />
     );
   }
@@ -135,14 +148,14 @@ function MessageRenderer({ message, activeToolCalls, onRetry, onFeedback }: Mess
       )}
     </div>
   );
-}
+});
 
-// Tool call renderer for cleaner code
+// Tool call renderer - memoized for performance (P3 optimization)
 interface ToolCallRendererProps {
   toolCall: ToolCall;
 }
 
-function ToolCallRenderer({ toolCall }: ToolCallRendererProps) {
+const ToolCallRenderer = memo(function ToolCallRenderer({ toolCall }: ToolCallRendererProps) {
   if (toolCall.status === 'loading') {
     return (
       <ToolCallIndicator
@@ -157,6 +170,6 @@ function ToolCallRenderer({ toolCall }: ToolCallRendererProps) {
   }
 
   return null;
-}
+});
 
 export default ChatMessageList;

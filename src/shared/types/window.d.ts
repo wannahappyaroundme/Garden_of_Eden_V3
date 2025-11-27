@@ -202,7 +202,7 @@ export interface WindowAPI {
   startModelDownload: (modelName: string, modelType?: string) => Promise<void>;
   getDownloadProgress: () => Promise<any>;
   getRequiredModels: (modelName: string, voiceEnabled: boolean) => Promise<{ llm: string; llava: string; whisper?: string; total_size_gb: number; total_ram_usage_gb: number; voice_enabled: boolean }>;
-  getAvailableModelsForSystem: () => Promise<any[]>;
+  getAvailableModelsForSystem: (languagePreference: string) => Promise<any[]>;
   generateCustomPrompt: (surveyData: any) => Promise<string>;
   detectSystemSpecs: () => Promise<any>;
   saveSurveyResults: (results: string, prompt?: string) => Promise<void>;
