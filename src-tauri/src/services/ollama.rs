@@ -181,6 +181,12 @@ where
     generate_response_stream_with_rag(user_message, None, on_chunk).await
 }
 
+/// Streaming optimization configuration
+const STREAM_BUFFER_SIZE: usize = 16; // Minimum chars to buffer before sending
+const STREAM_TIMEOUT_SECS: u64 = 120; // 2 minutes timeout for long responses
+const STREAM_RETRY_COUNT: usize = 2;  // Retries on transient failures
+const STREAM_RETRY_DELAY_MS: u64 = 500; // Delay between retries
+
 /// Generate a streaming response from Ollama with RAG context
 pub async fn generate_response_stream_with_rag<F>(
     user_message: &str,
@@ -267,39 +273,120 @@ where
         return Err(error_msg);
     }
 
-    // Process streaming response
+    // Process streaming response with optimized buffering
     let mut full_response = String::new();
     let mut stream = response.bytes_stream();
+    let mut chunk_buffer = String::new();  // Buffer for small chunks
+    let mut incomplete_json = String::new(); // Buffer for split JSON lines
+    let stream_start = std::time::Instant::now();
 
-    while let Some(chunk_result) = stream.next().await {
-        let chunk = chunk_result.map_err(|e| {
-            let error_msg = format!("Error reading stream chunk: {}", e);
-            log::error!("{}", error_msg);
-            error_msg
-        })?;
+    // Wrap stream processing with timeout
+    let timeout_duration = std::time::Duration::from_secs(STREAM_TIMEOUT_SECS);
 
-        // Parse JSON lines (each chunk is a JSON object)
-        let text = String::from_utf8_lossy(&chunk);
-        for line in text.lines() {
-            if line.trim().is_empty() {
-                continue;
+    loop {
+        // Check timeout
+        if stream_start.elapsed() > timeout_duration {
+            log::error!("Streaming timeout after {} seconds", STREAM_TIMEOUT_SECS);
+            // Flush any remaining buffer before returning
+            if !chunk_buffer.is_empty() {
+                let _ = on_chunk(std::mem::take(&mut chunk_buffer));
             }
+            return Err(format!("Response timeout after {} seconds", STREAM_TIMEOUT_SECS));
+        }
 
-            match serde_json::from_str::<OllamaResponse>(line) {
-                Ok(ollama_chunk) => {
-                    if !ollama_chunk.response.is_empty() {
-                        full_response.push_str(&ollama_chunk.response);
-                        // Send chunk to callback
-                        on_chunk(ollama_chunk.response)?;
+        let chunk_future = stream.next();
+        let chunk_result = tokio::time::timeout(
+            std::time::Duration::from_secs(30), // Per-chunk timeout
+            chunk_future
+        ).await;
+
+        match chunk_result {
+            Ok(Some(Ok(chunk))) => {
+                // Parse JSON lines (each chunk is a JSON object)
+                let text = String::from_utf8_lossy(&chunk);
+
+                // Handle split JSON lines across chunks
+                let lines_to_process = if !incomplete_json.is_empty() {
+                    incomplete_json.push_str(&text);
+                    std::mem::take(&mut incomplete_json)
+                } else {
+                    text.to_string()
+                };
+
+                for line in lines_to_process.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.is_empty() {
+                        continue;
                     }
-                    if ollama_chunk.done {
-                        log::info!("Streaming response complete");
-                        break;
+
+                    // Check for incomplete JSON (line doesn't end with closing brace)
+                    if !trimmed.ends_with('}') && !trimmed.ends_with('}') {
+                        incomplete_json.push_str(trimmed);
+                        continue;
+                    }
+
+                    match serde_json::from_str::<OllamaResponse>(trimmed) {
+                        Ok(ollama_chunk) => {
+                            if !ollama_chunk.response.is_empty() {
+                                full_response.push_str(&ollama_chunk.response);
+                                chunk_buffer.push_str(&ollama_chunk.response);
+
+                                // Optimized flushing: send when buffer is large enough
+                                // or when we hit natural break points
+                                let should_flush = chunk_buffer.len() >= STREAM_BUFFER_SIZE
+                                    || chunk_buffer.ends_with('\n')
+                                    || chunk_buffer.ends_with('.')
+                                    || chunk_buffer.ends_with('!')
+                                    || chunk_buffer.ends_with('?')
+                                    || chunk_buffer.ends_with(':')
+                                    || chunk_buffer.contains('\n');
+
+                                if should_flush {
+                                    on_chunk(std::mem::take(&mut chunk_buffer))?;
+                                }
+                            }
+                            if ollama_chunk.done {
+                                // Flush remaining buffer
+                                if !chunk_buffer.is_empty() {
+                                    on_chunk(std::mem::take(&mut chunk_buffer))?;
+                                }
+                                log::info!("Streaming response complete ({:.2}s)",
+                                    stream_start.elapsed().as_secs_f32());
+                                return Ok(full_response.trim().to_string());
+                            }
+                        }
+                        Err(e) => {
+                            // Could be incomplete JSON, buffer it
+                            if trimmed.starts_with('{') {
+                                incomplete_json.push_str(trimmed);
+                            } else {
+                                log::warn!("Failed to parse chunk: {} - Line: {}", e, trimmed);
+                            }
+                        }
                     }
                 }
-                Err(e) => {
-                    log::warn!("Failed to parse chunk: {} - Line: {}", e, line);
+            }
+            Ok(Some(Err(e))) => {
+                let error_msg = format!("Error reading stream chunk: {}", e);
+                log::error!("{}", error_msg);
+                // Flush buffer on error
+                if !chunk_buffer.is_empty() {
+                    let _ = on_chunk(std::mem::take(&mut chunk_buffer));
                 }
+                return Err(error_msg);
+            }
+            Ok(None) => {
+                // Stream ended
+                if !chunk_buffer.is_empty() {
+                    on_chunk(std::mem::take(&mut chunk_buffer))?;
+                }
+                log::info!("Stream ended");
+                break;
+            }
+            Err(_) => {
+                // Timeout on individual chunk
+                log::warn!("Chunk read timeout, continuing...");
+                continue;
             }
         }
     }
