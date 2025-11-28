@@ -585,6 +585,25 @@ pub fn create_indexes(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // v3.6.0 P4: Covering index for conversation list queries
+    // Includes all fields needed for conversation list without table lookup
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_conversations_list
+         ON conversations(updated_at DESC, id, title, mode, message_count)",
+        [],
+    )?;
+
+    // v3.6.0 P4: Index for message role filtering (user vs assistant)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_messages_role
+         ON messages(role, conversation_id)",
+        [],
+    )?;
+
+    // v3.6.0 P4: Run ANALYZE to update query planner statistics
+    // This helps SQLite choose optimal query plans
+    conn.execute("ANALYZE", [])?;
+
     Ok(())
 }
 

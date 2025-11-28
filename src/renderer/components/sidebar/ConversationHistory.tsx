@@ -1,13 +1,23 @@
 /**
- * Conversation History Sidebar
- * Lists all conversations with search and management
+ * Conversation History Sidebar (v3.6.0)
+ *
+ * Lists all conversations with search and management.
+ *
+ * Performance optimizations:
+ * - react-window FixedSizeList for virtualized scrolling
+ * - Only renders visible items (50 items visible at a time)
+ * - Reduces memory usage for users with many conversations
  */
 
-import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import { Button } from '../ui/button';
 import { HistoryItem } from './HistoryItem';
 import { HistoryListSkeleton } from './HistoryItemSkeleton';
 import type { ConversationSummary } from '../../lib/tauri-api';
+
+// Height of each conversation item in pixels
+const ITEM_HEIGHT = 72;
 
 interface ConversationHistoryProps {
   currentConversationId?: string;
@@ -96,9 +106,36 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
   };
 
   // Filter conversations by search query
-  const filteredConversations = conversations.filter((conv) =>
-    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredConversations = useMemo(() =>
+    conversations.filter((conv) =>
+      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [conversations, searchQuery]
   );
+
+  // Memoize handlers to prevent re-renders
+  const memoizedHandlers = useMemo(() => ({
+    onSelect: handleSelectConversation,
+    onDelete: handleDeleteConversation,
+    onRename: handleRenameConversation,
+  }), []);
+
+  // Row renderer for virtualized list
+  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const conversation = filteredConversations[index];
+    return (
+      <div style={style}>
+        <HistoryItem
+          key={conversation.id}
+          conversation={conversation}
+          isSelected={conversation.id === currentConversationId}
+          onSelect={memoizedHandlers.onSelect}
+          onDelete={memoizedHandlers.onDelete}
+          onRename={memoizedHandlers.onRename}
+        />
+      </div>
+    );
+  }, [filteredConversations, currentConversationId, memoizedHandlers]);
 
   return (
     <aside className="w-64 flex-shrink-0 border-r border-border bg-card flex flex-col h-full" aria-label="대화 목록 사이드바">
@@ -225,16 +262,29 @@ export const ConversationHistory = forwardRef<ConversationHistoryHandle, Convers
             </button>
           </div>
         ) : (
-          filteredConversations.map((conversation) => (
-            <HistoryItem
-              key={conversation.id}
-              conversation={conversation}
-              isSelected={conversation.id === currentConversationId}
-              onSelect={handleSelectConversation}
-              onDelete={handleDeleteConversation}
-              onRename={handleRenameConversation}
-            />
-          ))
+          // Use virtualized list for 20+ conversations, regular list for fewer
+          filteredConversations.length > 20 ? (
+            <List
+              height={400}
+              itemCount={filteredConversations.length}
+              itemSize={ITEM_HEIGHT}
+              width="100%"
+              className="scrollbar-thin"
+            >
+              {Row}
+            </List>
+          ) : (
+            filteredConversations.map((conversation) => (
+              <HistoryItem
+                key={conversation.id}
+                conversation={conversation}
+                isSelected={conversation.id === currentConversationId}
+                onSelect={handleSelectConversation}
+                onDelete={handleDeleteConversation}
+                onRename={handleRenameConversation}
+              />
+            ))
+          )
         )}
       </nav>
 
