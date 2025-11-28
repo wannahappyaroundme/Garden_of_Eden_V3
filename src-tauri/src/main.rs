@@ -116,6 +116,9 @@ pub struct AppState {
 }
 
 fn main() {
+    // Track total initialization time (v3.6.0 P4)
+    let init_start = std::time::Instant::now();
+
     // Initialize structured logging (v3.6.0 P3)
     // Falls back to env_logger if tracing init fails
     if let Err(e) = services::structured_logging::init_logging_auto() {
@@ -211,9 +214,16 @@ fn main() {
     log::info!("✓ Tool Settings Service initialized");
 
     // Initialize Embedding Service (v3.6.0 - BGE-M3 with graceful fallback to TF-IDF)
-    log::info!("Initializing Embedding Service (BGE-M3 with fallback)...");
+    // This is a heavy operation - ONNX model loading takes 2-4 seconds
+    tracing::info!("Initializing Embedding Service (BGE-M3 with fallback)...");
+    let embedding_start = std::time::Instant::now();
     let embedding_service = Arc::new(UnifiedEmbeddingService::new());
-    log::info!("✓ Embedding Service initialized: {}", embedding_service.mode_description());
+    let embedding_duration = embedding_start.elapsed();
+    tracing::info!(
+        duration_ms = embedding_duration.as_millis() as u64,
+        mode = embedding_service.mode_description(),
+        "Embedding Service initialized"
+    );
     if !embedding_service.is_full_mode() {
         log::warn!("╔════════════════════════════════════════════════════════════════╗");
         log::warn!("║  WARNING: Running in reduced accuracy mode (TF-IDF fallback)  ║");
@@ -225,7 +235,9 @@ fn main() {
     }
 
     // Initialize RAG Service v2 (v3.4.0 Phase 6 - LanceDB for maximum performance)
-    log::info!("Initializing RAG Service with LanceDB (10-100x faster)...");
+    // LanceDB initialization can take 1-3 seconds for first run
+    tracing::info!("Initializing RAG Service with LanceDB...");
+    let rag_start = std::time::Instant::now();
     let lance_db_path = data_dir.join("lance_db");
     let rag_service = tokio::runtime::Runtime::new()
         .expect("Failed to create tokio runtime")
@@ -238,7 +250,11 @@ fn main() {
         })
         .expect("Failed to initialize RAG Service");
     let rag_service_arc = Arc::new(rag_service);
-    log::info!("✓ RAG Service initialized with LanceDB - 10-100x faster vector search! 🚀");
+    let rag_duration = rag_start.elapsed();
+    tracing::info!(
+        duration_ms = rag_duration.as_millis() as u64,
+        "RAG Service initialized with LanceDB"
+    );
 
     // Initialize Hybrid Search Engine (v3.6.0) - only when LanceDB is enabled
     #[cfg(feature = "lancedb-support")]
@@ -515,7 +531,19 @@ fn main() {
         webhook_trigger_manager,
         calendar_service,
     };
-    log::info!("✓ AppState built with {} domain groups", 5);
+
+    // Log total initialization time (v3.6.0 P4)
+    let init_duration = init_start.elapsed();
+    tracing::info!(
+        total_init_ms = init_duration.as_millis() as u64,
+        "All services initialized - starting Tauri"
+    );
+    if init_duration.as_secs() > 5 {
+        tracing::warn!(
+            duration_secs = init_duration.as_secs(),
+            "Initialization took longer than 5 seconds. Consider investigating slow services."
+        );
+    }
 
     let mut builder = tauri::Builder::default()
         .manage(app_state)
