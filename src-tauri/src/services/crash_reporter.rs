@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /**
  * Crash Reporting Service (v3.4.0 - Enhanced)
  *
@@ -8,7 +9,6 @@
  * - Provides user control over crash reporting
  * - Sanitizes sensitive data before sending
  */
-#![allow(dead_code)]
 
 use anyhow::{anyhow, Result};
 use log::{error, info, warn};

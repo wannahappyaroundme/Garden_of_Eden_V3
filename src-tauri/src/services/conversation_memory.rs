@@ -1,14 +1,14 @@
-/**
- * Conversation Summary Buffer Memory Service (v3.5.0)
- *
- * Manages long conversations by maintaining a summary of older messages
- * while keeping recent messages in full detail for context.
- *
- * Pattern: Summary Buffer Memory
- * - Keep recent N messages in full
- * - Summarize older messages into a rolling summary
- * - Provide context (summary + recent messages) to LLM
- */
+//! Conversation Summary Buffer Memory Service (v3.5.0)
+//!
+//! Manages long conversations by maintaining a summary of older messages
+//! while keeping recent messages in full detail for context.
+//!
+//! Pattern: Summary Buffer Memory
+//! - Keep recent N messages in full
+//! - Summarize older messages into a rolling summary
+//! - Provide context (summary + recent messages) to LLM
+
+#![allow(dead_code)]  // Phase 12: Summary buffer (on-demand)
 
 use crate::database::Database;
 use anyhow::{anyhow, Result};

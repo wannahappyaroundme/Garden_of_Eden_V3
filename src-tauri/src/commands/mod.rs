@@ -40,3 +40,7 @@ pub mod task_planner;
 pub mod learning_style;
 pub mod goal_tracker;
 pub mod raft;  // v3.4.0 Phase 7: RAFT hallucination reduction
+pub mod proactive;  // v3.6.0: Proactive AI monitoring
+pub mod lora;  // v3.6.0: LoRA training data collection and adapter management
+pub mod plugin;  // v3.6.0: Plugin system management
+pub mod episodic_memory;  // v3.6.0: Episodic memory visualization commands

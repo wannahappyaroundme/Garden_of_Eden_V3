@@ -82,6 +82,7 @@ impl ScreenCaptureService {
         // Spawn background task for periodic captures
         let state_clone = Arc::clone(&self.state);
         let db_clone = Arc::clone(&self.db);
+        let active_window_service = self.active_window_service.clone();
 
         tokio::spawn(async move {
             let mut interval_timer = interval(Duration::from_secs(interval_seconds));
@@ -98,8 +99,8 @@ impl ScreenCaptureService {
                     break; // Stop the loop if tracking is disabled
                 }
 
-                // Capture screen
-                if let Err(e) = Self::capture_and_save(&state_clone, &db_clone).await {
+                // Capture screen with active window info
+                if let Err(e) = Self::capture_and_save(&state_clone, &db_clone, &active_window_service).await {
                     log::error!("Screen capture failed: {}", e);
                 }
             }
@@ -140,10 +141,11 @@ impl ScreenCaptureService {
         }
     }
 
-    /// Capture screen and save to database
+    /// Capture screen and save to database with active window info
     async fn capture_and_save(
         state: &Arc<Mutex<ScreenTrackingState>>,
         db: &Arc<Mutex<Database>>,
+        active_window_service: &ActiveWindowService,
     ) -> Result<(), String> {
         // Capture all screens
         let screens = Screen::all().map_err(|e| format!("Failed to get screens: {}", e))?;
@@ -177,6 +179,21 @@ impl ScreenCaptureService {
             .map_err(|e| format!("Failed to get timestamp: {}", e))?
             .as_millis() as i64;
 
+        // Get active window information (v3.6.0)
+        let active_window: Option<ActiveWindow> = match active_window_service.get_active_window() {
+            Ok(window) => {
+                log::debug!("Active window: {} ({})", window.title, window.app_name);
+                Some(window)
+            },
+            Err(e) => {
+                log::warn!("Failed to get active window: {}", e);
+                None
+            }
+        };
+
+        let window_title = active_window.as_ref().map(|w| w.title.clone());
+        let app_name = active_window.as_ref().map(|w| w.app_name.clone());
+
         // Save to database
         let db_guard = db.lock().map_err(|e| format!("Failed to lock database: {}", e))?;
         let conn = db_guard.conn();
@@ -189,9 +206,9 @@ impl ScreenCaptureService {
                 format!("screen_{}", timestamp),
                 1, // Level 1: Current screen only
                 base64_image, // Storing base64 in image_path temporarily
-                Option::<String>::None, // OCR not implemented yet
-                Option::<String>::None, // Active window detection not implemented yet
-                Option::<String>::None, // Application detection not implemented yet
+                Option::<String>::None, // OCR: Use LLaVA vision for text extraction instead
+                window_title,
+                app_name,
                 timestamp,
             ],
         )
@@ -203,9 +220,10 @@ impl ScreenCaptureService {
         state_guard.capture_count += 1;
 
         log::info!(
-            "Screen captured (count: {}, size: {} KB)",
+            "Screen captured (count: {}, size: {} KB, window: {:?})",
             state_guard.capture_count,
-            png_data.len() / 1024
+            png_data.len() / 1024,
+            window_title.as_deref().unwrap_or("unknown")
         );
 
         Ok(())

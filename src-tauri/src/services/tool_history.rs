@@ -100,7 +100,8 @@ impl ToolHistoryService {
 
     /// Record a tool execution to the database
     pub fn record_execution(&self, record: ToolCallRecord) -> Result<()> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         conn.execute(
@@ -137,7 +138,8 @@ impl ToolHistoryService {
 
     /// Get tool history with optional filters
     pub fn get_history(&self, filters: ToolHistoryFilters) -> Result<Vec<ToolCallRecord>> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         let mut query = String::from(
@@ -213,7 +215,8 @@ impl ToolHistoryService {
 
     /// Get tool usage statistics
     pub fn get_statistics(&self) -> Result<ToolUsageStats> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         // Overall statistics
@@ -323,7 +326,8 @@ impl ToolHistoryService {
 
     /// Delete tool history older than the specified timestamp
     pub fn delete_history_before(&self, before_timestamp: i64) -> Result<usize> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         let deleted_count = conn.execute(
@@ -338,7 +342,8 @@ impl ToolHistoryService {
 
     /// Get the most recently called tools
     pub fn get_recent_tools(&self, limit: usize) -> Result<Vec<String>> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         let mut stmt = conn.prepare(
@@ -357,7 +362,8 @@ impl ToolHistoryService {
 
     /// Get error rate for a specific tool
     pub fn get_tool_error_rate(&self, tool_name: &str) -> Result<f32> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         let (total, failures): (i64, i64) = conn.query_row(

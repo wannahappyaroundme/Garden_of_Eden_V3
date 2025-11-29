@@ -1,15 +1,15 @@
-/**
- * Phase 5 Stage 4: Task Planner Service (v3.9.0)
- *
- * Autonomous task breakdown and execution planning with dependency tracking.
- *
- * Features:
- * - Intelligent task decomposition using Ollama
- * - Dependency graph management
- * - Execution plan generation
- * - Progress tracking
- * - Subtask reordering based on dependencies
- */
+//! Phase 5 Stage 4: Task Planner Service (v3.9.0)
+//!
+//! Autonomous task breakdown and execution planning with dependency tracking.
+//!
+//! Features:
+//! - Intelligent task decomposition using Ollama
+//! - Dependency graph management
+//! - Execution plan generation
+//! - Progress tracking
+//! - Subtask reordering based on dependencies
+
+#![allow(dead_code)]  // Phase 5: Task planning (Stage 4)
 
 use crate::database::Database;
 use crate::services::ollama;

@@ -31,6 +31,38 @@ import SuggestionsPanel from '../components/SuggestionsPanel';
 import { ToolCall } from '../../shared/types/tool.types';
 import { ToolCallIndicator, ToolResultCard, ToolHistory } from '../components/tool';
 import type { ToolCallRecord } from '../../shared/types/tool-history.types';
+import { getToolDisplayName } from '../../shared/types/tool-history.types';
+
+// Backend ToolCallRecord type (snake_case from Rust)
+interface BackendToolCallRecord {
+  id: string;
+  conversation_id: string;
+  message_id: string;
+  tool_name: string;
+  tool_input: string;
+  tool_output: string;
+  execution_time_ms: number;
+  status: 'success' | 'error';
+  error_message: string | null;
+  created_at: number;
+}
+
+// Convert backend record to frontend format
+function convertToolRecord(backend: BackendToolCallRecord): ToolCallRecord {
+  return {
+    id: backend.id,
+    toolName: backend.tool_name,
+    displayName: getToolDisplayName(backend.tool_name),
+    timestamp: backend.created_at,
+    duration: backend.execution_time_ms,
+    status: backend.status,
+    input: JSON.parse(backend.tool_input || '{}'),
+    output: backend.tool_output ? JSON.parse(backend.tool_output) : null,
+    error: backend.error_message ? { message: backend.error_message } : undefined,
+    conversationId: backend.conversation_id,
+    messageId: backend.message_id,
+  };
+}
 
 interface Message {
   id: string;
@@ -73,77 +105,24 @@ export function Chat({ onOpenSettings }: ChatProps) {
   // Proactive notifications
   const { dismissSuggestion } = useProactiveNotifications();
 
-  // Load mock tool history data (v3.7.0 Phase 3 demo)
-  useEffect(() => {
-    // TODO: Replace with actual backend call
-    const mockHistory: ToolCallRecord[] = [
-      {
-        id: 'tc-001',
-        toolName: 'web_search',
-        displayName: 'Web Search',
-        timestamp: Date.now() - 3600000, // 1 hour ago
-        duration: 1240,
-        status: 'success',
-        input: { query: 'React hooks best practices', maxResults: 5 },
-        output: {
-          results: [
-            { title: 'React Hooks Guide', url: 'https://react.dev/hooks' },
-            { title: 'Best Practices', url: 'https://example.com/hooks' },
-          ],
-        },
-      },
-      {
-        id: 'tc-002',
-        toolName: 'read_file',
-        displayName: 'Read File',
-        timestamp: Date.now() - 7200000, // 2 hours ago
-        duration: 45,
-        status: 'success',
-        input: { path: '/Users/kyungsbook/Desktop/Eden_Project_V3/package.json' },
-        output: '{\n  "name": "garden-of-eden-v3",\n  ...\n}',
-      },
-      {
-        id: 'tc-003',
-        toolName: 'calculate',
-        displayName: 'Calculator',
-        timestamp: Date.now() - 86400000, // 1 day ago
-        duration: 12,
-        status: 'success',
-        input: { expression: '(1234 + 5678) * 0.15' },
-        output: { result: 1036.8 },
-      },
-      {
-        id: 'tc-004',
-        toolName: 'fetch_url',
-        displayName: 'URL Fetch',
-        timestamp: Date.now() - 172800000, // 2 days ago
-        duration: 3420,
-        status: 'error',
-        input: { url: 'https://api.example.com/data' },
-        output: null,
-        error: {
-          message: 'Connection timeout',
-          code: 'ETIMEDOUT',
-        },
-      },
-      {
-        id: 'tc-005',
-        toolName: 'get_system_info',
-        displayName: 'System Info',
-        timestamp: Date.now() - 259200000, // 3 days ago
-        duration: 105,
-        status: 'success',
-        input: { privacyLevel: 'standard' },
-        output: {
-          os: 'Darwin',
-          arch: 'arm64',
-          cpuCores: 10,
-          totalMemory: 16384,
-        },
-      },
-    ];
-    setToolCallHistory(mockHistory);
+  // Load tool history from backend (v3.7.0 Phase 3)
+  const loadToolHistory = useCallback(async () => {
+    try {
+      const backendRecords = await invoke<BackendToolCallRecord[]>('get_tool_history', {
+        filters: { limit: 50 }
+      });
+      const frontendRecords = backendRecords.map(convertToolRecord);
+      setToolCallHistory(frontendRecords);
+    } catch (error) {
+      console.error('Failed to load tool history:', error);
+      // Keep empty array on error
+      setToolCallHistory([]);
+    }
   }, []);
+
+  useEffect(() => {
+    loadToolHistory();
+  }, [loadToolHistory]);
 
   // Toggle screen tracking
   const handleToggleTracking = useCallback(async () => {
@@ -916,8 +895,7 @@ export function Chat({ onOpenSettings }: ChatProps) {
           <ToolHistory
             records={toolCallHistory}
             onRefresh={() => {
-              // TODO: Refresh tool history from backend
-              console.log('Refresh tool history');
+              loadToolHistory();
             }}
             onClearHistory={() => {
               setToolCallHistory([]);

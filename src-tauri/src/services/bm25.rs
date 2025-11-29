@@ -1,19 +1,19 @@
-/**
- * BM25 Indexing Service (v3.6.0)
- *
- * TF-IDF based lexical search for hybrid retrieval
- *
- * Algorithm:
- * score(D, Q) = Σ IDF(qi) × (f(qi, D) × (k1 + 1)) / (f(qi, D) + k1 × (1 - b + b × |D| / avgdl))
- *
- * Where:
- * - f(qi, D) = term frequency in document
- * - |D| = document length
- * - avgdl = average document length
- * - IDF(qi) = log((N - df(qi) + 0.5) / (df(qi) + 0.5))
- * - k1 = 1.5 (term frequency saturation)
- * - b = 0.75 (length normalization)
- */
+//! BM25 Indexing Service (v3.6.0)
+//!
+//! TF-IDF based lexical search for hybrid retrieval
+//!
+//! Algorithm:
+//! score(D, Q) = Σ IDF(qi) × (f(qi, D) × (k1 + 1)) / (f(qi, D) + k1 × (1 - b + b × |D| / avgdl))
+//!
+//! Where:
+//! - f(qi, D) = term frequency in document
+//! - |D| = document length
+//! - avgdl = average document length
+//! - IDF(qi) = log((N - df(qi) + 0.5) / (df(qi) + 0.5))
+//! - k1 = 1.5 (term frequency saturation)
+//! - b = 0.75 (length normalization)
+
+#![allow(dead_code)]  // Phase 13: Hybrid search (LanceDB feature)
 
 use log::{debug, info};
 use rusqlite::Connection;

@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Search, Download, Upload, Trash2, Brain, TrendingUp, Clock, ThumbsUp, X } from 'lucide-react';
 
 interface MemoryVisualizationProps {
@@ -47,31 +48,12 @@ const MemoryVisualization: React.FC<MemoryVisualizationProps> = ({ onClose }) =>
   const loadMemories = async () => {
     setLoading(true);
     try {
-      // TODO: Call IPC to get recent episodes
-      // For now, use mock data
-      const mockEpisodes: Episode[] = [
-        {
-          id: '1',
-          user_message: 'What is Rust programming language?',
-          ai_response: 'Rust is a systems programming language focused on safety, speed, and concurrency.',
-          satisfaction: 0.9,
-          created_at: Date.now() - 86400000, // 1 day ago
-          access_count: 5,
-          importance: 0.9,
-        },
-        {
-          id: '2',
-          user_message: 'How do I implement async/await in Rust?',
-          ai_response: 'In Rust, async/await is used with the async keyword and requires a runtime like Tokio.',
-          satisfaction: 0.8,
-          created_at: Date.now() - 172800000, // 2 days ago
-          access_count: 3,
-          importance: 0.8,
-        },
-      ];
-      setEpisodes(mockEpisodes);
+      const result = await invoke<Episode[]>('episodic_get_recent', { limit: 50 });
+      setEpisodes(result);
     } catch (error) {
       console.error('Failed to load memories:', error);
+      // Keep empty array on error
+      setEpisodes([]);
     } finally {
       setLoading(false);
     }
@@ -79,14 +61,12 @@ const MemoryVisualization: React.FC<MemoryVisualizationProps> = ({ onClose }) =>
 
   const loadStats = async () => {
     try {
-      // TODO: Call IPC to get stats
-      setStats({
-        total_memories: 2,
-        average_satisfaction: 0.85,
-        most_accessed_topic: 'Rust programming',
-      });
+      const result = await invoke<MemoryStats>('episodic_get_stats');
+      setStats(result);
     } catch (error) {
       console.error('Failed to load stats:', error);
+      // Set empty stats on error
+      setStats(null);
     }
   };
 
@@ -98,14 +78,11 @@ const MemoryVisualization: React.FC<MemoryVisualizationProps> = ({ onClose }) =>
 
     setLoading(true);
     try {
-      // TODO: Call IPC to search memories
-      // For now, filter mock data
-      const filtered = episodes.filter(
-        (ep) =>
-          ep.user_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          ep.ai_response.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setEpisodes(filtered);
+      const result = await invoke<Episode[]>('episodic_search', {
+        query: searchQuery,
+        limit: 50
+      });
+      setEpisodes(result);
     } catch (error) {
       console.error('Search failed:', error);
     } finally {
@@ -115,8 +92,9 @@ const MemoryVisualization: React.FC<MemoryVisualizationProps> = ({ onClose }) =>
 
   const handleExport = async () => {
     try {
-      // TODO: Call IPC to export memories
-      const dataStr = JSON.stringify(episodes, null, 2);
+      // Get all memories from backend for export
+      const allEpisodes = await invoke<Episode[]>('episodic_export', { limit: 1000 });
+      const dataStr = JSON.stringify(allEpisodes, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement('a');
@@ -135,10 +113,12 @@ const MemoryVisualization: React.FC<MemoryVisualizationProps> = ({ onClose }) =>
 
     try {
       const text = await file.text();
-      const imported = JSON.parse(text);
-      // TODO: Call IPC to import memories
-      console.log('Imported:', imported);
+      const imported = JSON.parse(text) as Episode[];
+      const importedCount = await invoke<number>('episodic_import', { episodes: imported });
+      console.log(`Imported ${importedCount} new memories`);
+      // Reload memories to show imported data
       loadMemories();
+      loadStats();
     } catch (error) {
       console.error('Import failed:', error);
     }
@@ -148,8 +128,11 @@ const MemoryVisualization: React.FC<MemoryVisualizationProps> = ({ onClose }) =>
     if (!confirm('Are you sure you want to delete this memory?')) return;
 
     try {
-      // TODO: Call IPC to delete episode
-      setEpisodes(episodes.filter((ep) => ep.id !== id));
+      const deleted = await invoke<boolean>('episodic_delete', { episodeId: id });
+      if (deleted) {
+        setEpisodes(episodes.filter((ep) => ep.id !== id));
+        loadStats(); // Refresh stats after deletion
+      }
     } catch (error) {
       console.error('Delete failed:', error);
     }

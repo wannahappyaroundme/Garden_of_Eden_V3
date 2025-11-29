@@ -1,19 +1,19 @@
-/**
- * Phase 3: Temporal Memory (v3.8.0)
- *
- * Ebbinghaus Forgetting Curve implementation with gradual decay:
- * - R(t) = max(min_retention, e^(-t/S))
- * - S = 20.0 (gradual decay per user requirement)
- * - 24h: ~100% retention
- * - 30d: ~22-50% retention (with access boost)
- * - 90d: ≥10% minimum retention
- *
- * Features:
- * - Memory pinning (important events never decay)
- * - Access-based retention boost
- * - Automated decay updates every 24 hours
- * - Configurable decay strength per memory
- */
+//! Phase 3: Temporal Memory (v3.8.0)
+//!
+//! Ebbinghaus Forgetting Curve implementation with gradual decay:
+//! - R(t) = max(min_retention, e^(-t/S))
+//! - S = 20.0 (gradual decay per user requirement)
+//! - 24h: ~100% retention
+//! - 30d: ~22-50% retention (with access boost)
+//! - 90d: ≥10% minimum retention
+//!
+//! Features:
+//! - Memory pinning (important events never decay)
+//! - Access-based retention boost
+//! - Automated decay updates every 24 hours
+//! - Configurable decay strength per memory
+
+#![allow(dead_code)]  // Phase 18: Temporal memory (Phase 3)
 
 use crate::database::Database;
 use anyhow::{Context, Result};

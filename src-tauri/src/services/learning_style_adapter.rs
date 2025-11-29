@@ -1,15 +1,15 @@
-/**
- * Phase 5 Stage 4: Learning Style Adapter Service (v3.9.0)
- *
- * Adapts AI responses based on user's preferred learning style and comprehension level.
- *
- * Features:
- * - Learning style detection (visual, auditory, kinesthetic, reading/writing)
- * - Complexity level adaptation
- * - Example vs theory preference
- * - Interaction pattern tracking
- * - Automatic style recommendation
- */
+//! Phase 5 Stage 4: Learning Style Adapter Service (v3.9.0)
+//!
+//! Adapts AI responses based on user's preferred learning style and comprehension level.
+//!
+//! Features:
+//! - Learning style detection (visual, auditory, kinesthetic, reading/writing)
+//! - Complexity level adaptation
+//! - Example vs theory preference
+//! - Interaction pattern tracking
+//! - Automatic style recommendation
+
+#![allow(dead_code)]  // Phase 5: Learning style (Stage 4)
 
 use crate::database::Database;
 use crate::services::ollama;

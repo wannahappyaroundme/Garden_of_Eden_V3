@@ -31,6 +31,7 @@ struct LlavaOptions {
 #[derive(Debug, Deserialize)]
 struct LlavaResponse {
     response: String,
+    #[allow(dead_code)]
     done: bool,
 }
 

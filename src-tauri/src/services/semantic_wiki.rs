@@ -1,23 +1,23 @@
-/**
- * Phase 5: Semantic Wiki (v3.9.0 - Stage 2)
- *
- * Knowledge base system that extracts and stores structured facts from conversations.
- *
- * Architecture:
- * 1. Fact Extraction: Uses LLM to extract facts/entities/relationships from conversations
- * 2. Knowledge Storage: Stores facts in SQLite with embeddings for semantic search
- * 3. Fact Linking: Maintains relationships between facts (supports/contradicts/extends)
- * 4. Provenance: Tracks which conversation each fact came from
- * 5. Semantic Query: Retrieves relevant facts using semantic similarity
- *
- * Features:
- * - Automatic fact extraction from conversations
- * - Entity and relationship extraction
- * - Fact confidence scoring
- * - Conflict detection (contradicting facts)
- * - Temporal tracking (when facts were learned)
- * - Source attribution (conversation provenance)
- */
+//! Phase 5: Semantic Wiki (v3.9.0 - Stage 2)
+//!
+//! Knowledge base system that extracts and stores structured facts from conversations.
+//!
+//! Architecture:
+//! 1. Fact Extraction: Uses LLM to extract facts/entities/relationships from conversations
+//! 2. Knowledge Storage: Stores facts in SQLite with embeddings for semantic search
+//! 3. Fact Linking: Maintains relationships between facts (supports/contradicts/extends)
+//! 4. Provenance: Tracks which conversation each fact came from
+//! 5. Semantic Query: Retrieves relevant facts using semantic similarity
+//!
+//! Features:
+//! - Automatic fact extraction from conversations
+//! - Entity and relationship extraction
+//! - Fact confidence scoring
+//! - Conflict detection (contradicting facts)
+//! - Temporal tracking (when facts were learned)
+//! - Source attribution (conversation provenance)
+
+#![allow(dead_code)]  // Phase 5: Knowledge base (scheduled)
 
 use crate::database::Database;
 use crate::services::embedding::UnifiedEmbeddingService;

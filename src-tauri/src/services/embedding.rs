@@ -24,6 +24,7 @@ const POOLING_STRATEGY: PoolingStrategy = PoolingStrategy::Mean;  // Mean poolin
 
 /// Pooling strategies for sentence embeddings
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]  // Cls and Max reserved for future pooling experiments
 enum PoolingStrategy {
     Mean,   // Average of all token embeddings
     Cls,    // Use [CLS] token only

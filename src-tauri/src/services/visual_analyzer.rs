@@ -1,21 +1,21 @@
-/**
- * Phase 5: Visual Analyzer (v3.9.0)
- *
- * Image understanding system using LLaVA for visual context analysis.
- *
- * Features:
- * - Screenshot analysis with code detection
- * - Chart/graph data extraction
- * - UI element identification
- * - Error message OCR and interpretation
- * - Lazy loading (only loads LLaVA when needed)
- * - VRAM efficient (unloads after use)
- *
- * VRAM Usage:
- * - Idle: 0 MB (not loaded)
- * - Active: ~2048 MB (LLaVA running)
- * - Post-analysis: 0 MB (auto-unloads)
- */
+//! Phase 5: Visual Analyzer (v3.9.0)
+//!
+//! Image understanding system using LLaVA for visual context analysis.
+//!
+//! Features:
+//! - Screenshot analysis with code detection
+//! - Chart/graph data extraction
+//! - UI element identification
+//! - Error message OCR and interpretation
+//! - Lazy loading (only loads LLaVA when needed)
+//! - VRAM efficient (unloads after use)
+//!
+//! VRAM Usage:
+//! - Idle: 0 MB (not loaded)
+//! - Active: ~2048 MB (LLaVA running)
+//! - Post-analysis: 0 MB (auto-unloads)
+
+#![allow(dead_code)]  // Phase 5: Visual analysis (lazy loaded)
 
 use crate::database::Database;
 use crate::services::llava::LlavaService;

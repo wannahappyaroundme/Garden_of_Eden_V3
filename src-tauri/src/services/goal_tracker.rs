@@ -1,16 +1,16 @@
-/**
- * Phase 5 Stage 4: Goal Tracker Service (v3.9.0)
- *
- * Long-term goal monitoring and progress tracking with automatic milestone detection.
- *
- * Features:
- * - Goal creation and management
- * - Milestone tracking
- * - Automatic progress detection
- * - Proactive reminders
- * - Achievement recognition
- * - Goal-oriented context retrieval
- */
+//! Phase 5 Stage 4: Goal Tracker Service (v3.9.0)
+//!
+//! Long-term goal monitoring and progress tracking with automatic milestone detection.
+//!
+//! Features:
+//! - Goal creation and management
+//! - Milestone tracking
+//! - Automatic progress detection
+//! - Proactive reminders
+//! - Achievement recognition
+//! - Goal-oriented context retrieval
+
+#![allow(dead_code)]  // Phase 5: Goal tracking (Stage 4)
 
 use crate::database::Database;
 use crate::services::ollama;

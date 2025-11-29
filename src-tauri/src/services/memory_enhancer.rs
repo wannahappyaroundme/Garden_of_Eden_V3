@@ -1,21 +1,21 @@
-/**
- * Phase 5: Memory Enhancer (v3.9.0 - Stage 2)
- *
- * Enhances existing memories with additional context and quality scoring.
- *
- * Features:
- * 1. Memory quality scoring (0.0-1.0)
- * 2. Context injection for low-quality memories
- * 3. Automatic enhancement using LLM
- * 4. Batch processing capabilities
- * 5. Integration with RAG service
- *
- * Quality Criteria:
- * - Clarity: Is the memory clear and understandable?
- * - Completeness: Does it contain sufficient context?
- * - Relevance: Is the information useful?
- * - Specificity: Is it specific rather than vague?
- */
+//! Phase 5: Memory Enhancer (v3.9.0 - Stage 2)
+//!
+//! Enhances existing memories with additional context and quality scoring.
+//!
+//! Features:
+//! 1. Memory quality scoring (0.0-1.0)
+//! 2. Context injection for low-quality memories
+//! 3. Automatic enhancement using LLM
+//! 4. Batch processing capabilities
+//! 5. Integration with RAG service
+//!
+//! Quality Criteria:
+//! - Clarity: Is the memory clear and understandable?
+//! - Completeness: Does it contain sufficient context?
+//! - Relevance: Is the information useful?
+//! - Specificity: Is it specific rather than vague?
+
+#![allow(dead_code)]  // Phase 5: Memory enhancement (scheduled)
 
 use crate::database::Database;
 use crate::services::ollama;

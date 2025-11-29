@@ -1,3 +1,10 @@
+//! RAG Service with SQLite JSON Embeddings (v3.2.0)
+//!
+//! Provides episodic memory retrieval for AI conversations.
+//! Fallback implementation when LanceDB is not available.
+
+#![allow(dead_code)]  // Phase 1: RAG fallback when LanceDB unavailable
+
 use anyhow::{anyhow, Result};
 use crate::database::Database;
 use std::path::PathBuf;

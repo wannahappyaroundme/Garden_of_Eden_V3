@@ -1,16 +1,16 @@
-/**
- * Cross-Encoder Re-ranking Service (v3.6.0)
- *
- * Uses ms-marco-MiniLM-L-12-v2 cross-encoder for relevance scoring
- *
- * Re-ranking Pipeline:
- * 1. Hybrid search returns top-20 candidates
- * 2. Cross-encoder scores query-document pairs
- * 3. Re-sort by cross-encoder scores
- * 4. Return top-K most relevant
- *
- * Expected improvement: 15-20% better precision@5
- */
+//! Cross-Encoder Re-ranking Service (v3.6.0)
+//!
+//! Uses ms-marco-MiniLM-L-12-v2 cross-encoder for relevance scoring
+//!
+//! Re-ranking Pipeline:
+//! 1. Hybrid search returns top-20 candidates
+//! 2. Cross-encoder scores query-document pairs
+//! 3. Re-sort by cross-encoder scores
+//! 4. Return top-K most relevant
+//!
+//! Expected improvement: 15-20% better precision@5
+
+#![allow(dead_code)]  // Phase 13: Re-ranking (LanceDB feature)
 
 use log::{debug, info};
 // TODO: Uncomment when implementing actual cross-encoder model

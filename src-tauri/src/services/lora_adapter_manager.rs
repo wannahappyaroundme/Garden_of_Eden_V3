@@ -19,6 +19,12 @@ use uuid::Uuid;
 
 use crate::database::Database;
 
+/// Ollama create model response
+#[derive(Debug, Deserialize)]
+pub struct OllamaCreateResponse {
+    pub status: String,
+}
+
 /// LoRA adapter metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoRAAdapter {
@@ -298,6 +304,174 @@ impl LoRAAdapterManager {
         log::info!("Saved Modelfile for adapter {} to {:?}", adapter.name, modelfile_path);
 
         Ok(modelfile_path)
+    }
+
+    /// Create Ollama model from adapter using `ollama create` API (v3.6.0)
+    ///
+    /// This creates a new model in Ollama using the adapter's Modelfile.
+    /// The model can then be used for inference.
+    ///
+    /// # Arguments
+    /// * `adapter_id` - The ID of the adapter to create a model from
+    /// * `model_name` - The name for the new Ollama model (e.g., "eden-custom")
+    /// * `system_prompt` - Optional system prompt to include in the Modelfile
+    ///
+    /// # Returns
+    /// * `Ok(())` on success
+    /// * `Err` if the API call fails or adapter not found
+    pub async fn create_ollama_model(
+        &self,
+        adapter_id: &str,
+        model_name: &str,
+        system_prompt: Option<String>,
+    ) -> AnyhowResult<()> {
+        // Generate the Modelfile content
+        let modelfile = self.generate_modelfile(adapter_id, system_prompt)?;
+
+        log::info!("Creating Ollama model '{}' from adapter {}", model_name, adapter_id);
+
+        // Call Ollama's create API
+        let client = reqwest::Client::new();
+        let response = client
+            .post("http://127.0.0.1:11434/api/create")
+            .json(&serde_json::json!({
+                "name": model_name,
+                "modelfile": modelfile,
+                "stream": false
+            }))
+            .send()
+            .await
+            .context("Failed to connect to Ollama API")?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!("Ollama create failed: {}", error_text));
+        }
+
+        // Parse streaming response - Ollama returns NDJSON
+        let response_text = response.text().await?;
+
+        // Check for success in the last line of the NDJSON response
+        let last_line = response_text.lines().last().unwrap_or("");
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(last_line) {
+            if let Some(status) = json.get("status").and_then(|s| s.as_str()) {
+                if status == "success" {
+                    log::info!("Successfully created Ollama model: {}", model_name);
+                    return Ok(());
+                }
+            }
+        }
+
+        // If we couldn't parse success, check if the response indicates an error
+        if response_text.contains("error") {
+            return Err(anyhow::anyhow!("Ollama create failed: {}", response_text));
+        }
+
+        log::info!("Ollama model creation completed for: {}", model_name);
+        Ok(())
+    }
+
+    /// Create Ollama model from adapter synchronously (blocking version)
+    ///
+    /// This is a convenience method for use in non-async contexts.
+    /// It creates a new tokio runtime to run the async operation.
+    pub fn create_ollama_model_sync(
+        &self,
+        adapter_id: &str,
+        model_name: &str,
+        system_prompt: Option<String>,
+    ) -> AnyhowResult<()> {
+        // Generate the Modelfile content
+        let modelfile = self.generate_modelfile(adapter_id, system_prompt)?;
+
+        log::info!("Creating Ollama model '{}' from adapter {} (sync)", model_name, adapter_id);
+
+        // Use blocking reqwest for sync context
+        let client = reqwest::blocking::Client::new();
+        let response = client
+            .post("http://127.0.0.1:11434/api/create")
+            .json(&serde_json::json!({
+                "name": model_name,
+                "modelfile": modelfile,
+                "stream": false
+            }))
+            .send()
+            .context("Failed to connect to Ollama API")?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().unwrap_or_default();
+            return Err(anyhow::anyhow!("Ollama create failed: {}", error_text));
+        }
+
+        let response_text = response.text()?;
+
+        // Check for success in the last line of the NDJSON response
+        let last_line = response_text.lines().last().unwrap_or("");
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(last_line) {
+            if let Some(status) = json.get("status").and_then(|s| s.as_str()) {
+                if status == "success" {
+                    log::info!("Successfully created Ollama model: {}", model_name);
+                    return Ok(());
+                }
+            }
+        }
+
+        if response_text.contains("error") {
+            return Err(anyhow::anyhow!("Ollama create failed: {}", response_text));
+        }
+
+        log::info!("Ollama model creation completed for: {}", model_name);
+        Ok(())
+    }
+
+    /// Delete Ollama model by name (v3.6.0)
+    pub async fn delete_ollama_model(&self, model_name: &str) -> AnyhowResult<()> {
+        log::info!("Deleting Ollama model: {}", model_name);
+
+        let client = reqwest::Client::new();
+        let response = client
+            .delete("http://127.0.0.1:11434/api/delete")
+            .json(&serde_json::json!({
+                "name": model_name
+            }))
+            .send()
+            .await
+            .context("Failed to connect to Ollama API")?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!("Failed to delete model: {}", error_text));
+        }
+
+        log::info!("Successfully deleted Ollama model: {}", model_name);
+        Ok(())
+    }
+
+    /// List Ollama models (v3.6.0)
+    pub async fn list_ollama_models(&self) -> AnyhowResult<Vec<String>> {
+        let client = reqwest::Client::new();
+        let response = client
+            .get("http://127.0.0.1:11434/api/tags")
+            .send()
+            .await
+            .context("Failed to connect to Ollama API")?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to list models"));
+        }
+
+        let json: serde_json::Value = response.json().await?;
+
+        let models = json.get("models")
+            .and_then(|m| m.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|m| m.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        Ok(models)
     }
 
     /// Delete an adapter

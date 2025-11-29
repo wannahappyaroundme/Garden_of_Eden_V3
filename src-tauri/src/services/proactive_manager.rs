@@ -1,11 +1,15 @@
-// Phase 4: Proactive Mode - Not yet integrated into main app
-#![allow(dead_code)]
+//! Phase 4: Proactive Mode - Background AI monitoring with Tauri events
+//! v3.6.0: Full integration with main.rs and frontend event emission
+
+#![allow(dead_code)]  // Phase 4: Proactive mode (feature-gated)
 
 use anyhow::Result;
 use log::{info, warn};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::sync::Mutex as TokioMutex;
 use tokio::time::interval;
+use tauri::{AppHandle, Emitter};
 use super::llava::{LlavaService, ProactiveTrigger};
 use super::screen::ScreenCaptureService;
 use super::active_window::{ActiveWindowService, ActiveWindow};
@@ -19,6 +23,8 @@ pub struct ProactiveManager {
     screen_service: Arc<ScreenCaptureService>,
     active_window_service: ActiveWindowService,
     last_trigger_time: Arc<Mutex<SystemTime>>,
+    /// Tauri app handle for emitting events to frontend
+    app_handle: Arc<TokioMutex<Option<AppHandle>>>,
 }
 
 /// Proactive mode configuration
@@ -95,7 +101,28 @@ impl ProactiveManager {
             screen_service,
             active_window_service,
             last_trigger_time: Arc::new(Mutex::new(UNIX_EPOCH)),
+            app_handle: Arc::new(TokioMutex::new(None)),
         })
+    }
+
+    /// Set the Tauri app handle for event emission
+    pub async fn set_app_handle(&self, handle: AppHandle) {
+        let mut app_handle = self.app_handle.lock().await;
+        *app_handle = Some(handle);
+        info!("Proactive manager: AppHandle set for event emission");
+    }
+
+    /// Emit a suggestion event to the frontend
+    async fn emit_suggestion(app_handle: &Arc<TokioMutex<Option<AppHandle>>>, suggestion: &ProactiveSuggestion) {
+        let handle = app_handle.lock().await;
+        if let Some(ref h) = *handle {
+            match h.emit("proactive-suggestion", suggestion) {
+                Ok(_) => info!("Emitted proactive suggestion to frontend: {}", suggestion.id),
+                Err(e) => warn!("Failed to emit proactive suggestion: {}", e),
+            }
+        } else {
+            warn!("Cannot emit proactive suggestion: AppHandle not set");
+        }
     }
 
     /// Start proactive monitoring
@@ -124,6 +151,7 @@ impl ProactiveManager {
         let screen_clone = Arc::clone(&self.screen_service);
         let active_window_clone = self.active_window_service.clone();
         let last_trigger_clone = Arc::clone(&self.last_trigger_time);
+        let app_handle_clone = Arc::clone(&self.app_handle);
 
         tokio::spawn(async move {
             Self::monitoring_loop(
@@ -133,6 +161,7 @@ impl ProactiveManager {
                 screen_clone,
                 active_window_clone,
                 last_trigger_clone,
+                app_handle_clone,
             )
             .await;
         });
@@ -192,6 +221,7 @@ impl ProactiveManager {
         screen: Arc<ScreenCaptureService>,
         active_window: ActiveWindowService,
         last_trigger: Arc<Mutex<SystemTime>>,
+        app_handle: Arc<TokioMutex<Option<AppHandle>>>,
     ) {
         let mut interval_timer = interval(Duration::from_secs(30)); // Will be updated from config
 
@@ -233,8 +263,8 @@ impl ProactiveManager {
                         // Update last trigger time
                         *last_trigger.lock().unwrap() = SystemTime::now();
 
-                        // TODO: Send suggestion to frontend via Tauri events
-                        // This will be handled by emitting a Tauri event that the frontend listens to
+                        // Emit suggestion to frontend via Tauri events
+                        Self::emit_suggestion(&app_handle, &suggestion).await;
                     }
                 }
                 Ok(None) => {

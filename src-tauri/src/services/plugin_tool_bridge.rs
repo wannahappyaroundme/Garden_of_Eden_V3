@@ -1,21 +1,20 @@
-/// Plugin Tool Bridge (v3.3.0)
-///
-/// Bridges user-created plugins with the tool calling system.
-/// Allows plugins to register custom tools that the AI can use.
-///
-/// Features:
-/// - Plugin tool discovery from V8 runtime
-/// - Tool registration and validation
-/// - Permission system for plugin tools
-/// - Safe execution in sandboxed V8 environment
-/// - Tool lifecycle management
-///
-/// Security:
-/// - All plugin tools disabled by default (user must enable)
-/// - Permission-based access control
-/// - Sandboxed execution via V8 runtime
-/// - Input/output validation
-/// - Execution timeout enforcement
+//! Plugin Tool Bridge (v3.3.0)
+//!
+//! Bridges user-created plugins with the tool calling system.
+//! Allows plugins to register custom tools that the AI can use.
+//!
+//! Features:
+//! - Plugin tool discovery from V8 runtime
+//! - Tool registration and validation
+//! - Permission system for plugin tools
+//! - Safe execution in sandboxed V8 environment
+//! - Tool lifecycle management
+//!
+//! Security:
+//! - All plugin tools disabled by default (user must enable)
+//! - Permission-based access control
+
+#![allow(dead_code)]  // Phase 10: Plugin system (experimental)
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -377,17 +376,71 @@ impl PluginToolBridge {
         Ok(())
     }
 
-    /// Execute tool in V8 runtime
+    /// Execute tool in plugin runtime (v3.6.0)
     ///
-    /// Note: Full implementation requires plugin runtime integration (v3.4.0+)
-    /// For v3.3.0, this is a placeholder that returns a stub response
-    fn execute_in_runtime(&self, def: &PluginToolDef, _params: Value) -> Result<Value> {
-        // TODO: Implement full plugin tool execution when plugin runtime is fully integrated
-        // For now, return a stub response indicating the tool would be executed
-        Ok(serde_json::json!({
-            "message": format!("Plugin tool '{}' from '{}' would be executed here", def.tool_name, def.plugin_name),
-            "status": "stub_implementation"
-        }))
+    /// Executes the plugin tool function using the PluginRuntimeManager.
+    /// The tool function is called with the provided parameters.
+    fn execute_in_runtime(&self, def: &PluginToolDef, params: Value) -> Result<Value> {
+        let runtime = self.plugin_runtime.lock()
+            .map_err(|e| anyhow::anyhow!("Failed to lock plugin runtime: {}", e))?;
+
+        // Check if plugin is loaded (use is_registered method)
+        if !runtime.is_registered(&def.plugin_name) {
+            // Try to initialize the plugin first
+            log::info!("Plugin '{}' not loaded, attempting to initialize", def.plugin_name);
+
+            // For now, we'll create a simple wrapper that calls the tool function
+            // The actual plugin code would define tool functions that we execute
+            return Err(anyhow::anyhow!(
+                "Plugin '{}' is not loaded. Please load the plugin first using plugin_load command.",
+                def.plugin_name
+            ));
+        }
+
+        // Build the function call - tool functions are expected to be named "tool_{tool_name}"
+        let function_name = format!("tool_{}", def.tool_name.replace("-", "_"));
+
+        // Convert params to array of arguments
+        let args: Vec<Value> = if let Some(obj) = params.as_object() {
+            obj.values().cloned().collect()
+        } else {
+            vec![params]
+        };
+
+        // Execute the function asynchronously
+        log::info!("Executing plugin tool: {}::{}", def.plugin_name, function_name);
+
+        // Use tokio runtime to execute async function
+        let plugin_name = def.plugin_name.clone();
+        let runtime_clone = self.plugin_runtime.clone();
+
+        // Since execute_function_async is async, we need to block on it here
+        // In a real async context, this would be awaited
+        let execution_result = std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| anyhow::anyhow!("Failed to create runtime: {}", e))?;
+
+            rt.block_on(async {
+                let runtime = runtime_clone.lock()
+                    .map_err(|e| anyhow::anyhow!("Failed to lock runtime: {}", e))?;
+
+                runtime.execute_function_async(&plugin_name, &function_name, args).await
+            })
+        })
+        .join()
+        .map_err(|_| anyhow::anyhow!("Thread panicked during execution"))??;
+
+        // Convert PluginExecutionResult to Value
+        if execution_result.success {
+            Ok(execution_result.value)
+        } else {
+            Err(anyhow::anyhow!(
+                "Plugin tool execution failed: {}",
+                execution_result.error.unwrap_or_else(|| "Unknown error".to_string())
+            ))
+        }
     }
 
     /// Reload all plugin tools from database into memory

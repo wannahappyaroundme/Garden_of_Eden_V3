@@ -22,6 +22,12 @@ use services::model_installer::ModelInstallerService;
 use services::learning::LearningService;
 use services::webhook_triggers::WebhookTriggerManager;
 use services::crash_reporter::CrashReporterService;
+use services::proactive_manager::ProactiveManager;
+use services::lora_data_collector::LoRADataCollectorService;
+use services::lora_adapter_manager::LoRAAdapterManager;
+use commands::lora::LoRAState;
+use commands::plugin::PluginState;
+use services::plugin::PluginService;
 use services::tool_calling::ToolService;
 use services::tool_implementations::{
     WebSearchTool, UrlFetchTool, FileReadTool, FileWriteTool,
@@ -81,7 +87,7 @@ use rusqlite::Connection;
 pub struct AppState {
     // === Core Services ===
     pub db: Mutex<Database>,
-    pub screen_service: ScreenCaptureService,
+    pub screen_service: Arc<ScreenCaptureService>,
     pub llava_service: Mutex<LlavaService>,
     pub model_installer: Arc<ModelInstallerService>,
     pub learning_service: LearningService,
@@ -113,6 +119,9 @@ pub struct AppState {
     // === Integration Services ===
     pub webhook_trigger_manager: Arc<WebhookTriggerManager>,
     pub calendar_service: CalendarServiceWrapper,
+
+    // === Proactive Mode (Phase 4) ===
+    pub proactive_manager: Arc<TokioMutex<ProactiveManager>>,  // v3.6.0: AI-Led proactive monitoring
 }
 
 fn main() {
@@ -144,10 +153,15 @@ fn main() {
 
     // Initialize screen capture service
     let screen_service = ScreenCaptureService::new(Arc::clone(&db_arc));
+    let screen_service_arc = Arc::new(screen_service);
 
     // Initialize LLaVA service
     let llava_service = LlavaService::new()
         .expect("Failed to initialize LLaVA service");
+    // Create a second instance for ProactiveManager
+    let llava_service_for_proactive = Arc::new(
+        LlavaService::new().expect("Failed to initialize LLaVA service for proactive")
+    );
 
     // Initialize Model Installer service
     let model_installer = Arc::new(ModelInstallerService::new());
@@ -161,6 +175,37 @@ fn main() {
 
     // Initialize Calendar Service Wrapper
     let calendar_service = CalendarServiceWrapper::new();
+
+    // Initialize Proactive Manager (v3.6.0 - Phase 4: AI-Led Proactive Mode)
+    log::info!("Initializing Proactive Manager...");
+    let proactive_manager = ProactiveManager::new(
+        Some(llava_service_for_proactive),
+        Arc::clone(&screen_service_arc),
+    ).expect("Failed to initialize Proactive Manager");
+    let proactive_manager_arc = Arc::new(TokioMutex::new(proactive_manager));
+    log::info!("✓ Proactive Manager initialized");
+
+    // Initialize LoRA Services (v3.6.0 - Phase 5: LoRA Training System)
+    log::info!("Initializing LoRA Services...");
+    let lora_data_collector = LoRADataCollectorService::new(Arc::clone(&db_arc))
+        .expect("Failed to initialize LoRA Data Collector");
+    let lora_adapter_manager = LoRAAdapterManager::new(Arc::clone(&db_arc))
+        .expect("Failed to initialize LoRA Adapter Manager");
+    let lora_state = LoRAState {
+        data_collector: Arc::new(Mutex::new(lora_data_collector)),
+        adapter_manager: Arc::new(Mutex::new(lora_adapter_manager)),
+    };
+    log::info!("✓ LoRA Services initialized");
+
+    // Initialize Plugin System (v3.6.0 - Phase 10: Plugin Architecture)
+    log::info!("Initializing Plugin System...");
+    let plugins_dir = data_dir.join("plugins");
+    let plugin_service = PluginService::new(plugins_dir)
+        .expect("Failed to initialize Plugin Service");
+    let plugin_state = PluginState {
+        service: Arc::new(Mutex::new(plugin_service)),
+    };
+    log::info!("✓ Plugin System initialized");
 
     // Initialize Tool Service with all 6 production tools (v3.6.0)
     log::info!("Initializing Tool Service with 6 production tools...");
@@ -498,7 +543,7 @@ fn main() {
         db: Mutex::new(
             Database::new().expect("Failed to initialize database for app state")
         ),
-        screen_service,
+        screen_service: Arc::clone(&screen_service_arc),
         llava_service: Mutex::new(llava_service),
         model_installer,
         learning_service,
@@ -530,6 +575,9 @@ fn main() {
         // === Integration Services ===
         webhook_trigger_manager,
         calendar_service,
+
+        // === Proactive Mode (Phase 4) ===
+        proactive_manager: proactive_manager_arc,
     };
 
     // Log total initialization time (v3.6.0 P4)
@@ -548,6 +596,8 @@ fn main() {
     let mut builder = tauri::Builder::default()
         .manage(app_state)
         .manage(crash_reporter_state)
+        .manage(lora_state)  // v3.6.0: LoRA training data and adapter management
+        .manage(plugin_state)  // v3.6.0: Plugin system for user extensions
         .manage(computer_control_arc)  // v3.8.0: LAM service for commands
         .manage(streaming_vision_arc)  // v3.8.0 Phase 2: Streaming vision service
         .manage(temporal_memory_arc)  // v3.8.0 Phase 3: Temporal memory service
@@ -926,6 +976,51 @@ fn main() {
             commands::raft::get_raft_config,
             commands::raft::update_raft_config,
             commands::raft::reset_raft_config,
+            // Proactive Mode Commands (v3.6.0 Phase 4)
+            commands::proactive::proactive_start,
+            commands::proactive::proactive_stop,
+            commands::proactive::proactive_toggle,
+            commands::proactive::proactive_status,
+            commands::proactive::proactive_update_config,
+            commands::proactive::proactive_get_config,
+            commands::proactive::proactive_dismiss_suggestion,
+            commands::proactive::proactive_accept_suggestion,
+            // LoRA Training Commands (v3.6.0 Phase 5)
+            commands::lora::lora_collect_data,
+            commands::lora::lora_get_filter,
+            commands::lora::lora_update_filter,
+            commands::lora::lora_list_adapters,
+            commands::lora::lora_get_adapter,
+            commands::lora::lora_register_adapter,
+            commands::lora::lora_delete_adapter,
+            commands::lora::lora_activate_adapter,
+            commands::lora::lora_get_active_adapter,
+            commands::lora::lora_generate_modelfile,
+            commands::lora::lora_export_data,
+            commands::lora::lora_get_stats,
+            commands::lora::lora_create_ollama_model,
+            commands::lora::lora_delete_ollama_model,
+            commands::lora::lora_list_ollama_models,
+            // Plugin System Commands (v3.6.0 Phase 10)
+            commands::plugin::plugin_discover,
+            commands::plugin::plugin_list,
+            commands::plugin::plugin_load,
+            commands::plugin::plugin_unload,
+            commands::plugin::plugin_execute,
+            commands::plugin::plugin_enable,
+            commands::plugin::plugin_disable,
+            commands::plugin::plugin_install,
+            commands::plugin::plugin_uninstall,
+            commands::plugin::plugin_has_permission,
+            commands::plugin::plugin_get_directory,
+            commands::plugin::plugin_get_stats,
+            // v3.6.0: Episodic memory visualization commands
+            commands::episodic_memory::episodic_get_recent,
+            commands::episodic_memory::episodic_get_stats,
+            commands::episodic_memory::episodic_search,
+            commands::episodic_memory::episodic_export,
+            commands::episodic_memory::episodic_import,
+            commands::episodic_memory::episodic_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

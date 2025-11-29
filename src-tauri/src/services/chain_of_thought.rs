@@ -1,22 +1,22 @@
-/**
- * Phase 5: Chain-of-Thought Engine (v3.9.0)
- *
- * Step-by-step reasoning system for complex problem solving.
- *
- * Algorithm:
- * 1. Break down complex queries into reasoning steps
- * 2. Execute each step with LLM (Ollama)
- * 3. Verify and self-correct intermediate results
- * 4. Synthesize final answer from step chain
- * 5. Calculate confidence based on reasoning quality
- *
- * Features:
- * - Multi-step reasoning (default: 5 steps max)
- * - Self-correction and verification
- * - Confidence scoring
- * - Intermediate result caching
- * - VRAM efficient (reuses Ollama instance)
- */
+//! Phase 5: Chain-of-Thought Engine (v3.9.0)
+//!
+//! Step-by-step reasoning system for complex problem solving.
+//!
+//! Algorithm:
+//! 1. Break down complex queries into reasoning steps
+//! 2. Execute each step with LLM (Ollama)
+//! 3. Verify and self-correct intermediate results
+//! 4. Synthesize final answer from step chain
+//! 5. Calculate confidence based on reasoning quality
+//!
+//! Features:
+//! - Multi-step reasoning (default: 5 steps max)
+//! - Self-correction and verification
+//! - Confidence scoring
+//! - Intermediate result caching
+//! - VRAM efficient (reuses Ollama instance)
+
+#![allow(dead_code)]  // Phase 5: Reasoning Engine 2.0 (scheduled)
 
 use crate::services::ollama;
 use anyhow::{Context, Result};

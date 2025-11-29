@@ -1,13 +1,13 @@
-/**
- * URL Fetching Service (v3.3.0 Internet Access)
- *
- * Privacy-preserving web content fetching:
- * - Fetch and parse HTML content
- * - Extract main text content (remove ads, navigation, etc.)
- * - Respect robots.txt and rate limits
- * - User opt-in required
- * - No tracking or cookies
- */
+//! URL Fetching Service (v3.3.0 Internet Access)
+//!
+//! Privacy-preserving web content fetching:
+//! - Fetch and parse HTML content
+//! - Extract main text content (remove ads, navigation, etc.)
+//! - Respect robots.txt and rate limits
+//! - User opt-in required
+//! - No tracking or cookies
+
+#![allow(dead_code)]  // Phase 9: Internet Access (opt-in feature)
 
 use anyhow::{anyhow, Result};
 use reqwest::Client;

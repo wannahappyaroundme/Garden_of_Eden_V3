@@ -19,6 +19,7 @@ const Integrations = lazy(() => import('./pages/Integrations').then(m => ({ defa
 const MemoryVisualization = lazy(() => import('./pages/MemoryVisualization'));
 const SmartOnboarding = lazy(() => import('./pages/SmartOnboarding'));
 const UpdateNotification = lazy(() => import('./components/UpdateNotification').then(m => ({ default: m.UpdateNotification })));
+const ProactiveNotification = lazy(() => import('./components/ProactiveNotification').then(m => ({ default: m.ProactiveNotification })));
 
 type Page = 'onboarding' | 'chat' | 'settings' | 'integrations' | 'memory';
 
@@ -132,6 +133,24 @@ function App() {
           <UpdateNotification
             checkOnMount={true}
             autoCheckInterval={60} // Check every hour
+          />
+        </Suspense>
+      )}
+      {/* v3.6.0: Proactive AI suggestions - show after onboarding */}
+      {currentPage !== 'onboarding' && (
+        <Suspense fallback={null}>
+          <ProactiveNotification
+            onAccept={(suggestion) => {
+              console.log('Accepted proactive suggestion:', suggestion);
+              // Navigate to chat with the suggestion context
+              if (currentPage !== 'chat') {
+                setCurrentPage('chat');
+              }
+            }}
+            onDismiss={(id) => {
+              console.log('Dismissed proactive suggestion:', id);
+            }}
+            onOpenSettings={() => setCurrentPage('settings')}
           />
         </Suspense>
       )}

@@ -12,9 +12,32 @@
  * Integration: Used by graph_builder.rs for knowledge graph construction
  */
 
-use log::{debug, info};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+/// Response from LLM for entity extraction
+#[derive(Debug, Deserialize)]
+struct LLMEntityResponse {
+    entities: Vec<LLMEntity>,
+    relationships: Vec<LLMRelationship>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LLMEntity {
+    name: String,
+    #[serde(rename = "type")]
+    entity_type: String,
+    confidence: Option<f32>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LLMRelationship {
+    source: String,
+    target: String,
+    relation: String,
+    confidence: Option<f32>,
+}
 
 /// Entity types for knowledge graph
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -175,17 +198,140 @@ impl EntityExtractor {
     pub async fn extract(&self, text: &str) -> Result<ExtractionResult, String> {
         info!("Extracting entities from text (length: {})", text.len());
 
-        // TODO: Call LLM with specialized NER prompt
-        // For v3.7.0 MVP, we use heuristic extraction as placeholder
+        // Try LLM-based extraction first (v3.7.0)
+        match self.extract_with_llm(text).await {
+            Ok(result) => {
+                debug!(
+                    "LLM extracted {} entities, {} relationships",
+                    result.entities.len(),
+                    result.relationships.len()
+                );
+                return Ok(result);
+            }
+            Err(e) => {
+                warn!("LLM extraction failed, falling back to heuristics: {}", e);
+            }
+        }
 
+        // Fallback to heuristic extraction
         let entities = self.extract_entities_heuristic(text);
         let relationships = self.extract_relationships_heuristic(text, &entities);
 
         debug!(
-            "Extracted {} entities, {} relationships",
+            "Heuristic extracted {} entities, {} relationships",
             entities.len(),
             relationships.len()
         );
+
+        Ok(ExtractionResult {
+            entities,
+            relationships,
+            source_text: text.to_string(),
+        })
+    }
+
+    /// Extract entities using LLM (Ollama)
+    async fn extract_with_llm(&self, text: &str) -> Result<ExtractionResult, String> {
+        // Construct NER prompt
+        let prompt = format!(
+            r#"Extract named entities and relationships from the following text.
+
+TEXT:
+{}
+
+Respond ONLY with a valid JSON object in this exact format:
+{{
+  "entities": [
+    {{"name": "entity name", "type": "Person|Organization|Location|Technology|Concept|Tool|Project|Document|Event", "confidence": 0.9}}
+  ],
+  "relationships": [
+    {{"source": "entity1", "target": "entity2", "relation": "WorksWith|PartOf|Uses|Creates|Knows|LocatedAt|DependsOn|RelatesTo", "confidence": 0.8}}
+  ]
+}}
+
+Rules:
+- Only extract concrete, specific entities (not generic concepts)
+- Confidence should be between 0.0 and 1.0
+- Source and target in relationships must match entity names exactly
+- Return empty arrays if no entities found"#,
+            text
+        );
+
+        // Call Ollama API directly
+        let client = reqwest::Client::new();
+        let response = client
+            .post("http://127.0.0.1:11434/api/generate")
+            .json(&serde_json::json!({
+                "model": "llama3.2:3b",
+                "prompt": prompt,
+                "stream": false,
+                "options": {
+                    "temperature": 0.1,
+                    "num_predict": 1024
+                }
+            }))
+            .send()
+            .await
+            .map_err(|e| format!("Failed to connect to Ollama: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Ollama request failed: {}", response.status()));
+        }
+
+        let response_json: serde_json::Value = response.json().await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        let response_text = response_json.get("response")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "No response field in Ollama output".to_string())?;
+
+        // Parse LLM response as JSON
+        // Try to find JSON in the response (LLM might include extra text)
+        let json_start = response_text.find('{').ok_or("No JSON found in response")?;
+        let json_end = response_text.rfind('}').ok_or("No closing brace in response")?;
+        let json_str = &response_text[json_start..=json_end];
+
+        let llm_response: LLMEntityResponse = serde_json::from_str(json_str)
+            .map_err(|e| format!("Failed to parse LLM JSON: {}", e))?;
+
+        // Convert LLM response to our entity format
+        let entities: Vec<Entity> = llm_response.entities
+            .into_iter()
+            .filter_map(|e| {
+                let entity_type = EntityType::from_str(&e.entity_type)?;
+                let confidence = e.confidence.unwrap_or(0.8);
+                if confidence >= self.config.min_confidence {
+                    Some(Entity {
+                        name: e.name.clone(),
+                        entity_type,
+                        properties: HashMap::new(),
+                        confidence,
+                    })
+                } else {
+                    None
+                }
+            })
+            .take(self.config.max_entities_per_text)
+            .collect();
+
+        let relationships: Vec<Relationship> = llm_response.relationships
+            .into_iter()
+            .filter_map(|r| {
+                let rel_type = RelationshipType::from_str(&r.relation)?;
+                let confidence = r.confidence.unwrap_or(0.7);
+                if confidence >= self.config.min_confidence {
+                    Some(Relationship {
+                        source_entity: r.source,
+                        target_entity: r.target,
+                        relationship_type: rel_type,
+                        properties: HashMap::new(),
+                        confidence,
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         Ok(ExtractionResult {
             entities,

@@ -1,3 +1,10 @@
+//! LAM Tools (v3.8.0 Phase 18)
+//!
+//! Large Action Model tools for computer use automation.
+//! Provides ReAct agent tools: click, type, scroll, wait, etc.
+
+#![allow(dead_code)]  // Phase 18: LAM computer control (feature-gated)
+
 use crate::services::computer_control::ComputerControlService;
 use crate::services::tool_calling::{
     ToolCategory, ToolDefinition, ToolExecutor, ToolParameter, ParameterType,

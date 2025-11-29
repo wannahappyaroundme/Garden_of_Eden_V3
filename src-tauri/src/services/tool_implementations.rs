@@ -1,14 +1,14 @@
-/**
- * Tool Implementations (v3.5.2)
- *
- * Production tool implementations for the tool calling system:
- * - WebSearchTool: Fully integrated with WebSearchService (DuckDuckGo/SearX)
- * - UrlFetchTool: Fully integrated with UrlFetchService (HTML parsing)
- * - FileReadTool: Integrated with FileService
- * - FileWriteTool: Integrated with FileService
- * - SystemInfoTool: Integrated with SystemInfoService
- * - CalculatorTool: Simple math expression evaluator
- */
+//! Tool Implementations (v3.5.2)
+//!
+//! Production tool implementations for the tool calling system:
+//! - WebSearchTool: Fully integrated with WebSearchService (DuckDuckGo/SearX)
+//! - UrlFetchTool: Fully integrated with UrlFetchService (HTML parsing)
+//! - FileReadTool: Integrated with FileService
+//! - FileWriteTool: Integrated with FileService
+//! - SystemInfoTool: Integrated with SystemInfoService
+//! - CalculatorTool: Simple math expression evaluator
+
+#![allow(dead_code)]  // Phase 11: Tool implementations (on-demand loading)
 
 use anyhow::{anyhow, Result};
 use serde_json;

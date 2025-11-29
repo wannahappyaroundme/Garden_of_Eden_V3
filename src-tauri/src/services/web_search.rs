@@ -1,13 +1,13 @@
-/**
- * Web Search Service (v3.3.0 Internet Access)
- *
- * Privacy-first web search integration:
- * - DuckDuckGo API (no tracking)
- * - SearX instances (privacy-preserving meta-search)
- * - User opt-in required
- * - Rate limiting to prevent abuse
- * - No tracking or analytics
- */
+//! Web Search Service (v3.3.0 Internet Access)
+//!
+//! Privacy-first web search integration:
+//! - DuckDuckGo API (no tracking)
+//! - SearX instances (privacy-preserving meta-search)
+//! - User opt-in required
+//! - Rate limiting to prevent abuse
+//! - No tracking or analytics
+
+#![allow(dead_code)]  // Phase 9: Internet Access (opt-in feature)
 
 use anyhow::{anyhow, Result};
 use reqwest::Client;

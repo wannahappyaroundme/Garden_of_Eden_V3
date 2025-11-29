@@ -1,13 +1,13 @@
-/**
- * Production-Level File System Integration Service
- *
- * Provides secure file system operations for AI assistant:
- * - Read/Write/Delete files with safety checks
- * - Directory traversal and management
- * - File search (by name and content)
- * - Workspace detection (VSCode, IntelliJ, Git repos)
- * - Path validation and sandboxing
- */
+//! Production-Level File System Integration Service
+//!
+//! Provides secure file system operations for AI assistant:
+//! - Read/Write/Delete files with safety checks
+//! - Directory traversal and management
+//! - File search (by name and content)
+//! - Workspace detection (VSCode, IntelliJ, Git repos)
+//! - Path validation and sandboxing
+
+#![allow(dead_code)]  // Phase 7: File system integration (on-demand)
 
 use anyhow::{anyhow, Result};
 use std::fs;

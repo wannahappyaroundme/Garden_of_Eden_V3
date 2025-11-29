@@ -1,3 +1,10 @@
+//! Active Window Detection Service
+//!
+//! Detects which application and window is currently active.
+//! Used for screen context capture and proactive mode.
+
+#![allow(dead_code)]  // Phase 2: Screen context (methods used conditionally)
+
 use anyhow::Result;
 use log::{info, error};
 

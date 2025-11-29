@@ -1,7 +1,8 @@
-/**
- * Google Calendar Integration Service
- * Provides OAuth 2.0 authentication and full calendar management
- */
+//! Google Calendar Integration Service
+//!
+//! Provides OAuth 2.0 authentication and full calendar management
+
+#![allow(dead_code)]  // Phase 6: Calendar integration (requires user setup)
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};

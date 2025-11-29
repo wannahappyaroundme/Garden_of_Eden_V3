@@ -200,8 +200,28 @@ impl Default for ToolService {
 
 // Example tool implementations
 
-/// Web search tool
-pub struct WebSearchTool;
+/// Web search tool with real WebSearchService integration
+pub struct WebSearchTool {
+    settings: crate::services::web_search::WebSearchSettings,
+}
+
+impl WebSearchTool {
+    pub fn new() -> Self {
+        Self {
+            settings: crate::services::web_search::WebSearchSettings::default(),
+        }
+    }
+
+    pub fn with_settings(settings: crate::services::web_search::WebSearchSettings) -> Self {
+        Self { settings }
+    }
+}
+
+impl Default for WebSearchTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for WebSearchTool {
@@ -210,19 +230,40 @@ impl ToolExecutor for WebSearchTool {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'query' parameter"))?;
 
-        // This would integrate with WebSearchService
         log::info!("Web search: {}", query);
 
-        Ok(serde_json::json!({
-            "results": [
-                {
-                    "title": "Example Result",
-                    "url": "https://example.com",
-                    "snippet": "This is a placeholder result"
-                }
-            ],
-            "query": query
-        }))
+        // Create web search service with current settings
+        let mut settings = self.settings.clone();
+        settings.enabled = true; // Enable for this search
+
+        let mut search_service = crate::services::web_search::WebSearchService::new(settings)?;
+
+        match search_service.search(query).await {
+            Ok(results) => {
+                let json_results: Vec<serde_json::Value> = results.iter().map(|r| {
+                    serde_json::json!({
+                        "title": r.title,
+                        "url": r.url,
+                        "snippet": r.snippet,
+                        "source": r.source
+                    })
+                }).collect();
+
+                Ok(serde_json::json!({
+                    "results": json_results,
+                    "query": query,
+                    "count": results.len()
+                }))
+            },
+            Err(e) => {
+                log::warn!("Web search failed: {}", e);
+                Ok(serde_json::json!({
+                    "results": [],
+                    "query": query,
+                    "error": e.to_string()
+                }))
+            }
+        }
     }
 
     fn definition(&self) -> ToolDefinition {
@@ -243,7 +284,7 @@ impl ToolExecutor for WebSearchTool {
     }
 }
 
-/// File read tool
+/// File read tool with real FileService integration
 pub struct FileReadTool;
 
 #[async_trait::async_trait]
@@ -253,13 +294,32 @@ impl ToolExecutor for FileReadTool {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'path' parameter"))?;
 
-        // This would integrate with FileService
         log::info!("Reading file: {}", path);
 
-        Ok(serde_json::json!({
-            "content": "File content placeholder",
-            "path": path
-        }))
+        // Use FileService for actual file reading
+        match crate::services::file::FileService::read_file(path) {
+            Ok(content) => {
+                let line_count = content.lines().count();
+                let byte_count = content.len();
+
+                Ok(serde_json::json!({
+                    "content": content,
+                    "path": path,
+                    "lines": line_count,
+                    "bytes": byte_count,
+                    "success": true
+                }))
+            },
+            Err(e) => {
+                log::warn!("Failed to read file {}: {}", path, e);
+                Ok(serde_json::json!({
+                    "content": null,
+                    "path": path,
+                    "error": e.to_string(),
+                    "success": false
+                }))
+            }
+        }
     }
 
     fn definition(&self) -> ToolDefinition {
@@ -280,8 +340,125 @@ impl ToolExecutor for FileReadTool {
     }
 }
 
-/// Calculator tool
+/// Calculator tool with actual expression evaluation
 pub struct CalculatorTool;
+
+impl CalculatorTool {
+    /// Simple expression evaluator supporting +, -, *, /, ^, parentheses
+    fn evaluate_expression(expr: &str) -> Result<f64> {
+        // Clean the expression
+        let expr = expr.replace(" ", "");
+
+        if expr.is_empty() {
+            return Err(anyhow!("Empty expression"));
+        }
+
+        // Parse and evaluate
+        Self::parse_expression(&expr, &mut 0)
+    }
+
+    fn parse_expression(expr: &str, pos: &mut usize) -> Result<f64> {
+        let mut result = Self::parse_term(expr, pos)?;
+
+        while *pos < expr.len() {
+            let c = expr.chars().nth(*pos);
+            match c {
+                Some('+') => {
+                    *pos += 1;
+                    result += Self::parse_term(expr, pos)?;
+                },
+                Some('-') => {
+                    *pos += 1;
+                    result -= Self::parse_term(expr, pos)?;
+                },
+                _ => break,
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn parse_term(expr: &str, pos: &mut usize) -> Result<f64> {
+        let mut result = Self::parse_power(expr, pos)?;
+
+        while *pos < expr.len() {
+            let c = expr.chars().nth(*pos);
+            match c {
+                Some('*') => {
+                    *pos += 1;
+                    result *= Self::parse_power(expr, pos)?;
+                },
+                Some('/') => {
+                    *pos += 1;
+                    let divisor = Self::parse_power(expr, pos)?;
+                    if divisor == 0.0 {
+                        return Err(anyhow!("Division by zero"));
+                    }
+                    result /= divisor;
+                },
+                _ => break,
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn parse_power(expr: &str, pos: &mut usize) -> Result<f64> {
+        let base = Self::parse_factor(expr, pos)?;
+
+        if *pos < expr.len() && expr.chars().nth(*pos) == Some('^') {
+            *pos += 1;
+            let exponent = Self::parse_power(expr, pos)?;
+            Ok(base.powf(exponent))
+        } else {
+            Ok(base)
+        }
+    }
+
+    fn parse_factor(expr: &str, pos: &mut usize) -> Result<f64> {
+        // Handle negative numbers
+        let negative = if *pos < expr.len() && expr.chars().nth(*pos) == Some('-') {
+            *pos += 1;
+            true
+        } else {
+            false
+        };
+
+        let result = if *pos < expr.len() && expr.chars().nth(*pos) == Some('(') {
+            *pos += 1; // skip '('
+            let inner = Self::parse_expression(expr, pos)?;
+            if *pos < expr.len() && expr.chars().nth(*pos) == Some(')') {
+                *pos += 1; // skip ')'
+            }
+            inner
+        } else {
+            Self::parse_number(expr, pos)?
+        };
+
+        Ok(if negative { -result } else { result })
+    }
+
+    fn parse_number(expr: &str, pos: &mut usize) -> Result<f64> {
+        let start = *pos;
+
+        while *pos < expr.len() {
+            let c = expr.chars().nth(*pos).unwrap();
+            if c.is_ascii_digit() || c == '.' {
+                *pos += 1;
+            } else {
+                break;
+            }
+        }
+
+        if start == *pos {
+            return Err(anyhow!("Expected number at position {}", start));
+        }
+
+        let num_str: String = expr.chars().skip(start).take(*pos - start).collect();
+        num_str.parse::<f64>()
+            .map_err(|_| anyhow!("Invalid number: {}", num_str))
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for CalculatorTool {
@@ -290,14 +467,26 @@ impl ToolExecutor for CalculatorTool {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("Missing 'expression' parameter"))?;
 
-        // Simple calculator implementation
-        // In production, this would use a proper expression parser
         log::info!("Calculating: {}", expression);
 
-        Ok(serde_json::json!({
-            "result": 42,  // Placeholder
-            "expression": expression
-        }))
+        match Self::evaluate_expression(expression) {
+            Ok(result) => {
+                Ok(serde_json::json!({
+                    "result": result,
+                    "expression": expression,
+                    "success": true
+                }))
+            },
+            Err(e) => {
+                log::warn!("Calculation failed: {}", e);
+                Ok(serde_json::json!({
+                    "result": null,
+                    "expression": expression,
+                    "error": e.to_string(),
+                    "success": false
+                }))
+            }
+        }
     }
 
     fn definition(&self) -> ToolDefinition {
@@ -371,12 +560,24 @@ mod tests {
     #[test]
     fn test_get_tool_definitions() {
         let mut service = ToolService::new();
-        service.register_tool(Box::new(WebSearchTool));
+        service.register_tool(Box::new(WebSearchTool::new()));
         service.register_tool(Box::new(FileReadTool));
         service.register_tool(Box::new(CalculatorTool));
 
         let definitions = service.get_tool_definitions();
         assert_eq!(definitions.len(), 3);
+    }
+
+    #[test]
+    fn test_calculator_expression() {
+        // Test the expression evaluator
+        assert_eq!(CalculatorTool::evaluate_expression("2+2").unwrap(), 4.0);
+        assert_eq!(CalculatorTool::evaluate_expression("3*4").unwrap(), 12.0);
+        assert_eq!(CalculatorTool::evaluate_expression("10/2").unwrap(), 5.0);
+        assert_eq!(CalculatorTool::evaluate_expression("2+3*4").unwrap(), 14.0); // precedence
+        assert_eq!(CalculatorTool::evaluate_expression("(2+3)*4").unwrap(), 20.0); // parentheses
+        assert_eq!(CalculatorTool::evaluate_expression("2^3").unwrap(), 8.0); // power
+        assert_eq!(CalculatorTool::evaluate_expression("2.5*4").unwrap(), 10.0); // decimals
     }
 
     #[test]

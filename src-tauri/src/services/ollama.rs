@@ -484,6 +484,7 @@ struct OllamaToolFunction {
 #[derive(Debug, Deserialize)]
 struct OllamaChatResponse {
     message: ChatMessage,
+    #[allow(dead_code)]
     done: bool,
 }
 

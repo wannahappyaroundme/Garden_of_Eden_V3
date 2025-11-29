@@ -17,6 +17,7 @@ import { CrashReportsPanel } from '../components/settings/CrashReportsPanel'; //
 import { UpdateSettingsPanel } from '../components/settings/UpdateSettingsPanel'; // v3.4.0
 import { RaftSettings } from '../components/settings/RaftSettings'; // v3.4.0 Phase 7
 import LLMSettingsPanel from '../components/settings/LLMSettings'; // v3.5.0
+import { LoRASettings } from '../components/settings/LoRASettings'; // v3.6.0
 import { Phase5Settings } from '../components/settings/Phase5Settings'; // v3.9.0
 import { IntegrationsSettingsPanel } from '../components/settings/IntegrationsSettings'; // v3.4.0 Performance
 import MemoryVisualization from './MemoryVisualization'; // Settings integration
@@ -32,7 +33,7 @@ interface SettingsProps {
 
 export function Settings({ onClose, onThemeChange }: SettingsProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'phase5' | 'app' | 'integrations' | 'raft' | 'updates' | 'crashes' | 'about' | 'shortcuts' | 'memory' | 'taskplanner' | 'goaltracker' | 'learning'>('persona'); // Added: shortcuts, memory, taskplanner, goaltracker, learning
+  const [activeTab, setActiveTab] = useState<'persona' | 'tools' | 'llm' | 'phase5' | 'lora' | 'app' | 'integrations' | 'raft' | 'updates' | 'crashes' | 'about' | 'shortcuts' | 'memory' | 'taskplanner' | 'goaltracker' | 'learning'>('persona'); // Added: lora, shortcuts, memory, taskplanner, goaltracker, learning
   const [persona, setPersona] = useState<PersonaSettings>({
     formality: 5,
     humor: 5,
@@ -229,6 +230,17 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           >
             🔗 추론 엔진
           </button>
+          {/* v3.6.0: LoRA Fine-Tuning Tab */}
+          <button
+            onClick={() => setActiveTab('lora')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'lora'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            🧬 LoRA
+          </button>
           <button
             onClick={() => setActiveTab('app')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -395,6 +407,13 @@ export function Settings({ onClose, onThemeChange }: SettingsProps) {
           {activeTab === 'phase5' && (
             <div className="max-w-5xl mx-auto">
               <Phase5Settings />
+            </div>
+          )}
+
+          {/* LoRA Fine-Tuning Tab (v3.6.0) */}
+          {activeTab === 'lora' && (
+            <div className="max-w-4xl mx-auto">
+              <LoRASettings />
             </div>
           )}
 

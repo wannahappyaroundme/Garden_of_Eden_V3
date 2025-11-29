@@ -12,6 +12,38 @@ import type { ChatInputHandle } from '../components/chat/ChatInput';
 import type { ConversationHistoryHandle } from '../components/sidebar/ConversationHistory';
 import type { ToolCall } from '../../shared/types/tool.types';
 import type { ToolCallRecord } from '../../shared/types/tool-history.types';
+import { getToolDisplayName } from '../../shared/types/tool-history.types';
+
+// Backend ToolCallRecord type (snake_case from Rust)
+interface BackendToolCallRecord {
+  id: string;
+  conversation_id: string;
+  message_id: string;
+  tool_name: string;
+  tool_input: string;
+  tool_output: string;
+  execution_time_ms: number;
+  status: 'success' | 'error';
+  error_message: string | null;
+  created_at: number;
+}
+
+// Convert backend record to frontend format
+function convertToolRecord(backend: BackendToolCallRecord): ToolCallRecord {
+  return {
+    id: backend.id,
+    toolName: backend.tool_name,
+    displayName: getToolDisplayName(backend.tool_name),
+    timestamp: backend.created_at,
+    duration: backend.execution_time_ms,
+    status: backend.status,
+    input: JSON.parse(backend.tool_input || '{}'),
+    output: backend.tool_output ? JSON.parse(backend.tool_output) : null,
+    error: backend.error_message ? { message: backend.error_message } : undefined,
+    conversationId: backend.conversation_id,
+    messageId: backend.message_id,
+  };
+}
 
 export interface Message {
   id: string;
@@ -245,37 +277,23 @@ export function useChatState() {
     setupToolListeners();
   }, []);
 
-  // Load mock tool history (TODO: Replace with actual backend call)
-  useEffect(() => {
-    const mockHistory: ToolCallRecord[] = [
-      {
-        id: 'tc-001',
-        toolName: 'web_search',
-        displayName: 'Web Search',
-        timestamp: Date.now() - 3600000,
-        duration: 1240,
-        status: 'success',
-        input: { query: 'React hooks best practices', maxResults: 5 },
-        output: {
-          results: [
-            { title: 'React Hooks Guide', url: 'https://react.dev/hooks' },
-            { title: 'Best Practices', url: 'https://example.com/hooks' },
-          ],
-        },
-      },
-      {
-        id: 'tc-002',
-        toolName: 'read_file',
-        displayName: 'Read File',
-        timestamp: Date.now() - 7200000,
-        duration: 45,
-        status: 'success',
-        input: { path: '/Users/kyungsbook/Desktop/Eden_Project_V3/package.json' },
-        output: '{\n  "name": "garden-of-eden-v3",\n  ...\n}',
-      },
-    ];
-    setToolCallHistory(mockHistory);
+  // Load tool history from backend (v3.7.0)
+  const loadToolHistory = useCallback(async () => {
+    try {
+      const backendRecords = await invoke<BackendToolCallRecord[]>('get_tool_history', {
+        filters: { limit: 50 }
+      });
+      const frontendRecords = backendRecords.map(convertToolRecord);
+      setToolCallHistory(frontendRecords);
+    } catch (error) {
+      console.error('Failed to load tool history:', error);
+      setToolCallHistory([]);
+    }
   }, []);
+
+  useEffect(() => {
+    loadToolHistory();
+  }, [loadToolHistory]);
 
   return {
     // State

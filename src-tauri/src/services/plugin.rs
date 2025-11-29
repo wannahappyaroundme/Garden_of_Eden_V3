@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /**
  * Plugin System (v3.4.0)
  *
@@ -8,7 +9,6 @@
  * - Plugin discovery and installation
  * - Hot-reload support
  */
-#![allow(dead_code)]
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -235,6 +235,11 @@ impl PluginService {
         } else {
             false
         }
+    }
+
+    /// Get the plugins directory path
+    pub fn get_plugins_dir(&self) -> &PathBuf {
+        &self.plugins_dir
     }
 
     /// Install a plugin from a directory

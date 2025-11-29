@@ -1,12 +1,12 @@
-/**
- * Phase 2: Streaming Vision Processing (v3.8.0)
- *
- * Continuous screen monitoring with proactive communication:
- * - 10-30 second screen capture intervals
- * - Smart throttling with image hash comparison
- * - LLaVA analysis for significant changes
- * - Proactive alerts via TTS, notifications, or chat
- */
+//! Phase 2: Streaming Vision Processing (v3.8.0)
+//!
+//! Continuous screen monitoring with proactive communication:
+//! - 10-30 second screen capture intervals
+//! - Smart throttling with image hash comparison
+//! - LLaVA analysis for significant changes
+//! - Proactive alerts via TTS, notifications, or chat
+
+#![allow(dead_code)]  // Phase 18: Streaming vision (proactive mode)
 
 use crate::services::{screen::ScreenCaptureService, llava::LlavaService};
 use crate::database::Database;

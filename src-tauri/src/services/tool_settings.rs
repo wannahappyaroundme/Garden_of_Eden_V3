@@ -134,7 +134,8 @@ impl ToolSettingsService {
 
     /// Get settings for a specific tool
     pub fn get_settings(&self, tool_name: &str) -> Result<ToolSettings> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         let mut stmt = conn
@@ -157,7 +158,8 @@ impl ToolSettingsService {
 
     /// Get all tool settings
     pub fn get_all_settings(&self) -> Result<HashMap<String, ToolSettings>> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
 
         let mut stmt = conn
@@ -189,7 +191,8 @@ impl ToolSettingsService {
         // Validate configuration
         self.validate_config(tool_name, &config)?;
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock()
+            .map_err(|e| anyhow::anyhow!("Database lock failed: {}", e))?;
         let conn = db.conn();
         let now = chrono::Utc::now().timestamp();
 
