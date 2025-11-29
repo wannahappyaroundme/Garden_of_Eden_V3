@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use futures_util::StreamExt;
 use std::sync::Arc;
-use tauri::{Manager, Emitter};  // v3.3.0: For emit() method
+use tauri::Emitter;  // v3.3.0: For emit() method
 
 #[cfg(feature = "lancedb-support")]
 use super::rag_v2::{RagServiceV2, format_episodes_for_context};  // v3.4.0: LanceDB for 10-100x faster RAG
@@ -61,9 +61,7 @@ pub async fn generate_response_with_rag_and_persona_ref(
     log::info!("Generating AI response for message: {}", user_message);
 
     // 🎯 STEP 1: Load persona from database (v3.8.0 - Critical connection!)
-    let mut system_prompt = String::new();
-
-    if let Some(database) = &db {
+    let mut system_prompt = if let Some(database) = &db {
         match database.lock() {
             Ok(db_guard) => {
                 match db_guard.load_persona() {
@@ -75,25 +73,25 @@ pub async fn generate_response_with_rag_and_persona_ref(
 
                         // Convert to learning service parameters and generate personalized prompt
                         let learning_params = persona_params.to_learning_params();
-                        system_prompt = LearningService::generate_system_prompt(&learning_params);
-
-                        log::debug!("Generated personalized system prompt ({} chars)", system_prompt.len());
+                        let prompt = LearningService::generate_system_prompt(&learning_params);
+                        log::debug!("Generated personalized system prompt ({} chars)", prompt.len());
+                        prompt
                     }
                     Err(e) => {
                         log::warn!("Failed to load persona from database: {} - Using default prompt", e);
-                        system_prompt = get_default_system_prompt();
+                        get_default_system_prompt()
                     }
                 }
             }
             Err(e) => {
                 log::warn!("Failed to acquire database lock: {} - Using default prompt", e);
-                system_prompt = get_default_system_prompt();
+                get_default_system_prompt()
             }
         }
     } else {
         log::debug!("No database provided - Using default prompt");
-        system_prompt = get_default_system_prompt();
-    }
+        get_default_system_prompt()
+    };
 
     // 🎯 STEP 2: RAG - Retrieve relevant past conversations
     if let Some(rag) = &rag_service {
@@ -184,8 +182,6 @@ where
 /// Streaming optimization configuration
 const STREAM_BUFFER_SIZE: usize = 16; // Minimum chars to buffer before sending
 const STREAM_TIMEOUT_SECS: u64 = 120; // 2 minutes timeout for long responses
-const STREAM_RETRY_COUNT: usize = 2;  // Retries on transient failures
-const STREAM_RETRY_DELAY_MS: u64 = 500; // Delay between retries
 
 /// Generate a streaming response from Ollama with RAG context
 pub async fn generate_response_stream_with_rag<F>(
@@ -545,7 +541,7 @@ pub async fn generate_response_with_tools(
     rag_service: Option<Arc<RagServiceV2>>,  // v3.4.0: LanceDB
     max_iterations: usize,
     app_handle: Option<tauri::AppHandle>,  // v3.7.0: For emitting tool events
-    message_id: Option<String>,  // v3.7.0: Message ID for event tracking
+    _message_id: Option<String>,  // v3.7.0: Reserved for future event tracking
 ) -> Result<String, String> {
     log::info!("Generating AI response with tool calling for: {}", user_message);
 

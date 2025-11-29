@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::database::models::{Conversation, Message};
+use crate::database::models::Message;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 

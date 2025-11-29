@@ -8,12 +8,12 @@
  * - Async/await support
  * - Console API for debugging
  */
+#![allow(dead_code)]
 
 use anyhow::{anyhow, Result};
 use deno_core::{JsRuntime, RuntimeOptions};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use super::plugin::{Permission, PluginManifest};
 

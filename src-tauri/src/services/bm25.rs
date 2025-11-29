@@ -15,7 +15,7 @@
  * - b = 0.75 (length normalization)
  */
 
-use log::{debug, error, info};
+use log::{debug, info};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use unicode_segmentation::UnicodeSegmentation;

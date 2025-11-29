@@ -7,6 +7,7 @@
 // 1. Export training data using LoRADataCollectorService
 // 2. Train LoRA adapters externally (LLaMA-Factory, Axolotl, etc.)
 // 3. Use this service to load adapters into Ollama via Modelfiles
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

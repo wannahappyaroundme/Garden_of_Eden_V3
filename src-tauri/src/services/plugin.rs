@@ -8,6 +8,7 @@
  * - Plugin discovery and installation
  * - Hot-reload support
  */
+#![allow(dead_code)]
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};

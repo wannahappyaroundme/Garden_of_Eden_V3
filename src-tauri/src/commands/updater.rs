@@ -7,7 +7,7 @@
 use crate::services::updater::{UpdateChannel, UpdateCheckResult, UpdaterService};
 use crate::AppState;
 use log::{error, info, warn};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_updater::UpdaterExt;
 
 /// Get current application version

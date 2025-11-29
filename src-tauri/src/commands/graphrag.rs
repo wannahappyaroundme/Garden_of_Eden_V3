@@ -1,16 +1,5 @@
-/**
- * GraphRAG Commands (v3.7.0)
- *
- * Commands for knowledge graph-based reasoning and retrieval
- */
-
-use crate::services::entity_extractor::{EntityExtractor, EntityExtractorConfig};
-use crate::services::graph_builder::{GraphBuilder, GraphBuilderConfig};
-use crate::services::graph_retrieval::{GraphRetrievalConfig, GraphRetrievalEngine};
-use crate::services::graph_storage::GraphStorage;
 use crate::AppState;
 use log::info;
-use std::sync::Arc;
 use tauri::{command, State};
 
 /// Extract entities and relationships from text

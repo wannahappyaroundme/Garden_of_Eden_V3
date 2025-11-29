@@ -14,9 +14,9 @@
 
 use crate::services::graph_builder::{GraphNode, KnowledgeGraph};
 use crate::services::graph_storage::GraphStorage;
-use log::{debug, info, warn};
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Graph retrieval result

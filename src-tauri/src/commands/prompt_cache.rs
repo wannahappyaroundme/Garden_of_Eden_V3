@@ -1,10 +1,3 @@
-/**
- * Prompt Cache Commands (v3.6.0)
- *
- * Commands for managing the prompt cache system
- */
-
-use crate::services::prompt_cache::{PromptCache, PromptCacheConfig};
 use crate::AppState;
 use log::info;
 use tauri::{command, State};

@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use crate::database::Database;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tracing::{info, debug, warn, instrument};
+use tracing::{info, debug, instrument};
 
 use super::embedding::UnifiedEmbeddingService;
 

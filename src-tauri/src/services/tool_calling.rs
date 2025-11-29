@@ -12,7 +12,7 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, warn, debug, instrument};
+use tracing::{info, debug, instrument};
 
 /// Tool parameter definition
 #[derive(Debug, Clone, Serialize, Deserialize)]

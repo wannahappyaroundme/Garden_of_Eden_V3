@@ -16,7 +16,6 @@ use arrow_array::{Array, Float32Array, RecordBatch, RecordBatchIterator, StringA
 use arrow_schema::{DataType, Field, Schema, SchemaRef};
 use futures::StreamExt;
 use lancedb::connection::Connection;
-use lancedb::index::Index;
 use lancedb::query::{ExecutableQuery, QueryBase};
 use lancedb::table::OptimizeAction;
 use std::path::PathBuf;

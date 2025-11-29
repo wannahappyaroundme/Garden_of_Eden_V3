@@ -6,7 +6,7 @@
 use tauri::State;
 use serde_json::Value;
 use std::collections::HashMap;
-use crate::services::tool_settings::{ToolSettingsService, ToolSettings};
+use crate::services::tool_settings::ToolSettings;
 use crate::AppState;
 
 /// Get all tool settings

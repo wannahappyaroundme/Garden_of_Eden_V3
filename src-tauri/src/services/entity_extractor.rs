@@ -12,7 +12,7 @@
  * Integration: Used by graph_builder.rs for knowledge graph construction
  */
 
-use log::{debug, info, warn};
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

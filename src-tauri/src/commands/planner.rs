@@ -4,11 +4,10 @@
  * Commands for Plan-and-Solve agent with user confirmation
  */
 
-use crate::services::planner::{Plan, PlanExecution, Planner, PlannerConfig};
+use crate::services::planner::Plan;
 use crate::AppState;
 use log::info;
 use tauri::{command, State};
-use tokio::sync::Mutex as TokioMutex;
 
 /// Generate a plan for a given goal
 #[command]

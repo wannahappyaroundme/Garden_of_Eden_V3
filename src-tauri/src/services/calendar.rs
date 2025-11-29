@@ -13,7 +13,6 @@ use oauth2::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// Google Calendar OAuth configuration

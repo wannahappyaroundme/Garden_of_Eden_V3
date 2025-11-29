@@ -19,7 +19,7 @@
  * 5. Track progress and provide status updates
  */
 
-use crate::services::react_agent::{ReActAgent, ReActExecution};
+use crate::services::react_agent::ReActAgent;
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

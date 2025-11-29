@@ -13,10 +13,10 @@
 
 use anyhow::{anyhow, Result};
 use git2::{
-    Repository, Status, StatusOptions, DiffOptions, Signature,
-    BranchType, Oid, ObjectType, Diff, DiffDelta, DiffFormat,
+    Repository, Status, StatusOptions, Signature,
+    BranchType, Diff, DiffFormat,
 };
-use log::{info, warn, error};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 

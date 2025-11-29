@@ -1,5 +1,5 @@
 use crate::services::computer_control::{
-    ActionResult, ComputerControlService, SafetyConfig, RestrictedZone,
+    ActionResult, ComputerControlService, RestrictedZone,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

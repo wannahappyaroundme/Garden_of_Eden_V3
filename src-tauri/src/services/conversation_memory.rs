@@ -12,7 +12,7 @@
 
 use crate::database::Database;
 use anyhow::{anyhow, Result};
-use log::{error, info, warn};
+use log::info;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};

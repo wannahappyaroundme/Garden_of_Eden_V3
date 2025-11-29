@@ -1,10 +1,3 @@
-/**
- * Attention Sink Commands (v3.6.0)
- *
- * Commands for managing long context with StreamingLLM pattern
- */
-
-use crate::services::attention_sink::{AttentionSinkConfig, AttentionSinkManager};
 use crate::AppState;
 use log::info;
 use tauri::{command, State};
@@ -14,8 +7,8 @@ use tauri::{command, State};
 pub fn attention_sink_manage_context(
     state: State<'_, AppState>,
     context: String,
-    sink_size: Option<usize>,
-    window_size: Option<usize>,
+    _sink_size: Option<usize>,   // Reserved for future per-call configuration
+    _window_size: Option<usize>, // Reserved for future per-call configuration
 ) -> Result<serde_json::Value, String> {
     info!("Command: attention_sink_manage_context");
 

@@ -2,7 +2,7 @@ use crate::AppState;
 use crate::database::models::UserProfile;
 use crate::services::system_info::{SystemInfoService, SystemSpecs};
 use crate::services::model_recommender::{ModelRecommenderService, ModelRecommendation, RequiredModels};
-use crate::services::model_installer::{ModelInstallerService, ModelDownloadState};
+use crate::services::model_installer::ModelDownloadState;
 use crate::services::prompt_customizer::{PromptCustomizerService, SurveyResults, ModelConfig};
 use serde::{Deserialize, Serialize};
 use tauri::State;

@@ -12,8 +12,7 @@
 use anyhow::{anyhow, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::io::{Read, Write};
-use log::{info, warn, error};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 
 /// Maximum file size for reading (10MB)

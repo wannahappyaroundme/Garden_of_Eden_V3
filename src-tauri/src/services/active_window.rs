@@ -1,5 +1,5 @@
 use anyhow::Result;
-use log::{info, error, warn};
+use log::{info, error};
 
 /// Active window information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

@@ -1,8 +1,7 @@
 use crate::services::calendar::{
-    Attendee, Calendar, CalendarEvent, CalendarService, CalendarToken, EventDateTime,
-    EventReminders, ReminderOverride,
+    Calendar, CalendarEvent, CalendarService, CalendarToken,
 };
-use crate::services::webhook_triggers::{WebhookTriggerEvent, WebhookTriggerManager};
+use crate::services::webhook_triggers::WebhookTriggerEvent;
 use crate::AppState;
 use chrono::{DateTime, Utc};
 use log::{error, info};

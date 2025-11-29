@@ -1,5 +1,8 @@
+// Phase 4: Proactive Mode - Not yet integrated into main app
+#![allow(dead_code)]
+
 use anyhow::Result;
-use log::{info, warn, error};
+use log::{info, warn};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::interval;

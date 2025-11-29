@@ -11,14 +11,14 @@
 
 #![cfg(feature = "lancedb-support")]
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use crate::database::Database;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use super::embedding::UnifiedEmbeddingService;
-use super::vector_store::{VectorStoreService, VectorRecord, SearchResult};
-use super::raft::{RaftService, RaftConfig, RaftEpisode};
+use super::vector_store::{VectorStoreService, VectorRecord};
+use super::raft::{RaftService, RaftConfig};
 
 /// Episodic memory entry
 #[derive(Debug, Clone)]

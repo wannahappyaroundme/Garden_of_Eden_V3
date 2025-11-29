@@ -4,7 +4,6 @@
 /// Provides comprehensive logging of all tool calls with filtering, search, and export capabilities.
 
 use anyhow::{Context, Result};
-use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 

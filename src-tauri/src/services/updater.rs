@@ -8,7 +8,7 @@
  */
 
 use anyhow::{anyhow, Result};
-use log::{error, info, warn};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 

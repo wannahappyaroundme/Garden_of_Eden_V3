@@ -1,16 +1,3 @@
-/**
- * RAFT (Retrieval Augmented Fine-Tuning) - Hallucination Reduction (v3.2.0)
- *
- * RAFT is a technique to improve RAG systems by:
- * 1. Teaching the model to distinguish relevant vs irrelevant context
- * 2. Teaching the model to say "I don't know" when context is insufficient
- * 3. Improving context utilization through better prompting
- *
- * Reference: "RAFT: Adapting Language Model to Domain Specific RAG" (2024)
- * https://arxiv.org/abs/2403.10131
- */
-
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "lancedb-support")]

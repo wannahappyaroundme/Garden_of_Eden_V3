@@ -1,6 +1,5 @@
 use anyhow::Result;
 use log::{info, warn};
-use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 use crate::database::Database;
 

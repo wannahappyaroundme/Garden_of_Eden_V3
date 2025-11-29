@@ -7,10 +7,9 @@
 
 #![cfg(feature = "lancedb-support")]
 
-use crate::services::hybrid_search::{FusionWeights, HybridSearchEngine};
+use crate::services::hybrid_search::FusionWeights;
 use crate::AppState;
 use log::{error, info};
-use std::sync::Arc;
 use tauri::State;
 
 /// Initialize hybrid search engine and build BM25 index

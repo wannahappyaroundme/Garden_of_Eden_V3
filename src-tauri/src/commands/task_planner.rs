@@ -3,7 +3,7 @@
  */
 
 use crate::services::task_planner::{
-    ExecutionPlan, Task, TaskBreakdown, TaskPlannerService, TaskPriority, TaskStatus,
+    ExecutionPlan, Task, TaskBreakdown, TaskPlannerService, TaskStatus,
 };
 use std::sync::Arc;
 use tauri::State;

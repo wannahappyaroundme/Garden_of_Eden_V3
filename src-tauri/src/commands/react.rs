@@ -1,10 +1,3 @@
-/**
- * ReAct Commands (v3.7.0)
- *
- * Commands for ReAct agent (Reasoning + Acting)
- */
-
-use crate::services::react_agent::{ReActAgent, ReActConfig, ReActExecution};
 use crate::AppState;
 use log::info;
 use tauri::{command, State};

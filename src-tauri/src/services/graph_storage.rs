@@ -17,8 +17,8 @@
  */
 
 use crate::services::graph_builder::{GraphEdge, GraphNode, KnowledgeGraph};
-use log::{debug, info, warn};
-use rusqlite::{params, Connection, OptionalExtension, Result as SqliteResult};
+use log::{debug, info};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

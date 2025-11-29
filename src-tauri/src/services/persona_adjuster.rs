@@ -1,6 +1,7 @@
 // Automatic Persona Adjustment System (v3.8.0 Phase 2.3)
 // Analyzes personality insights and automatically adjusts persona parameters
 // to better match the user's communication style and preferences
+#![allow(dead_code)]
 
 use crate::database::{Database, models::PersonaParameters};
 use crate::services::personality_detector::{PersonalityDetectorService, PersonalityInsights};

@@ -5,7 +5,7 @@
 
 use tauri::State;
 use crate::services::tool_history::{
-    ToolHistoryService, ToolCallRecord, ToolHistoryFilters, ToolUsageStats,
+    ToolCallRecord, ToolHistoryFilters, ToolUsageStats,
 };
 use crate::AppState;
 

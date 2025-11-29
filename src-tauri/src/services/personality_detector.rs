@@ -1,9 +1,10 @@
 // Personality Detection Service (v3.8.0 Phase 2.1)
 // Analyzes conversation patterns to detect user personality traits
 // and automatically adjusts persona parameters
+#![allow(dead_code)]
 
 use crate::database::{Database, models::PersonaParameters};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use regex::Regex;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

@@ -4,6 +4,7 @@
 // It filters conversations based on user satisfaction, formats them for
 // training frameworks (LLaMA-Factory, Axolotl, etc.), and exports them in
 // standard formats (JSONL, Alpaca, ShareGPT).
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
