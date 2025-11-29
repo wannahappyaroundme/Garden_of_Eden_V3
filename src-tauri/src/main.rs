@@ -119,6 +119,7 @@ pub struct AppState {
     // === Integration Services ===
     pub webhook_trigger_manager: Arc<WebhookTriggerManager>,
     pub calendar_service: CalendarServiceWrapper,
+    pub cloud_sync_service: commands::cloud_sync::CloudSyncServiceWrapper,  // v3.6.0: Google Drive backup/restore
 
     // === Proactive Mode (Phase 4) ===
     pub proactive_manager: Arc<TokioMutex<ProactiveManager>>,  // v3.6.0: AI-Led proactive monitoring
@@ -175,6 +176,9 @@ fn main() {
 
     // Initialize Calendar Service Wrapper
     let calendar_service = CalendarServiceWrapper::new();
+
+    // Initialize Cloud Sync Service Wrapper (v3.6.0 - Google Drive backup/restore)
+    let cloud_sync_service = commands::cloud_sync::CloudSyncServiceWrapper::new();
 
     // Initialize Proactive Manager (v3.6.0 - Phase 4: AI-Led Proactive Mode)
     log::info!("Initializing Proactive Manager...");
@@ -575,6 +579,7 @@ fn main() {
         // === Integration Services ===
         webhook_trigger_manager,
         calendar_service,
+        cloud_sync_service,
 
         // === Proactive Mode (Phase 4) ===
         proactive_manager: proactive_manager_arc,
@@ -671,6 +676,8 @@ fn main() {
             commands::settings::delete_ollama_model,
             commands::settings::get_ollama_model_size,
             commands::settings::get_model_description,
+            commands::settings::get_phase5_settings,
+            commands::settings::update_phase5_settings,
             commands::system::get_system_info,
             commands::learning::learning_record_feedback,
             commands::learning::learning_optimize_persona,
@@ -701,6 +708,18 @@ fn main() {
             commands::calendar::calendar_search_events,
             commands::calendar::calendar_quick_add,
             commands::calendar::calendar_load_saved_token,
+            commands::cloud_sync::cloud_sync_initialize,
+            commands::cloud_sync::cloud_sync_start_oauth,
+            commands::cloud_sync::cloud_sync_complete_oauth,
+            commands::cloud_sync::cloud_sync_is_authenticated,
+            commands::cloud_sync::cloud_sync_sign_out,
+            commands::cloud_sync::cloud_sync_get_status,
+            commands::cloud_sync::cloud_sync_upload_backup,
+            commands::cloud_sync::cloud_sync_list_backups,
+            commands::cloud_sync::cloud_sync_download_backup,
+            commands::cloud_sync::cloud_sync_delete_backup,
+            commands::cloud_sync::cloud_sync_refresh_token,
+            commands::cloud_sync::cloud_sync_set_token,
             commands::file::file_read,
             commands::file::file_write,
             commands::file::file_delete,
@@ -744,6 +763,8 @@ fn main() {
             commands::llm::llm_set_model,
             commands::llm::llm_set_reasoning_mode,
             commands::llm::llm_update_vram,
+            commands::llm::llm_set_context_window,
+            commands::llm::llm_set_max_ram,
             // Conversation Memory Commands (v3.5.0)
             commands::conversation_memory::memory_get_context,
             commands::conversation_memory::memory_needs_summarization,

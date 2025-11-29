@@ -3,7 +3,8 @@
  * Main settings page for tool configuration
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import { ToolToggle } from './ToolToggle';
 import { ToolPreferences } from './ToolPreferences';
@@ -14,6 +15,14 @@ import {
   TOOL_PRIVACY_INFO,
 } from '../../../shared/types/tool-settings.types';
 import { cn } from '../../lib/utils';
+
+// Backend tool settings type
+interface BackendToolSettings {
+  enabled: boolean;
+  config: Record<string, unknown>;
+  last_used: number | null;
+  usage_count: number;
+}
 
 export interface ToolsSettingsProps {
   className?: string;
@@ -38,10 +47,44 @@ export function ToolsSettings({ className }: ToolsSettingsProps) {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        // TODO: Load from backend when settings service is implemented
-        // const loadedSettings = await window.api.invoke('settings:get-tool-settings', {});
-        // setSettings(loadedSettings);
-        console.log('Loading tool settings...');
+        const backendSettings = await invoke<Record<string, BackendToolSettings>>('get_all_tool_settings');
+
+        // Merge backend settings with default frontend structure
+        const mergedSettings: ToolSettings = { ...DEFAULT_TOOL_SETTINGS };
+
+        // Map backend tool names to frontend settings keys
+        const toolMapping: Record<string, keyof ToolSettings> = {
+          web_search: 'webSearch',
+          fetch_url: 'urlFetch',
+          read_file: 'fileOperations',
+          write_file: 'fileOperations',
+          get_system_info: 'systemInfo',
+          calculate: 'calculator',
+        };
+
+        for (const [toolName, toolSettings] of Object.entries(backendSettings)) {
+          const settingsKey = toolMapping[toolName];
+          if (settingsKey && settingsKey !== 'fileOperations') {
+            (mergedSettings as any)[settingsKey] = {
+              ...(mergedSettings as any)[settingsKey],
+              enabled: toolSettings.enabled,
+              ...toolSettings.config,
+            };
+          } else if (settingsKey === 'fileOperations') {
+            // Handle file operations (read/write) separately
+            if (toolName === 'read_file') {
+              mergedSettings.fileOperations.readEnabled = toolSettings.enabled;
+            } else if (toolName === 'write_file') {
+              mergedSettings.fileOperations.writeEnabled = toolSettings.enabled;
+            }
+          }
+        }
+
+        // Check if any tools are enabled for global toggle
+        const anyEnabled = Object.values(backendSettings).some(s => s.enabled);
+        mergedSettings.globalEnabled = anyEnabled;
+
+        setSettings(mergedSettings);
       } catch (error) {
         console.error('Failed to load tool settings:', error);
       }
@@ -50,54 +93,84 @@ export function ToolsSettings({ className }: ToolsSettingsProps) {
     loadSettings();
   }, []);
 
-  // Save settings to backend
-  const saveSettings = async (newSettings: ToolSettings) => {
+  // Save individual tool setting to backend
+  const saveToolSetting = useCallback(async (toolName: string, enabled: boolean, config: Record<string, unknown> = {}) => {
+    try {
+      await invoke('update_tool_setting', {
+        toolName,
+        enabled,
+        config,
+      });
+    } catch (error) {
+      console.error(`Failed to save settings for ${toolName}:`, error);
+      throw error;
+    }
+  }, []);
+
+  const handleGlobalToggle = async (enabled: boolean) => {
     setIsSaving(true);
     try {
-      // TODO: Save to backend when settings service is implemented
-      // await window.api.invoke('settings:update-tool-settings', { settings: newSettings });
-      console.log('Saving tool settings:', newSettings);
+      // Enable or disable all tools
+      for (const tool of TOOLS) {
+        await saveToolSetting(tool.name, enabled, {});
+      }
+      const newSettings = { ...settings, globalEnabled: enabled };
       setSettings(newSettings);
     } catch (error) {
-      console.error('Failed to save tool settings:', error);
+      console.error('Failed to toggle all tools:', error);
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleGlobalToggle = async (enabled: boolean) => {
-    const newSettings = { ...settings, globalEnabled: enabled };
-    await saveSettings(newSettings);
   };
 
   const handleToolToggle = async (toolName: string, enabled: boolean) => {
     const tool = TOOLS.find((t) => t.name === toolName);
     if (!tool) return;
 
-    const newSettings = {
-      ...settings,
-      [tool.settingsKey]: {
-        ...settings[tool.settingsKey],
-        enabled,
-      },
-    };
+    setIsSaving(true);
+    try {
+      await saveToolSetting(toolName, enabled, {});
 
-    await saveSettings(newSettings);
+      const newSettings = {
+        ...settings,
+        [tool.settingsKey]: {
+          ...settings[tool.settingsKey],
+          enabled,
+        },
+      };
+
+      setSettings(newSettings);
+    } catch (error) {
+      console.error(`Failed to toggle tool ${toolName}:`, error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePreferencesUpdate = async (toolName: string, toolSettings: any) => {
     const tool = TOOLS.find((t) => t.name === toolName);
     if (!tool) return;
 
-    const newSettings = {
-      ...settings,
-      [tool.settingsKey]: {
-        ...settings[tool.settingsKey],
-        ...toolSettings,
-      },
-    };
+    setIsSaving(true);
+    try {
+      const currentToolSettings = settings[tool.settingsKey];
+      const enabled = 'enabled' in currentToolSettings ? currentToolSettings.enabled : true;
+      await saveToolSetting(toolName, enabled, toolSettings);
 
-    await saveSettings(newSettings);
+      const newSettings = {
+        ...settings,
+        [tool.settingsKey]: {
+          ...settings[tool.settingsKey],
+          ...toolSettings,
+        },
+      };
+
+      setSettings(newSettings);
+    } catch (error) {
+      console.error(`Failed to update preferences for ${toolName}:`, error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const toggleExpanded = (toolName: string) => {

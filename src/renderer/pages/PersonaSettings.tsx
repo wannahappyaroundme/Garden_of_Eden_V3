@@ -35,6 +35,46 @@ interface LearningStats {
   last_optimization: number | null;
 }
 
+interface CloudSyncStatus {
+  is_authenticated: boolean;
+  last_backup: string | null;
+  last_restore: string | null;
+  auto_backup_enabled: boolean;
+  backup_count: number;
+}
+
+interface BackupMetadata {
+  id: string;
+  name: string;
+  created_at: string;
+  modified_at: string;
+  size: number;
+  version: string;
+}
+
+interface BackupData {
+  version: string;
+  created_at: string;
+  persona: {
+    name: string;
+    traits: string[];
+    communication_style: string;
+    knowledge_domains: string[];
+    custom_instructions: string | null;
+  };
+  settings: {
+    theme: string;
+    language: string;
+    llm_settings: Record<string, unknown>;
+    tool_settings: Record<string, unknown>;
+  };
+  memories: {
+    conversation_summaries: unknown[];
+    episodic_memories: unknown[];
+    knowledge_graph: unknown | null;
+  } | null;
+}
+
 const DEFAULT_PERSONA: PersonaParameters = {
   formality: 0.3,
   verbosity: 0.5,
@@ -56,17 +96,42 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastBackupTime, setLastBackupTime] = useState<number | null>(null);
-  const isAuthenticated = false; // TODO: Implement auth store
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [cloudBackups, setCloudBackups] = useState<BackupMetadata[]>([]);
 
   // Load stats and persona on mount
   useEffect(() => {
     loadStats();
     loadPersona();
+    checkCloudSyncStatus();
+  }, []);
+
+  // Check for cloud backups when authenticated
+  useEffect(() => {
     if (isAuthenticated) {
-      checkLastBackup();
+      loadCloudBackups();
     }
   }, [isAuthenticated]);
+
+  const checkCloudSyncStatus = async () => {
+    try {
+      const status = await invoke<CloudSyncStatus>('cloud_sync_get_status');
+      setIsAuthenticated(status.is_authenticated);
+      setLastBackupTime(status.last_backup);
+    } catch (error) {
+      console.error('Failed to check cloud sync status:', error);
+    }
+  };
+
+  const loadCloudBackups = async () => {
+    try {
+      const backups = await invoke<BackupMetadata[]>('cloud_sync_list_backups');
+      setCloudBackups(backups);
+    } catch (error) {
+      console.error('Failed to load cloud backups:', error);
+    }
+  };
 
   // Track changes
   useEffect(() => {
@@ -96,16 +161,6 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
       generateSystemPrompt(loadedPersona);
     } catch (error) {
       console.error('Failed to load persona:', error);
-    }
-  };
-
-  const checkLastBackup = async () => {
-    try {
-      // TODO: Implement CloudSyncService
-      // const time = await CloudSyncService.getLastBackupTime();
-      setLastBackupTime(null);
-    } catch (error) {
-      console.error('Failed to check last backup:', error);
     }
   };
 
@@ -163,15 +218,31 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
 
     setIsSyncing(true);
     try {
-      const backupData: { persona: PersonaParameters; timestamp: number } = {
-        persona,
-        timestamp: Date.now(),
+      // Convert persona parameters to traits for backup
+      const traits = Object.entries(persona)
+        .filter(([, value]) => value > 0.5)
+        .map(([key]) => key);
+
+      const backupRequest = {
+        persona_name: 'Eden',
+        traits,
+        communication_style: persona.formality > 0.5 ? 'formal' : 'casual',
+        knowledge_domains: ['technology', 'general'],
+        custom_instructions: null,
+        theme: 'dark',
+        language: 'en',
+        llm_settings: {},
+        tool_settings: {},
+        include_memories: false,
       };
-      // TODO: Implement CloudSyncService
-      // await CloudSyncService.uploadBackup(backupData);
-      await checkLastBackup();
-      alert('Persona backup feature coming soon!');
-      console.log('Backup data:', backupData);
+
+      const metadata = await invoke<BackupMetadata>('cloud_sync_upload_backup', {
+        request: backupRequest,
+      });
+
+      await checkCloudSyncStatus();
+      await loadCloudBackups();
+      alert(`Backup uploaded successfully: ${metadata.name}`);
     } catch (error) {
       console.error('Failed to backup to cloud:', error);
       alert('Failed to backup to cloud: ' + error);
@@ -186,26 +257,36 @@ export function PersonaSettings({ onClose }: PersonaSettingsProps) {
       return;
     }
 
+    if (cloudBackups.length === 0) {
+      alert('No cloud backups found');
+      return;
+    }
+
     setIsSyncing(true);
     try {
-      // TODO: Implement CloudSyncService
-      // const backupData = await CloudSyncService.downloadBackup();
-      const backupData = { persona: DEFAULT_PERSONA, timestamp: Date.now() };
-      if (backupData && backupData.persona) {
-        setPersona(backupData.persona);
-        // Save to local database
-        await invoke('learning_save_persona', { persona: backupData.persona });
-        alert('Persona restored from cloud backup!');
-      } else {
-        alert('No cloud backup found');
-      }
+      // Download the latest backup
+      const latestBackup = cloudBackups[0];
+      const backupData = await invoke<BackupData>('cloud_sync_download_backup', {
+        fileId: latestBackup.id,
+      });
+
+      // Convert backup persona to PersonaParameters
+      const restoredPersona: PersonaParameters = {
+        ...DEFAULT_PERSONA,
+        // Map traits back to parameter values
+        formality: backupData.persona.communication_style === 'formal' ? 0.7 : 0.3,
+      };
+
+      setPersona(restoredPersona);
+      await invoke('learning_save_persona', { persona: restoredPersona });
+      alert('Persona restored from cloud backup!');
     } catch (error) {
       console.error('Failed to restore from cloud:', error);
       alert('Failed to restore from cloud: ' + error);
     } finally {
       setIsSyncing(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, cloudBackups]);
 
   const handleReset = useCallback(() => {
     setPersona(DEFAULT_PERSONA);

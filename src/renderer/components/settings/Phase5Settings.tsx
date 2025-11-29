@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
@@ -91,13 +92,78 @@ export function Phase5Settings() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Load settings from backend
     loadSettings();
   }, []);
 
+  // Backend response type (snake_case)
+  interface BackendPhase5Settings {
+    cot_enabled: boolean;
+    cot_max_steps: number;
+    cot_confidence_threshold: number;
+    visual_analyzer_enabled: boolean;
+    visual_analyzer_auto_load: boolean;
+    context_enricher_enabled: boolean;
+    context_sources_enabled: {
+      active_window: boolean;
+      screen_context: boolean;
+      conversation_history: boolean;
+      semantic_memory: boolean;
+      task_context: boolean;
+    };
+    semantic_wiki_enabled: boolean;
+    wiki_auto_extract: boolean;
+    wiki_search_threshold: number;
+    memory_enhancer_enabled: boolean;
+    enhancement_auto_apply: boolean;
+    enhancement_quality_threshold: number;
+    task_planner_enabled: boolean;
+    task_auto_decompose: boolean;
+    task_dependency_tracking: boolean;
+    learning_style_enabled: boolean;
+    learning_style_auto_detect: boolean;
+    learning_style_confidence_min: number;
+    goal_tracker_enabled: boolean;
+    goal_auto_detect_progress: boolean;
+    goal_stale_alert_days: number;
+  }
+
   const loadSettings = async () => {
-    // TODO: Implement settings loading from database
-    console.log('Loading Phase 5 settings...');
+    try {
+      const backendSettings = await invoke<BackendPhase5Settings>('get_phase5_settings');
+      // Convert snake_case to camelCase
+      setSettings({
+        cotEnabled: backendSettings.cot_enabled,
+        cotMaxSteps: backendSettings.cot_max_steps,
+        cotConfidenceThreshold: backendSettings.cot_confidence_threshold,
+        visualAnalyzerEnabled: backendSettings.visual_analyzer_enabled,
+        visualAnalyzerAutoLoad: backendSettings.visual_analyzer_auto_load,
+        contextEnricherEnabled: backendSettings.context_enricher_enabled,
+        contextSourcesEnabled: {
+          activeWindow: backendSettings.context_sources_enabled.active_window,
+          screenContext: backendSettings.context_sources_enabled.screen_context,
+          conversationHistory: backendSettings.context_sources_enabled.conversation_history,
+          semanticMemory: backendSettings.context_sources_enabled.semantic_memory,
+          taskContext: backendSettings.context_sources_enabled.task_context,
+        },
+        semanticWikiEnabled: backendSettings.semantic_wiki_enabled,
+        wikiAutoExtract: backendSettings.wiki_auto_extract,
+        wikiSearchThreshold: backendSettings.wiki_search_threshold,
+        memoryEnhancerEnabled: backendSettings.memory_enhancer_enabled,
+        enhancementAutoApply: backendSettings.enhancement_auto_apply,
+        enhancementQualityThreshold: backendSettings.enhancement_quality_threshold,
+        taskPlannerEnabled: backendSettings.task_planner_enabled,
+        taskAutoDecompose: backendSettings.task_auto_decompose,
+        taskDependencyTracking: backendSettings.task_dependency_tracking,
+        learningStyleEnabled: backendSettings.learning_style_enabled,
+        learningStyleAutoDetect: backendSettings.learning_style_auto_detect,
+        learningStyleConfidenceMin: backendSettings.learning_style_confidence_min,
+        goalTrackerEnabled: backendSettings.goal_tracker_enabled,
+        goalAutoDetectProgress: backendSettings.goal_auto_detect_progress,
+        goalStaleAlertDays: backendSettings.goal_stale_alert_days,
+      });
+    } catch (err) {
+      console.error('Failed to load Phase 5 settings:', err);
+    }
   };
 
   const handleSave = async () => {
@@ -105,12 +171,44 @@ export function Phase5Settings() {
     setSaveMessage(null);
 
     try {
-      // TODO: Save settings to database
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate save
-      setSaveMessage('✅ Settings saved successfully');
+      // Convert camelCase to snake_case for backend
+      const backendSettings: BackendPhase5Settings = {
+        cot_enabled: settings.cotEnabled,
+        cot_max_steps: settings.cotMaxSteps,
+        cot_confidence_threshold: settings.cotConfidenceThreshold,
+        visual_analyzer_enabled: settings.visualAnalyzerEnabled,
+        visual_analyzer_auto_load: settings.visualAnalyzerAutoLoad,
+        context_enricher_enabled: settings.contextEnricherEnabled,
+        context_sources_enabled: {
+          active_window: settings.contextSourcesEnabled.activeWindow,
+          screen_context: settings.contextSourcesEnabled.screenContext,
+          conversation_history: settings.contextSourcesEnabled.conversationHistory,
+          semantic_memory: settings.contextSourcesEnabled.semanticMemory,
+          task_context: settings.contextSourcesEnabled.taskContext,
+        },
+        semantic_wiki_enabled: settings.semanticWikiEnabled,
+        wiki_auto_extract: settings.wikiAutoExtract,
+        wiki_search_threshold: settings.wikiSearchThreshold,
+        memory_enhancer_enabled: settings.memoryEnhancerEnabled,
+        enhancement_auto_apply: settings.enhancementAutoApply,
+        enhancement_quality_threshold: settings.enhancementQualityThreshold,
+        task_planner_enabled: settings.taskPlannerEnabled,
+        task_auto_decompose: settings.taskAutoDecompose,
+        task_dependency_tracking: settings.taskDependencyTracking,
+        learning_style_enabled: settings.learningStyleEnabled,
+        learning_style_auto_detect: settings.learningStyleAutoDetect,
+        learning_style_confidence_min: settings.learningStyleConfidenceMin,
+        goal_tracker_enabled: settings.goalTrackerEnabled,
+        goal_auto_detect_progress: settings.goalAutoDetectProgress,
+        goal_stale_alert_days: settings.goalStaleAlertDays,
+      };
+
+      await invoke('update_phase5_settings', { settings: backendSettings });
+      setSaveMessage('Settings saved successfully');
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
-      setSaveMessage('❌ Failed to save settings');
+      console.error('Failed to save Phase 5 settings:', err);
+      setSaveMessage('Failed to save settings');
     } finally {
       setIsSaving(false);
     }
@@ -132,7 +230,7 @@ export function Phase5Settings() {
       {saveMessage && (
         <div className={cn(
           "p-3 rounded-lg text-sm",
-          saveMessage.includes('✅')
+          saveMessage.includes('success')
             ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400"
             : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400"
         )}>

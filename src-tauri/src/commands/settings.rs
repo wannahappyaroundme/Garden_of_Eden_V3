@@ -244,3 +244,147 @@ pub async fn get_ollama_model_size(model_name: String) -> Result<f32, String> {
 pub fn get_model_description(model_name: String) -> String {
     ModelRecommenderService::get_model_description(&model_name)
 }
+
+// ============================================================================
+// Phase 5 Settings (v3.9.0: Reasoning Engine 2.0)
+// ============================================================================
+
+/// Phase 5 settings structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Phase5Settings {
+    // Chain-of-Thought Settings
+    pub cot_enabled: bool,
+    pub cot_max_steps: i32,
+    pub cot_confidence_threshold: f64,
+
+    // Visual Analyzer Settings
+    pub visual_analyzer_enabled: bool,
+    pub visual_analyzer_auto_load: bool,
+
+    // Context Enricher Settings
+    pub context_enricher_enabled: bool,
+    pub context_sources_enabled: ContextSourcesEnabled,
+
+    // Semantic Wiki Settings
+    pub semantic_wiki_enabled: bool,
+    pub wiki_auto_extract: bool,
+    pub wiki_search_threshold: f64,
+
+    // Memory Enhancer Settings
+    pub memory_enhancer_enabled: bool,
+    pub enhancement_auto_apply: bool,
+    pub enhancement_quality_threshold: f64,
+
+    // Task Planner Settings
+    pub task_planner_enabled: bool,
+    pub task_auto_decompose: bool,
+    pub task_dependency_tracking: bool,
+
+    // Learning Style Adapter Settings
+    pub learning_style_enabled: bool,
+    pub learning_style_auto_detect: bool,
+    pub learning_style_confidence_min: f64,
+
+    // Goal Tracker Settings
+    pub goal_tracker_enabled: bool,
+    pub goal_auto_detect_progress: bool,
+    pub goal_stale_alert_days: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextSourcesEnabled {
+    pub active_window: bool,
+    pub screen_context: bool,
+    pub conversation_history: bool,
+    pub semantic_memory: bool,
+    pub task_context: bool,
+}
+
+impl Default for Phase5Settings {
+    fn default() -> Self {
+        Self {
+            cot_enabled: true,
+            cot_max_steps: 10,
+            cot_confidence_threshold: 0.7,
+            visual_analyzer_enabled: true,
+            visual_analyzer_auto_load: false,
+            context_enricher_enabled: true,
+            context_sources_enabled: ContextSourcesEnabled {
+                active_window: true,
+                screen_context: false,
+                conversation_history: true,
+                semantic_memory: true,
+                task_context: true,
+            },
+            semantic_wiki_enabled: true,
+            wiki_auto_extract: true,
+            wiki_search_threshold: 0.75,
+            memory_enhancer_enabled: true,
+            enhancement_auto_apply: false,
+            enhancement_quality_threshold: 6.0,
+            task_planner_enabled: true,
+            task_auto_decompose: true,
+            task_dependency_tracking: true,
+            learning_style_enabled: true,
+            learning_style_auto_detect: true,
+            learning_style_confidence_min: 0.5,
+            goal_tracker_enabled: true,
+            goal_auto_detect_progress: true,
+            goal_stale_alert_days: 7,
+        }
+    }
+}
+
+/// Get Phase 5 settings
+#[tauri::command]
+pub async fn get_phase5_settings(state: State<'_, AppState>) -> Result<Phase5Settings, String> {
+    log::info!("Getting Phase 5 settings");
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = db.conn();
+
+    // Try to load from database, use defaults if not found
+    let settings_json: Result<String, _> = conn.query_row(
+        "SELECT value FROM user_preferences WHERE key = 'phase5_settings'",
+        [],
+        |row| row.get(0),
+    );
+
+    match settings_json {
+        Ok(json) => {
+            serde_json::from_str(&json).map_err(|e| {
+                log::warn!("Failed to parse Phase5 settings, using defaults: {}", e);
+                e.to_string()
+            })
+        }
+        Err(_) => {
+            log::info!("No Phase5 settings found, returning defaults");
+            Ok(Phase5Settings::default())
+        }
+    }
+}
+
+/// Update Phase 5 settings
+#[tauri::command]
+pub async fn update_phase5_settings(
+    state: State<'_, AppState>,
+    settings: Phase5Settings,
+) -> Result<(), String> {
+    log::info!("Updating Phase 5 settings");
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = db.conn();
+    let now = chrono::Utc::now().timestamp_millis();
+
+    let settings_json = serde_json::to_string(&settings).map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO user_preferences (key, value, updated_at)
+         VALUES ('phase5_settings', ?1, ?2)",
+        rusqlite::params![settings_json, now],
+    )
+    .map_err(|e| e.to_string())?;
+
+    log::info!("Phase 5 settings saved successfully");
+    Ok(())
+}

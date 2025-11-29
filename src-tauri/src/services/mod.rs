@@ -35,6 +35,7 @@ mod personality_tests;  // v3.3.0 Phase 2: Comprehensive personality tests (69+ 
 pub mod webhook;
 pub mod webhook_triggers;
 pub mod calendar;
+pub mod cloud_sync;  // v3.6.0: Google Drive backup/restore for persona settings
 
 // Phase 7: File System & Git Integration
 pub mod file;

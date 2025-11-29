@@ -7,6 +7,7 @@ pub mod system;
 pub mod learning;
 pub mod webhook;
 pub mod calendar;
+pub mod cloud_sync;  // v3.6.0: Google Drive backup/restore
 pub mod file;
 pub mod git;
 pub mod updater;

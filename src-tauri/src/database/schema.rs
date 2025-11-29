@@ -355,7 +355,7 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    // LLM settings table (v3.5.0 - VRAM-based model selection)
+    // LLM settings table (v3.5.0 - VRAM-based model selection, v3.6.0 - context/RAM settings)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS llm_settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -363,11 +363,19 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
             selected_model TEXT NOT NULL DEFAULT 'qwen2.5:3b',
             reasoning_mode TEXT NOT NULL DEFAULT 'quick' CHECK(reasoning_mode IN ('quick', 'deep')),
             auto_select_model BOOLEAN NOT NULL DEFAULT 1,
+            context_window_size INTEGER DEFAULT 8192,
+            max_ram_usage_gb INTEGER DEFAULT 8,
             created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
             updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )",
         [],
     )?;
+
+    // Migration: Add new columns if they don't exist (v3.6.0)
+    conn.execute_batch(
+        "ALTER TABLE llm_settings ADD COLUMN context_window_size INTEGER DEFAULT 8192;
+         ALTER TABLE llm_settings ADD COLUMN max_ram_usage_gb INTEGER DEFAULT 8;"
+    ).ok(); // Ignore errors if columns already exist
 
     // Conversation summaries table (v3.5.0 - Multi-turn memory)
     conn.execute(
